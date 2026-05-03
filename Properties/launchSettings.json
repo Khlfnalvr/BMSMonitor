@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BMSMonitor": {
+      "commandName": "Executable",
+      "executablePath": "$(TargetDir)BMSMonitor.exe"
+    }
+  }
+}
