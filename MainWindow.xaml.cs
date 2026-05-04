@@ -21,8 +21,11 @@ public sealed partial class MainWindow : Window
         { "Dashboard",    typeof(DashboardPage) },
         { "CellView",     typeof(CellViewPage) },
         { "ControlPanel", typeof(ControlPanelPage) },
-        { "Logging",      typeof(LoggingPage) }
+        { "Logging",      typeof(LoggingPage) },
+        { "Playback",     typeof(PlaybackPage) }
     };
+
+    private bool _pbSeeking; // suppress slider feedback loop
 
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _clock;
     private bool _initializing;
@@ -42,6 +45,9 @@ public sealed partial class MainWindow : Window
         _clock.Interval = TimeSpan.FromSeconds(1);
         _clock.Tick += (_, _) => ClockText.Text = DateTime.Now.ToString("HH:mm:ss");
         _clock.Start();
+
+        // Playback bar — subscribe so it appears/updates whenever the service fires
+        ViewModel.Playback.StateChanged += OnPlaybackStateChanged;
 
         // Shrink the drag region whenever window size or toggle size changes.
         SizeChanged += (_, _) => UpdateTitleBarLayout();
@@ -154,5 +160,50 @@ public sealed partial class MainWindow : Window
         if (args.SelectedItem is NavigationViewItem item && item.Tag is string tag)
             if (_pages.TryGetValue(tag, out var pageType))
                 ContentFrame.Navigate(pageType);
+    }
+
+    // ── Playback bar ──────────────────────────────────────────────────────
+    private void OnPlaybackStateChanged()
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            var pb = ViewModel.Playback;
+            PlaybackBar.Visibility = pb.IsLoaded
+                ? Microsoft.UI.Xaml.Visibility.Visible
+                : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+            if (!pb.IsLoaded) return;
+
+            PbFileText.Text    = pb.FileName;
+            PbFrameText.Text   = $"{pb.CurrentFrame + 1} / {pb.TotalFrames}  ·  {pb.CurrentTimestamp}";
+            PbPlayPauseBtn.Content = pb.IsPlaying ? "⏸" : "▶";
+
+            _pbSeeking = true;
+            PbSlider.Maximum = Math.Max(1, pb.TotalFrames - 1);
+            PbSlider.Value   = pb.CurrentFrame;
+            _pbSeeking = false;
+        });
+    }
+
+    private void PbPlayPause_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Playback.IsPlaying) ViewModel.Playback.Pause();
+        else                              ViewModel.Playback.Play();
+    }
+
+    private void PbFirst_Click(object sender, RoutedEventArgs e)
+        => ViewModel.Playback.SeekTo(0);
+
+    private void PbLast_Click(object sender, RoutedEventArgs e)
+        => ViewModel.Playback.SeekTo(ViewModel.Playback.TotalFrames - 1);
+
+    private void PbClose_Click(object sender, RoutedEventArgs e)
+        => ViewModel.Playback.Unload();
+
+    private void PbSlider_ValueChanged(object sender,
+        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_pbSeeking) return;
+        ViewModel.Playback.SeekTo((int)Math.Round(e.NewValue));
     }
 }

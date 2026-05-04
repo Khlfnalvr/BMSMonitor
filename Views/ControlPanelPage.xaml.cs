@@ -96,6 +96,7 @@ public sealed partial class ControlPanelPage : Page
     private void LoadConfig()
     {
         var cfg = ViewModel.Config;
+        NbxCapacity.Value     = cfg.NominalCapacityAh;
         NbxOvervolt.Value     = cfg.OvervoltageThreshold;
         NbxUndervolt.Value    = cfg.UndervoltageThreshold;
         NbxLowVolt.Value      = cfg.LowVoltageWarning;
@@ -111,6 +112,7 @@ public sealed partial class ControlPanelPage : Page
     private void ApplySettings_Click(object sender, RoutedEventArgs e)
     {
         var cfg = ViewModel.Config;
+        cfg.NominalCapacityAh     = NbxCapacity.Value;
         cfg.OvervoltageThreshold  = NbxOvervolt.Value;
         cfg.UndervoltageThreshold = NbxUndervolt.Value;
         cfg.LowVoltageWarning     = NbxLowVolt.Value;
@@ -130,6 +132,7 @@ public sealed partial class ControlPanelPage : Page
 
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
     {
+        NbxCapacity.Value     = 20;
         NbxOvervolt.Value     = 4.20;
         NbxUndervolt.Value    = 2.80;
         NbxLowVolt.Value      = 3.00;

@@ -23,6 +23,7 @@ public class BmsData
 
 public class BmsConfig
 {
+    public double NominalCapacityAh { get; set; } = 20.0;   // 20 Ah → shown as mAh on dashboard
     public double MaxDod { get; set; } = 80;
     public double MaxChargeCurrent { get; set; } = 20;
     public double MaxDischargeCurrent { get; set; } = 40;

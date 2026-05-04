@@ -8,7 +8,8 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>   <!-- playback bar -->
+            <RowDefinition Height="Auto"/>   <!-- status bar -->
         </Grid.RowDefinitions>
 
         <NavigationView
@@ -25,6 +26,7 @@
                 <NavigationViewItem Content="Cell View"     Tag="CellView"/>
                 <NavigationViewItem Content="Control Panel" Tag="ControlPanel"/>
                 <NavigationViewItem Content="Logging"       Tag="Logging"/>
+                <NavigationViewItem Content="Playback"      Tag="Playback"/>
             </NavigationView.MenuItems>
 
             <Frame x:Name="ContentFrame" Padding="0"/>
@@ -73,8 +75,63 @@
             </StackPanel>
         </Border>
 
-        <!-- Status bar -->
-        <Border Grid.Row="1"
+        <!-- ── Playback bar (Row 1, hidden when no file is loaded) ─────── -->
+        <Border x:Name="PlaybackBar"
+                Grid.Row="1"
+                Padding="12,6,12,6"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                Visibility="Collapsed">
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>   <!-- transport buttons -->
+                    <ColumnDefinition Width="*"/>       <!-- slider + labels -->
+                    <ColumnDefinition Width="Auto"/>   <!-- close button -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Transport buttons -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2"
+                            VerticalAlignment="Center">
+                    <Button x:Name="PbFirstBtn" Content="⏮" FontSize="13" Padding="6,4"
+                            ToolTipService.ToolTip="First frame"
+                            Click="PbFirst_Click"/>
+                    <Button x:Name="PbPlayPauseBtn" Content="▶" FontSize="13" Padding="8,4"
+                            Style="{ThemeResource AccentButtonStyle}"
+                            ToolTipService.ToolTip="Play / Pause"
+                            Click="PbPlayPause_Click"/>
+                    <Button x:Name="PbLastBtn" Content="⏭" FontSize="13" Padding="6,4"
+                            ToolTipService.ToolTip="Last frame"
+                            Click="PbLast_Click"/>
+                </StackPanel>
+
+                <!-- Scrub area: file name + frame counter + slider -->
+                <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
+                    <Grid>
+                        <TextBlock x:Name="PbFileText"
+                                   FontSize="10" FontWeight="SemiBold" Opacity="0.7"
+                                   HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        <TextBlock x:Name="PbFrameText"
+                                   FontSize="10" Opacity="0.5" FontFamily="Consolas"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Slider x:Name="PbSlider"
+                            Minimum="0" Maximum="100" Value="0"
+                            HorizontalAlignment="Stretch"
+                            Margin="0,-4,0,-6"
+                            ValueChanged="PbSlider_ValueChanged"/>
+                </StackPanel>
+
+                <!-- Unload (close) button -->
+                <Button Grid.Column="2" Content="✕" FontSize="11" Padding="7,4"
+                        VerticalAlignment="Center"
+                        ToolTipService.ToolTip="Unload file and return to live mode"
+                        Click="PbClose_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- ── Status bar (Row 2) ─────────────────────────────────────── -->
+        <Border Grid.Row="2"
                 Padding="16,5"
                 BorderThickness="0,1,0,0"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"

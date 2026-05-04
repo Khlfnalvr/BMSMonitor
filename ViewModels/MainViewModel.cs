@@ -17,7 +17,7 @@ public partial class MainViewModel : ObservableObject
 
     // --- Pack level ---
     [ObservableProperty][NotifyPropertyChangedFor(nameof(PackVoltageText))] private double _packVoltage;
-    [ObservableProperty][NotifyPropertyChangedFor(nameof(SocText))]         private double _soc;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(SocText))][NotifyPropertyChangedFor(nameof(RemainingCapacityText))] private double _soc;
     [ObservableProperty][NotifyPropertyChangedFor(nameof(CurrentText))]     private double _current;
     [ObservableProperty] private string _packStatus = "—";
 
@@ -48,10 +48,12 @@ public partial class MainViewModel : ObservableObject
     public event Action? HistoryUpdated;
 
     // --- Formatted text ---
-    public string PackVoltageText => HasData ? $"{PackVoltage:F2} V" : "— V";
-    public string SocText         => HasData ? $"{Soc:F1} %"        : "— %";
-    public string CurrentText     => !HasData ? "— A"
-                                   : Current >= 0 ? $"+{Current:F2} A" : $"{Current:F2} A";
+    public string PackVoltageText       => HasData ? $"{PackVoltage:F2} V" : "— V";
+    public string SocText               => HasData ? $"{Soc:F1} %"        : "— %";
+    public string CurrentText           => !HasData ? "— A"
+                                         : Current >= 0 ? $"+{Current:F2} A" : $"{Current:F2} A";
+    public string RemainingCapacityText => !HasData ? "— mAh"
+                                         : $"{Soc / 100.0 * Config.NominalCapacityAh * 1000:N0} mAh";
     public string MinCellText     => HasData ? $"{MinCellVoltage:F3} V" : "— V";
     public string MaxCellText     => HasData ? $"{MaxCellVoltage:F3} V" : "— V";
     public string AvgCellText     => HasData ? $"{AvgCellVoltage:F3} V" : "— V";
@@ -67,6 +69,9 @@ public partial class MainViewModel : ObservableObject
     private const int StreamCapacity = 20;
     public BmsConfig Config { get; } = new();
 
+    // --- Playback ---
+    public PlaybackService Playback { get; } = new();
+
     public MainViewModel(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
@@ -74,10 +79,13 @@ public partial class MainViewModel : ObservableObject
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
 
-        // All data flows from the ESP32 over serial. No simulation.
-        Serial.DataReceived  += data => _dispatcherQueue.TryEnqueue(() => ApplyData(data));
+        // Live serial — skip if a playback file is loaded (don't overwrite review data).
+        Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
         Serial.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnSerialStatus(msg));
         Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
+
+        // Playback frames feed through the same pipeline as live data.
+        Playback.FrameChanged += data => _dispatcherQueue.TryEnqueue(() => ApplyData(data));
     }
 
     partial void OnHasDataChanged(bool value)
@@ -91,6 +99,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(AvgCellText));
         OnPropertyChanged(nameof(DeltaText));
         OnPropertyChanged(nameof(BalancingText));
+        OnPropertyChanged(nameof(RemainingCapacityText));
     }
 
     private void OnSerialStatus(string msg)
@@ -135,7 +144,7 @@ public partial class MainViewModel : ObservableObject
             Temperatures[i].Temperature = data.Temps[i];
 
         HasData = true;
-        Logging.Log(data);
+        if (!Playback.IsLoaded) Logging.Log(data);   // don't re-log playback frames
 
         // ── Live data stream (newest at top) ─────────────────────────
         DataStream.Insert(0, new LogRow

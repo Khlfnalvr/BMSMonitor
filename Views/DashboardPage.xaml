@@ -23,6 +23,7 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Pack Voltage -->
@@ -46,8 +47,18 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Current -->
+                <!-- Remaining Capacity -->
                 <Border Style="{StaticResource CardStyle}" Grid.Column="2">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="REMAINING" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.RemainingCapacityText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <TextBlock Text="based on SOC × capacity" FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Current -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="3">
                     <StackPanel Spacing="4">
                         <TextBlock Text="CURRENT" Style="{StaticResource CardLabelStyle}"/>
                         <TextBlock Text="{x:Bind ViewModel.CurrentText, Mode=OneWay}"
@@ -57,7 +68,7 @@
                 </Border>
 
                 <!-- Status -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="3">
+                <Border Style="{StaticResource CardStyle}" Grid.Column="4">
                     <StackPanel Spacing="4">
                         <TextBlock Text="STATUS" Style="{StaticResource CardLabelStyle}"/>
                         <TextBlock Text="{x:Bind ViewModel.PackStatus, Mode=OneWay}"
