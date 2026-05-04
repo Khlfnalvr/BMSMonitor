@@ -137,7 +137,7 @@
 
 
             <!-- ── LIVE DATA STREAM ──────────────────────────────────────────── -->
-            <TextBlock Text="LIVE DATA (10 TERBARU)" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="LIVE DATA (20 TERBARU)" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}" Padding="0">
                 <StackPanel>
 

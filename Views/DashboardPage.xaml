@@ -110,6 +110,86 @@
                 </StackPanel>
             </Border>
 
+            <!-- ── V/I HISTORY CHART ─────────────────────────────────── -->
+            <TextBlock Text="VOLTAGE / CURRENT HISTORY" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="4">
+
+                    <!-- 3-column layout: V-axis | canvas | I-axis -->
+                    <Grid ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Voltage Y-axis labels (left, right-aligned) -->
+                        <Canvas x:Name="VAxisCanvas" Grid.Column="0" Height="180">
+                            <TextBlock x:Name="VLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="0"/>
+                            <TextBlock x:Name="VLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="39"/>
+                            <TextBlock x:Name="VLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="84"/>
+                            <TextBlock x:Name="VLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="129"/>
+                            <TextBlock x:Name="VLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="168"/>
+                        </Canvas>
+
+                        <!-- Chart canvas -->
+                        <Canvas x:Name="VIChartCanvas" Grid.Column="1" Height="180"
+                                SizeChanged="VIChartCanvas_SizeChanged">
+                            <!-- Horizontal dashed grid lines -->
+                            <Line x:Name="VIGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="VIGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="VIGridH3" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <!-- Series: voltage (solid) and current (dashed) -->
+                            <Polyline x:Name="VoltageLine" StrokeThickness="2"
+                                      StrokeLineJoin="Round" Fill="Transparent"/>
+                            <Polyline x:Name="CurrentLine" StrokeThickness="2"
+                                      StrokeLineJoin="Round" Fill="Transparent"
+                                      StrokeDashArray="5,2"/>
+                        </Canvas>
+
+                        <!-- Current Y-axis labels (right, left-aligned) -->
+                        <Canvas x:Name="IAxisCanvas" Grid.Column="2" Height="180">
+                            <TextBlock x:Name="ILabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="0"/>
+                            <TextBlock x:Name="ILabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="39"/>
+                            <TextBlock x:Name="ILabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="84"/>
+                            <TextBlock x:Name="ILabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="129"/>
+                            <TextBlock x:Name="ILabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="168"/>
+                        </Canvas>
+                    </Grid>
+
+                    <!-- Legend -->
+                    <StackPanel Orientation="Horizontal" Spacing="16"
+                                HorizontalAlignment="Center" Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Rectangle x:Name="VLegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                            <TextBlock Text="Voltage (V)" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Rectangle x:Name="ILegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                            <TextBlock Text="Current (A)" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- X-axis labels -->
+                    <Grid Margin="44,0,44,0">
+                        <TextBlock Text="← 2 min ago" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock Text="now →" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
             <!-- ── VOLTAGE SUMMARY ────────────────────────────────────── -->
             <TextBlock Text="CELL VOLTAGE SUMMARY" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">

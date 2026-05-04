@@ -38,9 +38,11 @@ public partial class MainViewModel : ObservableObject
     // --- Live data indicator ---
     [ObservableProperty] private bool _hasData;
 
-    // --- SOC history (circular buffer, UI-thread only) ---
+    // --- SOC / V / I history (circular buffer, UI-thread only) ---
     public const int HistoryCapacity = 120;            // 2 min at 1 Hz
-    private readonly double[] _socRing = new double[HistoryCapacity];
+    private readonly double[] _socRing     = new double[HistoryCapacity];
+    private readonly double[] _voltageRing = new double[HistoryCapacity];
+    private readonly double[] _currentRing = new double[HistoryCapacity];
     private int _ringHead;   // next write slot
     private int _ringCount;  // valid samples so far
     public event Action? HistoryUpdated;
@@ -62,7 +64,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<CellViewModel> Cells        { get; } = new();
     public ObservableCollection<TempViewModel> Temperatures { get; } = new();
     public ObservableCollection<LogRow>        DataStream   { get; } = new();
-    private const int StreamCapacity = 10;
+    private const int StreamCapacity = 20;
     public BmsConfig Config { get; } = new();
 
     public MainViewModel(DispatcherQueue dispatcherQueue)
@@ -151,8 +153,10 @@ public partial class MainViewModel : ObservableObject
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
 
-        // Push SOC into circular buffer and notify chart.
-        _socRing[_ringHead] = data.Soc;
+        // Push SOC / V / I into circular buffers and notify chart.
+        _socRing[_ringHead]     = data.Soc;
+        _voltageRing[_ringHead] = data.PackVoltage;
+        _currentRing[_ringHead] = data.Current;
         _ringHead  = (_ringHead + 1) % HistoryCapacity;
         if (_ringCount < HistoryCapacity) _ringCount++;
         HistoryUpdated?.Invoke();
@@ -166,6 +170,22 @@ public partial class MainViewModel : ObservableObject
         for (int i = 0; i < _ringCount; i++)
             result[i] = _socRing[(start + i) % HistoryCapacity];
         return result;
+    }
+
+    // Returns V and I samples in chronological order (oldest → newest).
+    public (double[] voltages, double[] currents) GetViHistory()
+    {
+        int count = _ringCount;
+        var v = new double[count];
+        var c = new double[count];
+        int start = (_ringHead - count + HistoryCapacity) % HistoryCapacity;
+        for (int k = 0; k < count; k++)
+        {
+            int idx = (start + k) % HistoryCapacity;
+            v[k] = _voltageRing[idx];
+            c[k] = _currentRing[idx];
+        }
+        return (v, c);
     }
 
     private CellState GetCellState(double voltage)
