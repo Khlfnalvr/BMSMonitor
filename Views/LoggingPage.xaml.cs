@@ -2,6 +2,7 @@ using System.IO;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using BMSMonitor.Models;
 using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 using Windows.Storage.Pickers;
@@ -16,13 +17,17 @@ public sealed partial class LoggingPage : Page
     private string _selectedFolder = LoggingService.DefaultLogsFolder;
     private DispatcherQueueTimer? _durationTimer;
 
+    // Map ComboBox index → LogFormat
+    private static readonly LogFormat[] Formats =
+        [LogFormat.Csv, LogFormat.Tsv, LogFormat.Excel, LogFormat.Json];
+
     public LoggingPage()
     {
         InitializeComponent();
         FolderText.Text   = _selectedFolder;
-        FullPathText.Text  = BuildPreviewPath();
+        FullPathText.Text = BuildPreviewPath();
 
-        FileNameBox.TextChanged += (_, _) => FullPathText.Text = BuildPreviewPath();
+        FileNameBox.TextChanged   += (_, _) => FullPathText.Text = BuildPreviewPath();
 
         Loaded   += OnLoaded;
         Unloaded += OnUnloaded;
@@ -38,7 +43,6 @@ public sealed partial class LoggingPage : Page
         _durationTimer.Tick += (_, _) => UpdateDuration();
         _durationTimer.Start();
 
-        // Show/hide stream placeholder when collection changes
         ViewModel.DataStream.CollectionChanged += (_, _) => UpdateStreamPlaceholder();
         UpdateStreamPlaceholder();
     }
@@ -63,13 +67,15 @@ public sealed partial class LoggingPage : Page
     private void RefreshUi()
     {
         bool active = Logging.IsLogging;
+        var  fmt    = GetSelectedFormat();
 
         StateText.Text       = active ? "Logging" : "Idle";
         SampleText.Text      = Logging.SampleCount.ToString("N0");
         StartStopBtn.Content = active ? "Stop Logging" : "Start Logging";
 
-        // Lock folder/filename controls while recording
+        // Lock controls while recording
         FileNameBox.IsEnabled = !active;
+        FormatBox.IsEnabled   = !active;
         BrowseBtn.IsEnabled   = !active;
 
         if (active)
@@ -77,7 +83,7 @@ public sealed partial class LoggingPage : Page
             FolderText.Text   = Path.GetDirectoryName(Logging.FilePath) ?? _selectedFolder;
             FileNameBox.Text  = Path.GetFileName(Logging.FilePath) ?? "";
             FullPathText.Text = Logging.FilePath ?? "";
-            HintText.Text     = "Recording in progress. Stop to close the file.";
+            HintText.Text     = "Recording in progress. Stop to close / write the file.";
         }
         else
         {
@@ -102,30 +108,47 @@ public sealed partial class LoggingPage : Page
         }
         else
         {
-            DurationText.Text = Logging.SampleCount > 0 ? Logging.Duration.ToString(@"mm\:ss") : "—";
+            DurationText.Text = Logging.SampleCount > 0
+                ? Logging.Duration.ToString(@"mm\:ss")
+                : "—";
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private LogFormat GetSelectedFormat()
+    {
+        int idx = FormatBox?.SelectedIndex ?? 0;
+        return idx >= 0 && idx < Formats.Length ? Formats[idx] : LogFormat.Csv;
     }
 
     private string BuildPreviewPath()
     {
+        var    fmt  = GetSelectedFormat();
+        var    ext  = LoggingService.ExtensionFor(fmt);
         string name = FileNameBox?.Text.Trim() ?? "";
+
         if (string.IsNullOrEmpty(name))
-            name = LoggingService.GenerateFileName();
-        if (!name.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-            name += ".csv";
+            return Path.Combine(_selectedFolder, LoggingService.GenerateFileName(fmt));
+
+        // Strip any existing extension and apply the selected one
+        name = Path.GetFileNameWithoutExtension(name) + ext;
         return Path.Combine(_selectedFolder, name);
     }
 
     // ── Event handlers ────────────────────────────────────────────────────
 
+    private void FormatBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (FullPathText is null) return;   // fired during InitializeComponent — ignore
+        FullPathText.Text = BuildPreviewPath();
+    }
+
     private async void BrowseFolder_Click(object sender, RoutedEventArgs e)
     {
         var picker = new FolderPicker();
-
-        // Required for unpackaged apps: initialise with window handle
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.CurrentWindow);
+        var hwnd   = WinRT.Interop.WindowNative.GetWindowHandle(App.CurrentWindow);
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
-
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         picker.FileTypeFilter.Add("*");
 
@@ -134,7 +157,7 @@ public sealed partial class LoggingPage : Page
         {
             _selectedFolder   = folder.Path;
             FolderText.Text   = folder.Path;
-            FullPathText.Text  = BuildPreviewPath();
+            FullPathText.Text = BuildPreviewPath();
         }
     }
 
@@ -147,7 +170,7 @@ public sealed partial class LoggingPage : Page
         else
         {
             string path = BuildPreviewPath();
-            Logging.Start(path);
+            Logging.Start(path, GetSelectedFormat());
         }
     }
 

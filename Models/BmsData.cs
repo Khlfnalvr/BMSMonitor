@@ -1,5 +1,8 @@
 namespace BMSMonitor.Models;
 
+public enum LogFormat { Csv, Tsv, Excel, Json }
+
+
 public enum CellState { Normal, Low, Undervoltage, Overvoltage }
 
 public class CellStatus

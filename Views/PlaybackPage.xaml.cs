@@ -59,8 +59,8 @@ public sealed partial class PlaybackPage : Page
             FilePathText.Text    = "No file loaded";
             TotalFramesText.Text = "—";
             DurationText.Text    = "—";
-            LoadStatusText.Text  = "Browse and open a BMS Monitor CSV log file (.csv).";
-            HintText.Text        = "Browse and load a CSV file above, then use the playback bar that appears at the bottom of the window.";
+            LoadStatusText.Text  = "Browse and open a BMS Monitor log file (.csv, .tsv, .xlsx, .json).";
+            HintText.Text        = "Browse and load a log file above, then use the playback bar that appears at the bottom of the window.";
         }
     }
 
@@ -72,7 +72,8 @@ public sealed partial class PlaybackPage : Page
         var hwnd   = WinRT.Interop.WindowNative.GetWindowHandle(App.CurrentWindow);
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
-        picker.FileTypeFilter.Add(".csv");
+        foreach (var ext in PlaybackService.SupportedExtensions)
+            picker.FileTypeFilter.Add(ext);
 
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;

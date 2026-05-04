@@ -80,6 +80,25 @@
                                 VerticalAlignment="Center"/>
                     </Grid>
 
+                    <!-- Format row -->
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Format"
+                                   FontSize="13" VerticalAlignment="Center" Opacity="0.65"/>
+                        <ComboBox x:Name="FormatBox"
+                                  Grid.Column="1"
+                                  HorizontalAlignment="Left" MinWidth="200"
+                                  SelectionChanged="FormatBox_SelectionChanged">
+                            <ComboBoxItem Content="CSV — comma-separated (.csv)"    IsSelected="True"/>
+                            <ComboBoxItem Content="TSV — tab-separated (.tsv)"/>
+                            <ComboBoxItem Content="Excel — workbook (.xlsx)"/>
+                            <ComboBoxItem Content="JSON — array of objects (.json)"/>
+                        </ComboBox>
+                    </Grid>
+
                     <!-- Filename row -->
                     <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
@@ -91,8 +110,7 @@
                         <TextBox x:Name="FileNameBox"
                                  Grid.Column="1"
                                  PlaceholderText="auto-generated if left blank"
-                                 FontSize="12"
-                                 IsEnabled="True"/>
+                                 FontSize="12"/>
                     </Grid>
 
                     <!-- Full path preview -->
@@ -122,16 +140,16 @@
                 </StackPanel>
             </Border>
 
-            <!-- ── CSV FORMAT ───────────────────────────────────────────────── -->
-            <TextBlock Text="CSV COLUMNS" Style="{StaticResource SectionHeaderStyle}"/>
+            <!-- ── DATA FORMAT ──────────────────────────────────────────────── -->
+            <TextBlock Text="DATA FORMAT" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="6">
-                    <TextBlock Text="Each row = one data frame received from the ESP32 (~1 Hz)."
-                               FontSize="12" Opacity="0.65" TextWrapping="Wrap"/>
                     <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
-                               Text="Timestamp · PackVoltage_V · SOC_pct · Current_A · Status · Cell1_V … Cell20_V · Bal1 … Bal20 · Temp1_C … Temp5_C"/>
-                    <TextBlock FontSize="11" Opacity="0.45"
-                               Text="Bal columns: 1 = balancing active, 0 = idle"/>
+                               Text="Each row = one data frame received from the ESP32 (~1 Hz)."/>
+                    <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                               Text="Fields: Timestamp · PackVoltage_V · SOC_pct · Current_A · Status · Cell1_V … Cell20_V · Bal1 … Bal20 · Temp1_C … Temp10_C"/>
+                    <TextBlock FontSize="11" Opacity="0.45" TextWrapping="Wrap"
+                               Text="CSV / TSV: streamed to disk every frame.  Excel / JSON: buffered in memory and written when you press Stop."/>
                 </StackPanel>
             </Border>
 
