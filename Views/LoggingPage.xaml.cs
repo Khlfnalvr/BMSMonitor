@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -21,13 +23,17 @@ public sealed partial class LoggingPage : Page
     private static readonly LogFormat[] Formats =
         [LogFormat.Csv, LogFormat.Tsv, LogFormat.Excel, LogFormat.Json];
 
+    // Column config persists across navigation (static)
+    private static readonly ObservableCollection<LogColumn> _columns =
+        LogColumn.CreateDefaults();
+
     public LoggingPage()
     {
         InitializeComponent();
         FolderText.Text   = _selectedFolder;
         FullPathText.Text = BuildPreviewPath();
 
-        FileNameBox.TextChanged   += (_, _) => FullPathText.Text = BuildPreviewPath();
+        FileNameBox.TextChanged += (_, _) => FullPathText.Text = BuildPreviewPath();
 
         Loaded   += OnLoaded;
         Unloaded += OnUnloaded;
@@ -45,6 +51,9 @@ public sealed partial class LoggingPage : Page
 
         ViewModel.DataStream.CollectionChanged += (_, _) => UpdateStreamPlaceholder();
         UpdateStreamPlaceholder();
+
+        // Bind column list (static collection — already populated)
+        ColumnListView.ItemsSource = _columns;
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
@@ -74,9 +83,18 @@ public sealed partial class LoggingPage : Page
         StartStopBtn.Content = active ? "Stop Logging" : "Start Logging";
 
         // Lock controls while recording
-        FileNameBox.IsEnabled = !active;
-        FormatBox.IsEnabled   = !active;
-        BrowseBtn.IsEnabled   = !active;
+        FileNameBox.IsEnabled  = !active;
+        FormatBox.IsEnabled    = !active;
+        BrowseBtn.IsEnabled    = !active;
+
+        // Lock column config while recording
+        ColumnListView.IsEnabled  = !active;
+        SelectAllBtn.IsEnabled    = !active;
+        DeselectAllBtn.IsEnabled  = !active;
+        ResetColsBtn.IsEnabled    = !active;
+        ToggleCellsBtn.IsEnabled  = !active;
+        ToggleBalBtn.IsEnabled    = !active;
+        ToggleTempBtn.IsEnabled   = !active;
 
         if (active)
         {
@@ -131,9 +149,43 @@ public sealed partial class LoggingPage : Page
         if (string.IsNullOrEmpty(name))
             return Path.Combine(_selectedFolder, LoggingService.GenerateFileName(fmt));
 
-        // Strip any existing extension and apply the selected one
         name = Path.GetFileNameWithoutExtension(name) + ext;
         return Path.Combine(_selectedFolder, name);
+    }
+
+    // ── Column settings handlers ──────────────────────────────────────────
+
+    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var col in _columns) col.IsEnabled = true;
+    }
+
+    private void DeselectAll_Click(object sender, RoutedEventArgs e)
+    {
+        foreach (var col in _columns) col.IsEnabled = false;
+    }
+
+    private void ResetColumns_Click(object sender, RoutedEventArgs e)
+    {
+        var defaults = LogColumn.CreateDefaults();
+        _columns.Clear();
+        foreach (var col in defaults) _columns.Add(col);
+    }
+
+    private void ToggleCells_Click(object sender, RoutedEventArgs e)
+        => ToggleGroup("Cells");
+
+    private void ToggleBal_Click(object sender, RoutedEventArgs e)
+        => ToggleGroup("Balancing");
+
+    private void ToggleTemp_Click(object sender, RoutedEventArgs e)
+        => ToggleGroup("Temperatures");
+
+    private static void ToggleGroup(string group)
+    {
+        var groupCols  = _columns.Where(c => c.Group == group).ToList();
+        bool allEnabled = groupCols.All(c => c.IsEnabled);
+        foreach (var col in groupCols) col.IsEnabled = !allEnabled;
     }
 
     // ── Event handlers ────────────────────────────────────────────────────
@@ -170,7 +222,7 @@ public sealed partial class LoggingPage : Page
         else
         {
             string path = BuildPreviewPath();
-            Logging.Start(path, GetSelectedFormat());
+            Logging.Start(path, GetSelectedFormat(), _columns);
         }
     }
 

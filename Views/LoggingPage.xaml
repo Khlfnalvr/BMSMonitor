@@ -120,6 +120,93 @@
                 </StackPanel>
             </Border>
 
+            <!-- ── COLUMN SETTINGS ─────────────────────────────────────────── -->
+            <TextBlock Text="COLUMN SETTINGS" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+                               Text="Pilih kolom yang ingin di-log dan atur urutannya dengan drag ≡. Dikunci saat logging aktif."/>
+
+                    <!-- Quick-select buttons -->
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="SelectAllBtn"   Content="Pilih Semua"   Click="SelectAll_Click"    FontSize="12" Padding="10,5"/>
+                        <Button x:Name="DeselectAllBtn" Content="Hapus Semua"   Click="DeselectAll_Click"  FontSize="12" Padding="10,5"/>
+                        <Button x:Name="ResetColsBtn"   Content="Reset Default" Click="ResetColumns_Click" FontSize="12" Padding="10,5"/>
+                    </StackPanel>
+
+                    <!-- Group toggles -->
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="Grup:" FontSize="12" Opacity="0.55" VerticalAlignment="Center"/>
+                        <Button x:Name="ToggleCellsBtn" Content="Cell Voltages" Click="ToggleCells_Click" FontSize="11" Padding="8,4"/>
+                        <Button x:Name="ToggleBalBtn"   Content="Balancing"     Click="ToggleBal_Click"   FontSize="11" Padding="8,4"/>
+                        <Button x:Name="ToggleTempBtn"  Content="Temperatures"  Click="ToggleTemp_Click"  FontSize="11" Padding="8,4"/>
+                    </StackPanel>
+
+                    <!-- Draggable / reorderable column list -->
+                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="6">
+                        <ListView x:Name="ColumnListView"
+                                  MaxHeight="300"
+                                  CanReorderItems="True"
+                                  CanDragItems="True"
+                                  AllowDrop="True"
+                                  SelectionMode="Single">
+                            <ListView.Resources>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundSelected"            Color="Transparent"/>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed"     Color="{ThemeResource SubtleFillColorTertiaryBrush}"/>
+                            </ListView.Resources>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Padding"                    Value="0"/>
+                                    <Setter Property="MinHeight"                  Value="0"/>
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:LogColumn">
+                                    <Grid Padding="10,5" ColumnSpacing="10" Background="Transparent">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="32"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Drag handle -->
+                                        <TextBlock Grid.Column="0"
+                                                   Text="&#xE784;" FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="11" Opacity="0.3"
+                                                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                                        <!-- Column label -->
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{x:Bind Label}"
+                                                   FontSize="12.5" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+
+                                        <!-- Group badge -->
+                                        <Border Grid.Column="2"
+                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                CornerRadius="4" Padding="6,2">
+                                            <TextBlock Text="{x:Bind Group}"
+                                                       FontSize="10" Opacity="0.55"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Enable checkbox -->
+                                        <CheckBox Grid.Column="3"
+                                                  IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"
+                                                  MinWidth="0" Padding="0" Margin="0"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Border>
+                </StackPanel>
+            </Border>
+
             <!-- ── CONTROLS ────────────────────────────────────────────────── -->
             <TextBlock Text="CONTROLS" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">

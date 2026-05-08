@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using BMSMonitor.Models;
@@ -10,11 +11,12 @@ namespace BMSMonitor.Services;
 public class LoggingService
 {
     // ── Private state ────────────────────────────────────────────────────
-    private StreamWriter?   _writer;       // CSV / TSV — streaming
-    private List<LogEntry>? _buffer;       // Excel / JSON — buffered until Stop()
+    private StreamWriter?   _writer;          // CSV / TSV — streaming
+    private List<LogEntry>? _buffer;          // Excel / JSON — buffered until Stop()
     private DateTime        _startTime;
     private DateTime        _endTime;
     private LogFormat       _format;
+    private LogColumn[]     _activeColumns = []; // snapshot at Start()
 
     // Lightweight record that pairs a timestamp with each incoming frame
     private readonly record struct LogEntry(DateTime Timestamp, BmsData Data);
@@ -51,21 +53,29 @@ public class LoggingService
         $"BMS_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}{ExtensionFor(fmt)}";
 
     // ── Session control ───────────────────────────────────────────────────
-    public void Start(string filePath, LogFormat format = LogFormat.Csv)
+
+    /// <param name="columns">
+    /// Ordered list of columns to log. Only enabled columns are written.
+    /// Pass LogColumn.CreateDefaults() for the standard 55-column layout.
+    /// </param>
+    public void Start(string filePath, LogFormat format, IEnumerable<LogColumn> columns)
     {
         if (IsLogging) return;
         Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
 
-        _format     = format;
-        FilePath    = filePath;
-        _startTime  = DateTime.Now;
-        _endTime    = default;
-        SampleCount = 0;
+        // Snapshot enabled columns in the caller's order
+        _activeColumns = columns.Where(c => c.IsEnabled).ToArray();
+        _format        = format;
+        FilePath       = filePath;
+        _startTime     = DateTime.Now;
+        _endTime       = default;
+        SampleCount    = 0;
 
         if (format is LogFormat.Csv or LogFormat.Tsv)
         {
             _writer = new StreamWriter(filePath, append: false, Encoding.UTF8);
-            WriteTextHeader(format == LogFormat.Tsv ? '\t' : ',');
+            char sep = format == LogFormat.Tsv ? '\t' : ',';
+            _writer.WriteLine(string.Join(sep, _activeColumns.Select(c => c.Key)));
         }
         else
         {
@@ -77,8 +87,7 @@ public class LoggingService
     }
 
     /// <summary>
-    /// Stops the session. For Excel/JSON this finalises and writes the file —
-    /// may take a moment for very large sessions.
+    /// Stops the session. For Excel / JSON this finalises and writes the file.
     /// </summary>
     public void Stop()
     {
@@ -113,9 +122,8 @@ public class LoggingService
         if (_format is LogFormat.Csv or LogFormat.Tsv)
         {
             char sep = _format == LogFormat.Tsv ? '\t' : ',';
-            var  sb  = new StringBuilder();
-            AppendRow(sb, sep, DateTime.Now, data);
-            _writer!.WriteLine(sb.ToString());
+            var  ts  = DateTime.Now;
+            _writer!.WriteLine(string.Join(sep, _activeColumns.Select(c => c.GetString(ts, data))));
         }
         else
         {
@@ -126,27 +134,6 @@ public class LoggingService
         StateChanged?.Invoke();
     }
 
-    // ── Internal: text (CSV / TSV) ────────────────────────────────────────
-    private void WriteTextHeader(char sep)
-    {
-        var sb = new StringBuilder();
-        sb.Append("Timestamp");
-        sb.Append($"{sep}PackVoltage_V{sep}SOC_pct{sep}Current_A{sep}Status");
-        for (int i = 1; i <= 20; i++) sb.Append($"{sep}Cell{i}_V");
-        for (int i = 1; i <= 20; i++) sb.Append($"{sep}Bal{i}");
-        for (int i = 1; i <= 10; i++) sb.Append($"{sep}Temp{i}_C");
-        _writer!.WriteLine(sb.ToString());
-    }
-
-    private static void AppendRow(StringBuilder sb, char sep, DateTime ts, BmsData d)
-    {
-        sb.Append(ts.ToString("yyyy-MM-dd HH:mm:ss.fff"));
-        sb.Append($"{sep}{d.PackVoltage:F3}{sep}{d.Soc:F2}{sep}{d.Current:F3}{sep}{d.Status}");
-        for (int i = 0; i < 20; i++) sb.Append($"{sep}{d.Cells[i]:F4}");
-        for (int i = 0; i < 20; i++) sb.Append($"{sep}{(d.Balancing[i] ? 1 : 0)}");
-        for (int i = 0; i < 10; i++) sb.Append($"{sep}{d.Temps[i]:F2}");
-    }
-
     // ── Internal: Excel ───────────────────────────────────────────────────
     private void WriteExcel()
     {
@@ -154,17 +141,9 @@ public class LoggingService
 
         foreach (var (ts, d) in _buffer!)
         {
-            var row = new Dictionary<string, object>
-            {
-                ["Timestamp"]     = ts.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-                ["PackVoltage_V"] = d.PackVoltage,
-                ["SOC_pct"]       = d.Soc,
-                ["Current_A"]     = d.Current,
-                ["Status"]        = d.Status
-            };
-            for (int i = 1; i <= 20; i++) row[$"Cell{i}_V"] = d.Cells[i - 1];
-            for (int i = 1; i <= 20; i++) row[$"Bal{i}"]    = d.Balancing[i - 1] ? 1 : 0;
-            for (int i = 1; i <= 10; i++) row[$"Temp{i}_C"] = d.Temps[i - 1];
+            var row = new Dictionary<string, object>();
+            foreach (var col in _activeColumns)
+                row[col.Key] = col.GetObject(ts, d);
             rows.Add(row);
         }
 
@@ -175,19 +154,15 @@ public class LoggingService
     private void WriteJson()
     {
         var opts = new JsonSerializerOptions { WriteIndented = true };
-        // Project each buffered entry to an anonymous object matching the schema
-        var rows = System.Linq.Enumerable.Select(_buffer!, e => new
+
+        var rows = _buffer!.Select(e =>
         {
-            timestamp   = e.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"),
-            packVoltage = e.Data.PackVoltage,
-            soc         = e.Data.Soc,
-            current     = e.Data.Current,
-            status      = e.Data.Status,
-            cells       = e.Data.Cells,
-            balancing   = e.Data.Balancing,
-            temps       = e.Data.Temps
-        });
-        var json = JsonSerializer.Serialize(rows, opts);
-        File.WriteAllText(FilePath!, json, Encoding.UTF8);
+            var dict = new Dictionary<string, object>();
+            foreach (var col in _activeColumns)
+                dict[col.Key] = col.GetObject(e.Timestamp, e.Data);
+            return dict;
+        }).ToList();
+
+        File.WriteAllText(FilePath!, JsonSerializer.Serialize(rows, opts), Encoding.UTF8);
     }
 }

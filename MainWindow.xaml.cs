@@ -176,7 +176,8 @@ public sealed partial class MainWindow : Window
 
             PbFileText.Text    = pb.FileName;
             PbFrameText.Text   = $"{pb.CurrentFrame + 1} / {pb.TotalFrames}  ·  {pb.CurrentTimestamp}";
-            PbPlayPauseBtn.Content = pb.IsPlaying ? "⏸" : "▶";
+            // E769 = Play, E103 = Pause  (Segoe MDL2 Assets)
+            PbPlayPauseIcon.Glyph = pb.IsPlaying ? "" : "";
 
             _pbSeeking = true;
             PbSlider.Maximum = Math.Max(1, pb.TotalFrames - 1);

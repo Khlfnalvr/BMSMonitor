@@ -93,16 +93,23 @@
                 <!-- Transport buttons -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="2"
                             VerticalAlignment="Center">
-                    <Button x:Name="PbFirstBtn" Content="⏮" FontSize="13" Padding="6,4"
+                    <Button x:Name="PbFirstBtn" Padding="8,6"
                             ToolTipService.ToolTip="First frame"
-                            Click="PbFirst_Click"/>
-                    <Button x:Name="PbPlayPauseBtn" Content="▶" FontSize="13" Padding="8,4"
+                            Click="PbFirst_Click">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE892;" FontSize="14"/>
+                    </Button>
+                    <Button x:Name="PbPlayPauseBtn" Padding="10,6"
                             Style="{ThemeResource AccentButtonStyle}"
                             ToolTipService.ToolTip="Play / Pause"
-                            Click="PbPlayPause_Click"/>
-                    <Button x:Name="PbLastBtn" Content="⏭" FontSize="13" Padding="6,4"
+                            Click="PbPlayPause_Click">
+                        <FontIcon x:Name="PbPlayPauseIcon"
+                                  FontFamily="Segoe MDL2 Assets" Glyph="&#xE768;" FontSize="14"/>
+                    </Button>
+                    <Button x:Name="PbLastBtn" Padding="8,6"
                             ToolTipService.ToolTip="Last frame"
-                            Click="PbLast_Click"/>
+                            Click="PbLast_Click">
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE893;" FontSize="14"/>
+                    </Button>
                 </StackPanel>
 
                 <!-- Scrub area: file name + frame counter + slider -->
@@ -123,10 +130,12 @@
                 </StackPanel>
 
                 <!-- Unload (close) button -->
-                <Button Grid.Column="2" Content="✕" FontSize="11" Padding="7,4"
+                <Button Grid.Column="2" Padding="8,6"
                         VerticalAlignment="Center"
                         ToolTipService.ToolTip="Unload file and return to live mode"
-                        Click="PbClose_Click"/>
+                        Click="PbClose_Click">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8BB;" FontSize="12"/>
+                </Button>
             </Grid>
         </Border>
 
