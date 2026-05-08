@@ -1,0 +1,95 @@
+<Window
+    x:Class="SOCTester.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SOCTester"
+    Title="SOC Tester">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <NavigationView
+            x:Name="NavView"
+            Grid.Row="0"
+            PaneDisplayMode="Top"
+            IsBackButtonVisible="Collapsed"
+            IsSettingsVisible="False"
+            SelectionChanged="NavView_SelectionChanged"
+            Loaded="NavView_Loaded">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="Dashboard"     Tag="Dashboard"/>
+                <NavigationViewItem Content="Control Panel" Tag="ControlPanel"/>
+                <NavigationViewItem Content="Logging"       Tag="Logging"/>
+            </NavigationView.MenuItems>
+
+            <Frame x:Name="ContentFrame" Padding="0"/>
+        </NavigationView>
+
+        <!-- Drag region (caption-button row only) -->
+        <Border x:Name="AppTitleBar"
+                Grid.Row="0"
+                Height="32"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Stretch"
+                Background="Transparent"
+                IsHitTestVisible="False"/>
+
+        <!-- Theme toggle floated at top-right, code-behind shrinks AppTitleBar to exclude its area -->
+        <Border x:Name="ThemeToggleArea"
+                Grid.Row="0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Top"
+                Height="32"
+                Padding="0,0,10,0">
+            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <TextBlock Text="DARK"
+                           FontSize="10" FontWeight="SemiBold"
+                           CharacterSpacing="100" Opacity="0.5"
+                           VerticalAlignment="Center"/>
+                <ToggleSwitch x:Name="ThemeSwitch"
+                              OnContent="" OffContent=""
+                              ToolTipService.ToolTip="Dark / Light"
+                              Toggled="ThemeSwitch_Toggled"
+                              MinWidth="0"
+                              VerticalAlignment="Center"
+                              Margin="0,-4,0,-4"/>
+                <TextBlock Text="LIGHT"
+                           FontSize="10" FontWeight="SemiBold"
+                           CharacterSpacing="100" Opacity="0.5"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Status bar -->
+        <Border Grid.Row="1"
+                Padding="16,5"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{x:Bind ViewModel.DataSourceText, Mode=OneWay}"
+                           FontSize="11" FontWeight="SemiBold"
+                           Opacity="0.55" CharacterSpacing="80"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"/>
+                <TextBlock Grid.Column="1"
+                           Text="{x:Bind ViewModel.ConnectionStatus, Mode=OneWay}"
+                           FontSize="12" Opacity="0.65"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2" x:Name="ClockText"
+                           FontSize="12" Opacity="0.45"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

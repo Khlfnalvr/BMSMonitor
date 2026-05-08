@@ -1,0 +1,318 @@
+<Page
+    x:Class="BMSMonitor.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:BMSMonitor.ViewModels"
+    xmlns:conv="using:BMSMonitor.Converters"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Page.Resources>
+        <conv:StatusToForegroundConverter  x:Key="StatusToFgConverter"/>
+        <conv:TempToForegroundConverter    x:Key="TempToFgConverter"/>
+        <conv:BoolToVisibilityConverter    x:Key="BoolToVisConverter"/>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="20,16,20,24" Spacing="8">
+
+            <!-- ── PACK OVERVIEW ─────────────────────────────────────── -->
+            <TextBlock Text="PACK OVERVIEW" Style="{StaticResource SectionHeaderStyle}"/>
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Pack Voltage -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="0">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="PACK VOLTAGE" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.PackVoltageText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <TextBlock Text="72V nominal" FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- SOC -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="1">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="STATE OF CHARGE" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.SocText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <ProgressBar Value="{x:Bind ViewModel.Soc, Mode=OneWay}"
+                                     Maximum="100" Height="4" CornerRadius="2"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Remaining Capacity -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="2">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="REMAINING" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.RemainingCapacityText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <TextBlock Text="based on SOC × capacity" FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Current -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="3">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="CURRENT" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.CurrentText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <TextBlock Text="+ = charging  − = discharging" FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Status -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="4">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="STATUS" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.PackStatus, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"
+                                   Foreground="{x:Bind ViewModel.PackStatus, Converter={StaticResource StatusToFgConverter}, Mode=OneWay}"/>
+                        <TextBlock Text="20S4P NMC" FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ── SOC HISTORY CHART ─────────────────────────────────── -->
+            <TextBlock Text="SOC HISTORY" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="28"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Y-axis labels -->
+                        <Grid Grid.Column="0" Height="130">
+                            <TextBlock Text="100" FontSize="9" Opacity="0.45"
+                                       VerticalAlignment="Top" HorizontalAlignment="Right"/>
+                            <TextBlock Text="50" FontSize="9" Opacity="0.45"
+                                       VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                            <TextBlock Text="0" FontSize="9" Opacity="0.45"
+                                       VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <!-- Chart canvas -->
+                        <Canvas x:Name="SocChartCanvas" Grid.Column="1" Height="130"
+                                SizeChanged="SocChartCanvas_SizeChanged">
+                            <Line x:Name="GridLine75" StrokeThickness="1" StrokeDashArray="4,3"/>
+                            <Line x:Name="GridLine50" StrokeThickness="1" StrokeDashArray="4,3"/>
+                            <Line x:Name="GridLine25" StrokeThickness="1" StrokeDashArray="4,3"/>
+                            <Polygon  x:Name="SocFill"   Opacity="0.15"/>
+                            <Polyline x:Name="SocLine"   StrokeThickness="2"
+                                      StrokeLineJoin="Round" Fill="Transparent"/>
+                        </Canvas>
+                    </Grid>
+
+                    <!-- X-axis legend -->
+                    <Grid Margin="36,0,0,0">
+                        <TextBlock Text="← 2 min ago" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock Text="now" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ── V/I HISTORY CHART ─────────────────────────────────── -->
+            <TextBlock Text="VOLTAGE / CURRENT HISTORY" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="4">
+
+                    <!-- 3-column layout: V-axis | canvas | I-axis -->
+                    <Grid ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="40"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Voltage Y-axis labels (left, right-aligned) -->
+                        <Canvas x:Name="VAxisCanvas" Grid.Column="0" Height="180">
+                            <TextBlock x:Name="VLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="0"/>
+                            <TextBlock x:Name="VLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="39"/>
+                            <TextBlock x:Name="VLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="84"/>
+                            <TextBlock x:Name="VLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="129"/>
+                            <TextBlock x:Name="VLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="168"/>
+                        </Canvas>
+
+                        <!-- Chart canvas -->
+                        <Canvas x:Name="VIChartCanvas" Grid.Column="1" Height="180"
+                                SizeChanged="VIChartCanvas_SizeChanged">
+                            <!-- Horizontal dashed grid lines -->
+                            <Line x:Name="VIGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="VIGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="VIGridH3" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <!-- Series: voltage (solid) and current (dashed) -->
+                            <Polyline x:Name="VoltageLine" StrokeThickness="2"
+                                      StrokeLineJoin="Round" Fill="Transparent"/>
+                            <Polyline x:Name="CurrentLine" StrokeThickness="2"
+                                      StrokeLineJoin="Round" Fill="Transparent"
+                                      StrokeDashArray="5,2"/>
+                        </Canvas>
+
+                        <!-- Current Y-axis labels (right, left-aligned) -->
+                        <Canvas x:Name="IAxisCanvas" Grid.Column="2" Height="180">
+                            <TextBlock x:Name="ILabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="0"/>
+                            <TextBlock x:Name="ILabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="39"/>
+                            <TextBlock x:Name="ILabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="84"/>
+                            <TextBlock x:Name="ILabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="129"/>
+                            <TextBlock x:Name="ILabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="168"/>
+                        </Canvas>
+                    </Grid>
+
+                    <!-- Legend -->
+                    <StackPanel Orientation="Horizontal" Spacing="16"
+                                HorizontalAlignment="Center" Margin="0,4,0,0">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Rectangle x:Name="VLegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                            <TextBlock Text="Voltage (V)" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <Rectangle x:Name="ILegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                            <TextBlock Text="Current (A)" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- X-axis labels -->
+                    <Grid Margin="44,0,44,0">
+                        <TextBlock Text="← 2 min ago" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock Text="now →" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ── VOLTAGE SUMMARY ────────────────────────────────────── -->
+            <TextBlock Text="CELL VOLTAGE SUMMARY" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="MIN" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.MinCellText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="MAX" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.MaxCellText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="3" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="AVG" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.AvgCellText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="5" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="6" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="DELTA" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ── TEMPERATURE & BALANCING ───────────────────────────── -->
+            <Grid ColumnSpacing="10" Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Temperature Sensors -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="0">
+                    <StackPanel Spacing="0">
+                        <TextBlock Text="TEMPERATURE SENSORS" Style="{StaticResource CardLabelStyle}"
+                                   Margin="0,0,0,10"/>
+                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.Temperatures, Mode=OneWay}">
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TempViewModel">
+                                    <Grid Margin="0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="56"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{x:Bind Label}" FontSize="13" Opacity="0.65"
+                                                   VerticalAlignment="Center"/>
+                                        <ProgressBar Grid.Column="1"
+                                                     Value="{x:Bind TempRaw, Mode=OneWay}"
+                                                     Minimum="0" Maximum="80"
+                                                     Height="6" CornerRadius="3"
+                                                     VerticalAlignment="Center"
+                                                     Margin="0,0,12,0"/>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{x:Bind TempText, Mode=OneWay}"
+                                                   FontSize="13" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" Width="70"
+                                                   TextAlignment="Right"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </StackPanel>
+                </Border>
+
+                <!-- Balancing Status -->
+                <Border Style="{StaticResource CardStyle}" Grid.Column="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="BALANCING STATUS" Style="{StaticResource CardLabelStyle}"/>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Active Cells" FontSize="12" Opacity="0.6"/>
+                            <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
+                                       FontSize="20" FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Cell Delta" FontSize="12" Opacity="0.6"/>
+                            <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                       FontSize="20" FontWeight="SemiBold"/>
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Method" FontSize="12" Opacity="0.6"/>
+                            <TextBlock Text="Active (LTC8584)" FontSize="14"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

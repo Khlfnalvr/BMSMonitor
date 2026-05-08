@@ -1,0 +1,34 @@
+# Claude Code workspace files
+.claude/
+
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+**/Publish/
+# Dotnet publish output (relative path quirk)
+BMSMonitor/..publish/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# NuGet
+*.nupkg
+packages/
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Installer output (keep .iss script, exclude generated .exe)
+Publish/BMSMonitorSetup.exe
+
+# Logs / test data (optional — remove lines below to track them)
+*.log
+BMS_Simulation_*.csv

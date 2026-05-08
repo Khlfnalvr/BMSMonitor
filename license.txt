@@ -1,0 +1,118 @@
+BMS MONITOR — SOFTWARE LICENSE AGREEMENT
+ICO Laboratory (Instrumentation, Control & Optimization Laboratory)
+=========================================================================
+
+PLEASE READ THIS LICENSE AGREEMENT CAREFULLY BEFORE INSTALLING OR USING
+THIS SOFTWARE. BY CLICKING "I ACCEPT THE AGREEMENT" AND PROCEEDING WITH
+THE INSTALLATION, YOU AGREE TO BE BOUND BY THE TERMS OF THIS AGREEMENT.
+
+-------------------------------------------------------------------------
+1. PURPOSE AND SCOPE
+-------------------------------------------------------------------------
+BMS Monitor ("the Software") is developed by ICO Laboratory solely for
+academic research and educational purposes related to Battery Management
+System (BMS) monitoring, State-of-Charge (SOC) estimation, and battery
+characterization testing.
+
+-------------------------------------------------------------------------
+2. GRANT OF LICENSE
+-------------------------------------------------------------------------
+ICO Laboratory grants you a non-exclusive, non-transferable, royalty-free
+license to install and use the Software strictly for internal research and
+educational activities within your institution or laboratory.
+
+-------------------------------------------------------------------------
+3. RESTRICTIONS
+-------------------------------------------------------------------------
+You may NOT:
+  a) Use the Software for any commercial purpose or revenue-generating
+     activity without prior written consent from ICO Laboratory.
+  b) Redistribute, sublicense, sell, or transfer the Software or any
+     modified version to any third party.
+  c) Reverse engineer, decompile, or disassemble the Software beyond what
+     is permitted by applicable law.
+  d) Remove or alter any proprietary notices, labels, or marks on the
+     Software.
+  e) Use the Software in any safety-critical application where failure
+     could result in personal injury, property damage, or environmental
+     harm.
+
+-------------------------------------------------------------------------
+4. RESEARCH USE AND DATA
+-------------------------------------------------------------------------
+The Software is provided as a tool to assist battery testing and research.
+All measurement data, CSV logs, and derived results generated using the
+Software remain the intellectual property of the researcher or institution
+conducting the experiment. ICO Laboratory makes no claim over research data
+produced with this Software.
+
+-------------------------------------------------------------------------
+5. DISCLAIMER OF WARRANTIES
+-------------------------------------------------------------------------
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+ICO Laboratory does not warrant that:
+  - The Software will meet your specific research requirements.
+  - Measurement results are legally certified or traceable to national
+    standards (NIST, BSN, or equivalent).
+  - The Software will operate without interruption or error.
+
+The user is solely responsible for verifying the accuracy and suitability
+of all measurement data for their intended research application.
+
+-------------------------------------------------------------------------
+6. LIMITATION OF LIABILITY
+-------------------------------------------------------------------------
+IN NO EVENT SHALL ICO LABORATORY BE LIABLE FOR ANY INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING BUT NOT LIMITED TO
+LOSS OF DATA, RESEARCH INTERRUPTION, OR EQUIPMENT DAMAGE) ARISING FROM
+THE USE OR INABILITY TO USE THE SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES.
+
+-------------------------------------------------------------------------
+7. HARDWARE SAFETY
+-------------------------------------------------------------------------
+This Software interfaces with external hardware (ESP32 microcontroller,
+current sensors, battery cells). The user assumes full responsibility for:
+  - Safe wiring and hardware connections.
+  - Operating batteries within manufacturer-specified voltage, current,
+    and temperature limits.
+  - Complying with all applicable laboratory safety regulations.
+
+ICO Laboratory shall not be held liable for any damage to equipment,
+batteries, or personal injury resulting from hardware misuse.
+
+-------------------------------------------------------------------------
+8. ATTRIBUTION
+-------------------------------------------------------------------------
+Publications, theses, reports, or other academic works that make use of
+data collected with this Software are encouraged (but not required) to
+acknowledge ICO Laboratory and this tool.
+
+-------------------------------------------------------------------------
+9. TERMINATION
+-------------------------------------------------------------------------
+This license is effective until terminated. Your rights under this license
+will terminate automatically if you fail to comply with any of its terms.
+Upon termination, you must destroy all copies of the Software in your
+possession.
+
+-------------------------------------------------------------------------
+10. GOVERNING LAW
+-------------------------------------------------------------------------
+This Agreement shall be governed by the laws of the Republic of Indonesia.
+Any disputes arising from this Agreement shall be resolved in accordance
+with Indonesian law.
+
+-------------------------------------------------------------------------
+11. CONTACT
+-------------------------------------------------------------------------
+ICO Laboratory
+For inquiries regarding this license, please contact the laboratory
+administrator or supervisor responsible for this research project.
+
+=========================================================================
+Copyright (C) 2026 ICO Laboratory. All rights reserved.
+=========================================================================

@@ -1,0 +1,184 @@
+<Page
+    x:Class="SOCTester.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="20,16,20,24" Spacing="8">
+
+            <!-- ── HERO: SOC + voltage + current ─────────────────────── -->
+            <TextBlock Text="STATE OF CHARGE" Style="{StaticResource SectionHeaderStyle}"/>
+            <Grid ColumnSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- SOC big card -->
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="SOC (FINAL ESTIMATE)" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.SocFinalText, Mode=OneWay}"
+                                   FontSize="56" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                        <ProgressBar Value="{x:Bind ViewModel.SocFinal, Mode=OneWay}"
+                                     Maximum="100" Height="6" CornerRadius="3"
+                                     Margin="0,2,0,0"/>
+                        <TextBlock FontSize="11" Opacity="0.5"
+                                   Text="Algorithm chosen in Control Panel"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Pack voltage -->
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="PACK VOLTAGE" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.VoltageText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <TextBlock Text="from device" FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Current -->
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="CURRENT" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind ViewModel.CurrentText, Mode=OneWay}"
+                                   Style="{StaticResource CardValueStyle}"/>
+                        <TextBlock Text="+ = charging  − = discharging"
+                                   FontSize="11" Opacity="0.45"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ── SOC HISTORY CHART ─────────────────────────────────── -->
+            <TextBlock Text="SOC HISTORY (4 MIN)" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="6">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="32"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Grid.Column="0" Height="180">
+                            <TextBlock Text="100" FontSize="9" Opacity="0.45"
+                                       VerticalAlignment="Top"    HorizontalAlignment="Right"/>
+                            <TextBlock Text="50"  FontSize="9" Opacity="0.45"
+                                       VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                            <TextBlock Text="0"   FontSize="9" Opacity="0.45"
+                                       VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
+                        </Grid>
+
+                        <Canvas x:Name="SocChartCanvas" Grid.Column="1" Height="180"
+                                SizeChanged="SocChartCanvas_SizeChanged">
+                            <Line x:Name="GridLine25" StrokeThickness="1" StrokeDashArray="4,3"/>
+                            <Line x:Name="GridLine50" StrokeThickness="1" StrokeDashArray="4,3"/>
+                            <Line x:Name="GridLine75" StrokeThickness="1" StrokeDashArray="4,3"/>
+                            <Polygon  x:Name="SocFill" Opacity="0.15"/>
+                            <Polyline x:Name="SocLine" StrokeThickness="2"
+                                      StrokeLineJoin="Round" Fill="Transparent"/>
+                        </Canvas>
+                    </Grid>
+
+                    <Grid Margin="40,0,0,0">
+                        <TextBlock Text="← 4 min ago" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock Text="now" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- ── ALGORITHM COMPARISON ──────────────────────────────── -->
+            <TextBlock Text="ESTIMATION METHODS" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="DEVICE REPORTED" Style="{StaticResource CardLabelStyle}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.SocText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Width="1"
+                            Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="VOLTAGE-BASED" Style="{StaticResource CardLabelStyle}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.SocVoltageText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="3" Width="1"
+                            Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="COULOMB COUNTING" Style="{StaticResource CardLabelStyle}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.SocCoulombText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ── CUMULATIVE / POWER ────────────────────────────────── -->
+            <TextBlock Text="CUMULATIVE" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="POWER" Style="{StaticResource CardLabelStyle}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.PowerText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="1" Width="1"
+                            Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="COULOMB COUNT" Style="{StaticResource CardLabelStyle}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.CoulombCountText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="3" Width="1"
+                            Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="ENERGY" Style="{StaticResource CardLabelStyle}"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.EnergyText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
