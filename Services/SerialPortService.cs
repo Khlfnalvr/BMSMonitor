@@ -31,6 +31,51 @@ public class SerialPortService : IDisposable
         catch { return Array.Empty<string>(); }
     }
 
+    /// <summary>
+    /// Opens <paramref name="portName"/> briefly and listens for up to
+    /// <paramref name="timeoutMs"/> milliseconds. Returns <c>true</c> only if at
+    /// least one valid BMS JSON frame (protocol v = 1) is received, confirming
+    /// this is an ESP32 BMS device. The port is always closed before returning.
+    /// </summary>
+    public static bool Probe(string portName, int baudRate, int timeoutMs = 3500)
+    {
+        SerialPort? probe = null;
+        try
+        {
+            probe = new SerialPort(portName, baudRate, Parity.None, 8, StopBits.One)
+            {
+                ReadTimeout  = 1200,      // wait up to 1.2 s per ReadLine attempt
+                NewLine      = "\n",
+                Encoding     = Encoding.UTF8,
+                DtrEnable    = true,
+                RtsEnable    = true
+            };
+            probe.Open();
+
+            var deadline = DateTime.Now.AddMilliseconds(timeoutMs);
+            while (DateTime.Now < deadline)
+            {
+                string? line = null;
+                try   { line = probe.ReadLine(); }
+                catch (TimeoutException) { continue; }
+                catch { break; }            // port gone or fatal error
+
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                line = line.Trim();
+                if (line.Length == 0 || line[0] != '{') continue;
+
+                if (TryParseFrame(line) is not null)
+                    return true;            // ✓ valid BMS frame received
+            }
+            return false;
+        }
+        catch { return false; }
+        finally
+        {
+            try { probe?.Close(); probe?.Dispose(); } catch { }
+        }
+    }
+
     public bool Connect(string portName, int baudRate = 115200)
     {
         if (IsConnected) Disconnect();

@@ -27,11 +27,16 @@ public sealed partial class ControlPanelPage : Page
         });
         ViewModel.Serial.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
         {
+            // Suppress "Failed to open COMx" errors while auto-connect is scanning —
+            // those are expected when probing non-BMS ports.
+            if (!ViewModel.AutoConnect.IsSuspended) return;
             FeedbackBar.Title    = "Serial error";
             FeedbackBar.Message  = msg;
             FeedbackBar.Severity = InfoBarSeverity.Error;
             FeedbackBar.IsOpen   = true;
         });
+        ViewModel.AutoConnect.Notification += msg => DispatcherQueue.TryEnqueue(() =>
+            AutoConnectStatusText.Text = msg);
     }
 
     private void SyncConnectButton()
@@ -67,10 +72,20 @@ public sealed partial class ControlPanelPage : Page
 
     private void RefreshPorts_Click(object sender, RoutedEventArgs e) => RefreshPorts();
 
+    private int GetSelectedBaud()
+    {
+        if (ComboBaud.SelectedItem is ComboBoxItem item &&
+            item.Content is string s && int.TryParse(s, out var b))
+            return b;
+        return 115200;
+    }
+
     private void ConnectBtn_Click(object sender, RoutedEventArgs e)
     {
         if (ViewModel.Serial.IsConnected)
         {
+            // Manual disconnect → suspend auto-connect so we don't immediately reconnect
+            ViewModel.AutoConnect.SuspendReconnect();
             ViewModel.Serial.Disconnect();
             return;
         }
@@ -84,12 +99,10 @@ public sealed partial class ControlPanelPage : Page
             return;
         }
 
-        int baud = 115200;
-        if (ComboBaud.SelectedItem is ComboBoxItem item &&
-            item.Content is string s && int.TryParse(s, out var b))
-            baud = b;
-
-        ViewModel.Serial.Connect(port, baud);
+        // Manual connect → resume auto-connect (so future unplug will auto-reconnect)
+        ViewModel.AutoConnect.BaudRate = GetSelectedBaud();
+        ViewModel.AutoConnect.ResumeReconnect();
+        ViewModel.Serial.Connect(port, GetSelectedBaud());
     }
 
     // ── Settings ─────────────────────────────────────────────────────

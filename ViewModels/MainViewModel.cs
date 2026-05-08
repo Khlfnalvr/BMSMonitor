@@ -12,8 +12,9 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly DispatcherQueue _dispatcherQueue;
 
-    public SerialPortService Serial  { get; } = new();
-    public LoggingService    Logging { get; } = new();
+    public SerialPortService  Serial      { get; } = new();
+    public LoggingService     Logging     { get; } = new();
+    public AutoConnectService AutoConnect { get; }
 
     // --- Pack level ---
     [ObservableProperty][NotifyPropertyChangedFor(nameof(PackVoltageText))] private double _packVoltage;
@@ -75,6 +76,8 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
+        AutoConnect      = new AutoConnectService(Serial);
+        AutoConnect.Start();                               // always-on, begins scanning immediately
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
