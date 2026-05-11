@@ -28,6 +28,13 @@ public sealed partial class DashboardPage : Page
     private TextBlock[] _socTicks = [];
     private TextBlock[] _viTicks  = [];
 
+    // ── Chart layout defaults ──────────────────────────────────────────────
+    // 4:3 / 600×450 ≈ Origin Pro page (16.5 × 12 cm) — standard research figure.
+    private const double DefaultAspect = 4.0 / 3.0;
+    private const double DefaultWidth  = 600;
+    private const double DefaultHeight = 450;
+    private bool _applyingLayout;   // re-entrancy guard for slider events
+
     public DashboardPage()
     {
         InitializeComponent();
@@ -35,9 +42,84 @@ public sealed partial class DashboardPage : Page
         ApplyChartColors();
         PopulateTimeframeCombo();
         UpdateXAxisLabels();
+        ApplyChartLayout();   // apply default dimensions on first load
 
         Loaded   += (_, _) => ViewModel.HistoryUpdated += OnHistoryUpdated;
         Unloaded += (_, _) => ViewModel.HistoryUpdated -= OnHistoryUpdated;
+    }
+
+    // ── Chart layout (size & aspect ratio) ────────────────────────────────
+
+    private double GetSelectedAspect()
+    {
+        if (AspectCombo?.SelectedItem is ComboBoxItem item && item.Tag is string tag &&
+            double.TryParse(tag, NumberStyles.Any, CultureInfo.InvariantCulture, out double a))
+            return a;
+        return DefaultAspect;
+    }
+
+    private void AspectCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => ApplyChartLayout();
+
+    private void WidthSlider_ValueChanged(object sender,
+        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_applyingLayout) return;
+        ApplyChartLayout();
+    }
+
+    private void HeightSlider_ValueChanged(object sender,
+        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_applyingLayout) return;
+        ApplyChartLayout();
+    }
+
+    private void ResetChartSize_Click(object sender, RoutedEventArgs e)
+    {
+        _applyingLayout = true;
+        AspectCombo.SelectedIndex = 0;     // 4:3 paper default
+        WidthSlider.Value         = DefaultWidth;
+        HeightSlider.Value        = DefaultHeight;
+        _applyingLayout = false;
+        ApplyChartLayout();
+    }
+
+    /// <summary>
+    /// Recomputes chart card dimensions from the current control values.
+    /// When aspect ≠ Free: height = width / aspect (height slider read-only).
+    /// When aspect = Free: height comes directly from the height slider.
+    /// </summary>
+    private void ApplyChartLayout()
+    {
+        if (SocChartCard is null) return;   // not yet initialized
+
+        double w = WidthSlider.Value;
+        double aspect = GetSelectedAspect();
+        bool freeMode = aspect <= 0;
+        double h = freeMode ? HeightSlider.Value : w / aspect;
+
+        // Sync the height slider when aspect is locked (without re-firing handler)
+        _applyingLayout = true;
+        HeightSlider.IsEnabled = freeMode;
+        if (!freeMode) HeightSlider.Value = h;
+        _applyingLayout = false;
+
+        WidthValue.Text  = w.ToString("0", CultureInfo.InvariantCulture);
+        HeightValue.Text = h.ToString("0", CultureInfo.InvariantCulture);
+
+        // ── SOC chart ──
+        SocChartCard.MaxWidth   = w;
+        SocChartCanvas.Height   = h;
+        SocYAxisGrid.Height     = h;
+
+        // ── V/I chart ──
+        VIChartCard.MaxWidth    = w;
+        VIChartCanvas.Height    = h;
+        VAxisCanvas.Height      = h;
+        IAxisCanvas.Height      = h;
+
+        // Canvas SizeChanged will fire and trigger redraw — no explicit call needed.
     }
 
     private void InitializeTickPools()
