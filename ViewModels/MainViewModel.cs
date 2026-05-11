@@ -68,9 +68,10 @@ public partial class MainViewModel : ObservableObject
         _historyTimeframeMinutes > 0 ? (int)(_historyTimeframeMinutes * 60) : 0;
 
     // Queue<T> dequeues from front in O(1) — much cheaper than List.RemoveAt(0).
-    private readonly Queue<double> _socHistory     = new(120);
-    private readonly Queue<double> _voltageHistory = new(120);
-    private readonly Queue<double> _currentHistory = new(120);
+    private readonly Queue<double>   _socHistory     = new(120);
+    private readonly Queue<double>   _voltageHistory = new(120);
+    private readonly Queue<double>   _currentHistory = new(120);
+    private readonly Queue<DateTime> _timestamps     = new(120);
 
     private void TrimHistoryBuffers()
     {
@@ -79,6 +80,7 @@ public partial class MainViewModel : ObservableObject
         while (_socHistory.Count     > cap) _socHistory.Dequeue();
         while (_voltageHistory.Count > cap) _voltageHistory.Dequeue();
         while (_currentHistory.Count > cap) _currentHistory.Dequeue();
+        while (_timestamps.Count     > cap) _timestamps.Dequeue();
     }
 
     public event Action? HistoryUpdated;
@@ -196,10 +198,11 @@ public partial class MainViewModel : ObservableObject
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
 
-        // Push SOC / V / I into history queues and notify chart.
+        // Push SOC / V / I + timestamp into history queues and notify chart.
         _socHistory.Enqueue(data.Soc);
         _voltageHistory.Enqueue(data.PackVoltage);
         _currentHistory.Enqueue(data.Current);
+        _timestamps.Enqueue(DateTime.Now);
         TrimHistoryBuffers();
         HistoryUpdated?.Invoke();
     }
@@ -210,6 +213,14 @@ public partial class MainViewModel : ObservableObject
     // Returns V and I samples in chronological order (oldest → newest).
     public (double[] voltages, double[] currents) GetViHistory() =>
         (_voltageHistory.ToArray(), _currentHistory.ToArray());
+
+    // Returns timestamps in chronological order — one per sample,
+    // aligned with GetSocHistory()/GetViHistory() by index.
+    public DateTime[] GetTimestamps() => _timestamps.ToArray();
+
+    public DateTime? EarliestTimestamp => _timestamps.Count > 0 ? _timestamps.Peek() : null;
+    public DateTime? LatestTimestamp   =>
+        _timestamps.Count > 0 ? _timestamps.ToArray()[^1] : null;
 
     private CellState GetCellState(double voltage)
     {

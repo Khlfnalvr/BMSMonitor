@@ -29,6 +29,12 @@ public sealed partial class DashboardPage : Page
     private TextBlock[] _socTicks = [];
     private TextBlock[] _viTicks  = [];
 
+    // ── Time-range filter (used only during export) ────────────────────────
+    // When set, RedrawSocChart/RedrawVIChart trim data to this range.
+    // Cleared automatically after the snapshot is written.
+    private DateTime? _filterStart;
+    private DateTime? _filterEnd;
+
     public DashboardPage()
     {
         InitializeComponent();
@@ -159,6 +165,46 @@ public sealed partial class DashboardPage : Page
             VINowLabel.Text = $"time ({u})";
     }
 
+    /// <summary>
+    /// Returns the indices into the full history that match the active filter
+    /// (or the whole range when no filter is set). Used by both chart redraws.
+    /// </summary>
+    private (int start, int end, double timeframeMinutes) GetActiveRange(int fullLength)
+    {
+        if (_filterStart.HasValue || _filterEnd.HasValue)
+        {
+            var ts = ViewModel.GetTimestamps();
+            int s = 0, eIdx = ts.Length;
+
+            if (_filterStart.HasValue)
+            {
+                s = -1;
+                for (int i = 0; i < ts.Length; i++)
+                    if (ts[i] >= _filterStart.Value) { s = i; break; }
+                if (s < 0) s = ts.Length;  // start is after the latest sample
+            }
+            if (_filterEnd.HasValue)
+            {
+                eIdx = 0;
+                for (int i = ts.Length - 1; i >= 0; i--)
+                    if (ts[i] <= _filterEnd.Value) { eIdx = i + 1; break; }
+            }
+
+            if (eIdx < s) eIdx = s;
+
+            // Range duration drives the X-axis tick scale
+            double minutes = 0;
+            if (_filterStart.HasValue && _filterEnd.HasValue)
+                minutes = (_filterEnd.Value - _filterStart.Value).TotalMinutes;
+            else if (ts.Length > 0 && eIdx > s)
+                minutes = (ts[eIdx - 1] - ts[s]).TotalMinutes;
+
+            return (s, eIdx, minutes);
+        }
+
+        return (0, fullLength, ViewModel.HistoryTimeframeMinutes);
+    }
+
     /// <returns>The x-axis unit ("seconds" / "minutes" / "hours") or empty if no data.</returns>
     private string RedrawSocChart()
     {
@@ -171,13 +217,30 @@ public sealed partial class DashboardPage : Page
         UpdateGridLine(GridLine50, w, h * 0.50);
         UpdateGridLine(GridLine75, w, h * 0.25);
 
-        double[] history = ViewModel.GetSocHistory();
-        int      n       = history.Length;
+        double[] fullHistory = ViewModel.GetSocHistory();
+        var (rangeStart, rangeEnd, timeframeMinutes) = GetActiveRange(fullHistory.Length);
 
-        double cap    = ViewModel.HistoryCapacity;
-        if (cap <= 0 || cap > n) cap = n;
-        double xStep  = cap > 1 ? w / (cap - 1.0) : w;
-        double xStart = (cap - n) * xStep;
+        // Slice to the active range (filter or full history)
+        int n = Math.Max(0, rangeEnd - rangeStart);
+        double cap;
+        double xStep;
+        double xStart;
+
+        if (_filterStart.HasValue || _filterEnd.HasValue)
+        {
+            // Filter mode: data fills the chart from left to right
+            cap    = n;
+            xStep  = n > 1 ? w / (n - 1.0) : w;
+            xStart = 0;
+        }
+        else
+        {
+            // Rolling window mode: align rightmost sample with "now"
+            cap = ViewModel.HistoryCapacity;
+            if (cap <= 0 || cap > n) cap = n;
+            xStep  = cap > 1 ? w / (cap - 1.0) : w;
+            xStart = (cap - n) * xStep;
+        }
 
         if (n < 2)
         {
@@ -195,7 +258,7 @@ public sealed partial class DashboardPage : Page
         for (int i = 0; i < n; i++)
         {
             double x = xStart + i * xStep;
-            double y = h * (1.0 - history[i] / 100.0);
+            double y = h * (1.0 - fullHistory[rangeStart + i] / 100.0);
             linePoints.Add(new Point(x, y));
             fillPoints.Add(new Point(x, y));
         }
@@ -205,7 +268,7 @@ public sealed partial class DashboardPage : Page
         SocLine.Points = linePoints;
         SocFill.Points = fillPoints;
 
-        return UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes, _socTicks);
+        return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _socTicks);
     }
 
     private string RedrawVIChart()
@@ -218,8 +281,9 @@ public sealed partial class DashboardPage : Page
         UpdateGridLine(VIGridH2, w, h * 0.50);
         UpdateGridLine(VIGridH3, w, h * 0.75);
 
-        var (voltages, currents) = ViewModel.GetViHistory();
-        int n = voltages.Length;
+        var (fullV, fullI) = ViewModel.GetViHistory();
+        var (rangeStart, rangeEnd, timeframeMinutes) = GetActiveRange(fullV.Length);
+        int n = Math.Max(0, rangeEnd - rangeStart);
 
         if (n < 2)
         {
@@ -227,6 +291,15 @@ public sealed partial class DashboardPage : Page
             CurrentLine.Points = new PointCollection();
             HideTicks(_viTicks);
             return "";
+        }
+
+        // Slice both series to the active range
+        var voltages = new double[n];
+        var currents = new double[n];
+        for (int i = 0; i < n; i++)
+        {
+            voltages[i] = fullV[rangeStart + i];
+            currents[i] = fullI[rangeStart + i];
         }
 
         double vMin    = voltages.Min();
@@ -257,10 +330,23 @@ public sealed partial class DashboardPage : Page
         ILabel1.Text = $"{iRawMax - iRange * 0.75:F1}";    Canvas.SetTop(ILabel1, h * 0.75 - fontH / 2);
         ILabel0.Text = $"{iRawMin:F1}";                     Canvas.SetTop(ILabel0, h - fontH);
 
-        double cap    = ViewModel.HistoryCapacity;
-        if (cap <= 0 || cap > n) cap = n;
-        double xStep  = cap > 1 ? w / (cap - 1.0) : w;
-        double xStart = (cap - n) * xStep;
+        double cap;
+        double xStep;
+        double xStart;
+
+        if (_filterStart.HasValue || _filterEnd.HasValue)
+        {
+            cap    = n;
+            xStep  = n > 1 ? w / (n - 1.0) : w;
+            xStart = 0;
+        }
+        else
+        {
+            cap = ViewModel.HistoryCapacity;
+            if (cap <= 0 || cap > n) cap = n;
+            xStep  = cap > 1 ? w / (cap - 1.0) : w;
+            xStart = (cap - n) * xStep;
+        }
 
         var vPoints = new PointCollection();
         var iPoints = new PointCollection();
@@ -277,7 +363,7 @@ public sealed partial class DashboardPage : Page
         VoltageLine.Points = vPoints;
         CurrentLine.Points = iPoints;
 
-        return UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes, _viTicks);
+        return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _viTicks);
     }
 
     // ── Tick rendering ────────────────────────────────────────────────────
@@ -369,7 +455,9 @@ public sealed partial class DashboardPage : Page
 
     // ── Save chart (with size + aspect + format dialog) ────────────────────
 
-    private record ExportOptions(int Width, int Height, string Format);
+    private record ExportOptions(
+        int Width, int Height, string Format,
+        DateTime? FilterStart, DateTime? FilterEnd);
 
     private async void SaveSocChart_Click(object sender, RoutedEventArgs e)
     {
@@ -422,6 +510,16 @@ public sealed partial class DashboardPage : Page
         var file = await picker.PickSaveFileAsync();
         if (file is null) return;
 
+        // Apply time-range filter (if any) for the duration of the snapshot
+        bool filterApplied = opts.FilterStart.HasValue || opts.FilterEnd.HasValue;
+        if (filterApplied)
+        {
+            _filterStart = opts.FilterStart;
+            _filterEnd   = opts.FilterEnd;
+            RedrawSocChart();
+            RedrawVIChart();
+        }
+
         try
         {
             if (opts.Format == "svg")
@@ -435,19 +533,30 @@ public sealed partial class DashboardPage : Page
             System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
             var err = new ContentDialog
             {
-                Title = "Save failed",
-                Content = ex.Message,
+                Title           = "Save failed",
+                Content         = ex.Message,
                 CloseButtonText = "OK",
-                XamlRoot = root
+                XamlRoot        = root
             };
             try { await err.ShowAsync(); } catch { }
+        }
+        finally
+        {
+            if (filterApplied)
+            {
+                _filterStart = null;
+                _filterEnd   = null;
+                RedrawSocChart();
+                RedrawVIChart();
+            }
         }
     }
 
     /// <summary>
-    /// Shows the export dialog (size + aspect + format). Returns null on cancel.
+    /// Shows the export dialog (size + aspect + format + time range).
+    /// Returns null on cancel.
     /// </summary>
-    private static async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
+    private async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
     {
         // ── Controls ──────────────────────────────────────────────────────
         var aspect = new ComboBox
@@ -575,6 +684,81 @@ public sealed partial class DashboardPage : Page
 
         panel.Children.Add(sizeGrid);
 
+        // — Section: Time range —
+        panel.Children.Add(Divider());
+        panel.Children.Add(SectionHeader("Time range"));
+
+        // Data availability hint
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest   = ViewModel.LatestTimestamp;
+        string availability = (earliest, latest) switch
+        {
+            (DateTime e, DateTime l) => $"Available data: {e:HH:mm:ss} → {l:HH:mm:ss}",
+            _                        => "No data captured yet."
+        };
+
+        panel.Children.Add(new TextBlock
+        {
+            Text     = availability,
+            FontSize = 11, Opacity = 0.55, FontFamily = new FontFamily("Consolas"),
+            Margin   = new Thickness(0, 0, 0, 6)
+        });
+
+        var rangeMode = new RadioButtons { MaxColumns = 1 };
+        rangeMode.Items.Add("Use the chart's current view (default)");
+        rangeMode.Items.Add("Custom time range");
+        rangeMode.SelectedIndex = 0;
+
+        panel.Children.Add(rangeMode);
+
+        // Custom range picker (hidden by default)
+        var sessionDate = earliest?.Date ?? DateTime.Today;
+
+        var startTime = new TimePicker
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ClockIdentifier     = "24HourClock",
+            MinuteIncrement     = 1,
+            Time                = (earliest ?? DateTime.Now.AddMinutes(-2)).TimeOfDay
+        };
+        var endTime = new TimePicker
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            ClockIdentifier     = "24HourClock",
+            MinuteIncrement     = 1,
+            Time                = (latest ?? DateTime.Now).TimeOfDay
+        };
+
+        var rangeGrid = new Grid
+        {
+            ColumnSpacing = 12,
+            Margin        = new Thickness(0, 10, 0, 0),
+            Visibility    = Visibility.Collapsed
+        };
+        rangeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rangeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        rangeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        rangeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var sLab = FieldLabel("Start (HH:MM)"); Grid.SetColumn(sLab, 0); Grid.SetRow(sLab, 0);
+        var eLab = FieldLabel("End (HH:MM)");   Grid.SetColumn(eLab, 1); Grid.SetRow(eLab, 0);
+        Grid.SetColumn(startTime, 0);           Grid.SetRow(startTime, 1);
+        Grid.SetColumn(endTime,   1);           Grid.SetRow(endTime,   1);
+
+        rangeGrid.Children.Add(sLab);
+        rangeGrid.Children.Add(eLab);
+        rangeGrid.Children.Add(startTime);
+        rangeGrid.Children.Add(endTime);
+
+        panel.Children.Add(rangeGrid);
+
+        rangeMode.SelectionChanged += (_, _) =>
+        {
+            rangeGrid.Visibility = rangeMode.SelectedIndex == 1
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        };
+
         // — Section: Format —
         panel.Children.Add(Divider());
         panel.Children.Add(SectionHeader("File format"));
@@ -590,10 +774,19 @@ public sealed partial class DashboardPage : Page
             Margin       = new Thickness(0, 10, 0, 0)
         });
 
+        // Wrap in ScrollViewer — dialog can get tall on small screens
+        var scroll = new ScrollViewer
+        {
+            Content                       = panel,
+            VerticalScrollBarVisibility   = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            MaxHeight                     = 560
+        };
+
         var dialog = new ContentDialog
         {
             Title             = "Export chart",
-            Content           = panel,
+            Content           = scroll,
             PrimaryButtonText = "Save…",
             CloseButtonText   = "Cancel",
             DefaultButton     = ContentDialogButton.Primary,
@@ -605,7 +798,20 @@ public sealed partial class DashboardPage : Page
         string fmt = "png";
         if (format.SelectedItem is ComboBoxItem fi && fi.Tag is string ft) fmt = ft;
 
-        return new ExportOptions((int)widthBox.Value, (int)heightBox.Value, fmt);
+        // Resolve time range if custom mode is selected
+        DateTime? filterStart = null, filterEnd = null;
+        if (rangeMode.SelectedIndex == 1)
+        {
+            filterStart = sessionDate.Add(startTime.Time);
+            filterEnd   = sessionDate.Add(endTime.Time);
+            // Swap if user entered reversed range
+            if (filterEnd < filterStart)
+                (filterStart, filterEnd) = (filterEnd, filterStart);
+        }
+
+        return new ExportOptions(
+            (int)widthBox.Value, (int)heightBox.Value, fmt,
+            filterStart, filterEnd);
     }
 
     /// <summary>
