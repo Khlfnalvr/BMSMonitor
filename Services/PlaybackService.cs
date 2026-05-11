@@ -37,8 +37,12 @@ public sealed class PlaybackService
     public double PlaybackSpeed { get; set; } = 1.0;
 
     // ── Events ────────────────────────────────────────────────────────────
-    public event Action<BmsData>? FrameChanged;
-    public event Action?          StateChanged;
+    public event Action<BmsData>?   FrameChanged;
+    public event Action?            StateChanged;
+    /// <summary>Fired once after a file is loaded, with every frame in order.</summary>
+    public event Action<BmsData[]>? FileLoaded;
+    /// <summary>Fired when a loaded file is dismissed (back to live mode).</summary>
+    public event Action?            FileUnloaded;
 
     // ── Supported extensions ──────────────────────────────────────────────
     public static readonly string[] SupportedExtensions = [".csv", ".tsv", ".xlsx", ".json"];
@@ -71,6 +75,7 @@ public sealed class PlaybackService
         IsLoaded      = false;
         IsPlaying     = false;
         StateChanged?.Invoke();
+        FileUnloaded?.Invoke();
     }
 
     // ── Transport ─────────────────────────────────────────────────────────
@@ -241,6 +246,9 @@ public sealed class PlaybackService
         IsPlaying     = false;
 
         StateChanged?.Invoke();
+        // Bulk-load event first so subscribers can populate their history,
+        // then FrameChanged for the first-frame UI update.
+        FileLoaded?.Invoke(_frames);
         FrameChanged?.Invoke(_frames[0]);
         return null;
     }

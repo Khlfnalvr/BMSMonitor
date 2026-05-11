@@ -86,6 +86,8 @@ public partial class MainViewModel : ObservableObject
     }
 
     public event Action? HistoryUpdated;
+    /// <summary>Fired when history is bulk-replaced or cleared (playback load/unload).</summary>
+    public event Action? HistoryReset;
 
     // --- Formatted text ---
     public string PackVoltageText       => HasData ? $"{PackVoltage:F2} V" : "— V";
@@ -127,8 +129,18 @@ public partial class MainViewModel : ObservableObject
         Serial.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnSerialStatus(msg));
         Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
 
-        // Playback frames feed through the same pipeline as live data.
+        // Playback frames feed through the same pipeline as live data
+        // (the chart history is pre-populated by FileLoaded, so ApplyData
+        // will skip the enqueue step while a file is loaded).
         Playback.FrameChanged += data => _dispatcherQueue.TryEnqueue(() => ApplyData(data));
+
+        // When a file is loaded, bulk-populate the chart history with every
+        // sample at once so the trim bar reflects the full recording duration.
+        Playback.FileLoaded += frames => _dispatcherQueue.TryEnqueue(() => BulkLoadHistory(frames));
+
+        // Returning to live mode: clear the imported history so live samples
+        // don't get appended to old playback data.
+        Playback.FileUnloaded += () => _dispatcherQueue.TryEnqueue(ClearHistory);
     }
 
     partial void OnHasDataChanged(bool value)
@@ -187,12 +199,23 @@ public partial class MainViewModel : ObservableObject
             Temperatures[i].Temperature = data.Temps[i];
 
         HasData = true;
-        if (!Playback.IsLoaded) Logging.Log(data);   // don't re-log playback frames
 
-        // ── Check for abnormal conditions ─────────────────────────────
-        App.Notifications.CheckAndNotify(data, Config);
+        // Live-only side effects: logging, notifications, and history capture.
+        // (Playback frames replay already-known data — no need to re-log or
+        // re-enqueue them; the chart history is bulk-loaded on file open.)
+        if (!Playback.IsLoaded)
+        {
+            Logging.Log(data);
+            App.Notifications.CheckAndNotify(data, Config);
 
-        // ── Live data stream (newest at top) ─────────────────────────
+            _socHistory.Enqueue(data.Soc);
+            _voltageHistory.Enqueue(data.PackVoltage);
+            _currentHistory.Enqueue(data.Current);
+            _timestamps.Enqueue(DateTime.Now);
+            TrimHistoryBuffers();
+        }
+
+        // ── Live data stream (newest at top) — always shown ──────────
         var row = new LogRow();
         foreach (var col in LogColumns.Where(c => c.IsEnabled))
             row.Values.Add(col.GetString(DateTime.Now, data));
@@ -200,12 +223,51 @@ public partial class MainViewModel : ObservableObject
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
 
-        // Push SOC / V / I + timestamp into history queues and notify chart.
-        _socHistory.Enqueue(data.Soc);
-        _voltageHistory.Enqueue(data.PackVoltage);
-        _currentHistory.Enqueue(data.Current);
-        _timestamps.Enqueue(DateTime.Now);
-        TrimHistoryBuffers();
+        HistoryUpdated?.Invoke();
+    }
+
+    /// <summary>
+    /// Replaces the chart history queues with every sample from a loaded file.
+    /// Uses synthetic 1 Hz timestamps so the trim bar / chart show the full
+    /// recording duration immediately (no need to play back through it).
+    /// </summary>
+    public void BulkLoadHistory(BmsData[] frames)
+    {
+        _socHistory.Clear();
+        _voltageHistory.Clear();
+        _currentHistory.Clear();
+        _timestamps.Clear();
+
+        if (frames.Length == 0)
+        {
+            HistoryUpdated?.Invoke();
+            return;
+        }
+
+        // Anchor so latest sample aligns with "now"; earlier samples are
+        // spaced 1 s apart (matches CSV sampling rate, and gives elapsed
+        // labels starting from 00:00:00 in the trim bar).
+        var baseTime = DateTime.Now.AddSeconds(-(frames.Length - 1));
+        for (int i = 0; i < frames.Length; i++)
+        {
+            _socHistory.Enqueue(frames[i].Soc);
+            _voltageHistory.Enqueue(frames[i].PackVoltage);
+            _currentHistory.Enqueue(frames[i].Current);
+            _timestamps.Enqueue(baseTime.AddSeconds(i));
+        }
+
+        HistoryReset?.Invoke();
+        HistoryUpdated?.Invoke();
+    }
+
+    /// <summary>Clears every chart history queue. Used when unloading a file.</summary>
+    public void ClearHistory()
+    {
+        _socHistory.Clear();
+        _voltageHistory.Clear();
+        _currentHistory.Clear();
+        _timestamps.Clear();
+        HistoryReset?.Invoke();
         HistoryUpdated?.Invoke();
     }
 

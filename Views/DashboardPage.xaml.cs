@@ -43,8 +43,16 @@ public sealed partial class DashboardPage : Page
         ApplyChartColors();
         UpdateXAxisLabels();
 
-        Loaded   += (_, _) => ViewModel.HistoryUpdated += OnHistoryUpdated;
-        Unloaded += (_, _) => ViewModel.HistoryUpdated -= OnHistoryUpdated;
+        Loaded   += (_, _) =>
+        {
+            ViewModel.HistoryUpdated += OnHistoryUpdated;
+            ViewModel.HistoryReset   += OnHistoryReset;
+        };
+        Unloaded += (_, _) =>
+        {
+            ViewModel.HistoryUpdated -= OnHistoryUpdated;
+            ViewModel.HistoryReset   -= OnHistoryReset;
+        };
     }
 
     private void InitializeTickPools()
@@ -112,7 +120,14 @@ public sealed partial class DashboardPage : Page
         string socUnit = RedrawSocChart();
         string viUnit  = RedrawVIChart();
         UpdateXAxisLabels(socUnit, viUnit);
-        UpdateTrimBar();   // keep the trim selection in sync with the data range
+        UpdateTrimBar();
+    }
+
+    /// <summary>Clear any active trim filter when history is replaced.</summary>
+    private void OnHistoryReset()
+    {
+        _filterStart = null;
+        _filterEnd   = null;
     }
 
     private void SocChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -663,59 +678,29 @@ public sealed partial class DashboardPage : Page
 
     /// <summary>
     /// Renders the chart to a raster image at the requested dimensions.
-    /// Temporarily resizes the chart card so the chart re-layouts at the
-    /// target size, snapshots it, then restores the original dimensions.
+    /// The chart layout is NOT resized — font sizes, line widths and tick
+    /// proportions stay identical regardless of output resolution.
+    /// Only the pixel density changes.
     /// </summary>
     private static async Task SaveAsRaster(
         FrameworkElement renderElement,
-        Border card,
-        Canvas mainCanvas,
-        FrameworkElement[] heightSyncs,
-        StorageFile file,
-        ExportOptions opts,
-        bool jpeg)
+        Border _0, Canvas _1, FrameworkElement[] _2,
+        StorageFile file, ExportOptions opts, bool jpeg)
     {
-        // Snapshot original dimensions
-        double oldMaxW = card.MaxWidth;
-        double oldH    = mainCanvas.Height;
-        var    oldSync = heightSyncs.Select(s => s.Height).ToArray();
+        var rt = new RenderTargetBitmap();
+        await rt.RenderAsync(renderElement, opts.Width, opts.Height);
 
-        try
-        {
-            // Resize chart card so it actually re-layouts to target size
-            card.MaxWidth      = opts.Width;
-            mainCanvas.Height  = opts.Height;
-            foreach (var s in heightSyncs) s.Height = opts.Height;
+        var pixels = await rt.GetPixelsAsync();
+        var bytes  = new byte[pixels.Length];
+        DataReader.FromBuffer(pixels).ReadBytes(bytes);
 
-            card.UpdateLayout();
-            renderElement.UpdateLayout();
-            await Task.Yield();           // let layout settle one cycle
-            renderElement.UpdateLayout(); // second pass — picks up new chart canvas size
+        var encoderId = jpeg ? BitmapEncoder.JpegEncoderId : BitmapEncoder.PngEncoderId;
 
-            // Snapshot
-            var rt = new RenderTargetBitmap();
-            await rt.RenderAsync(renderElement);
-
-            var pixels = await rt.GetPixelsAsync();
-            var bytes  = new byte[pixels.Length];
-            DataReader.FromBuffer(pixels).ReadBytes(bytes);
-
-            var encoderId = jpeg ? BitmapEncoder.JpegEncoderId : BitmapEncoder.PngEncoderId;
-
-            using var stream  = await file.OpenAsync(FileAccessMode.ReadWrite);
-            var       encoder = await BitmapEncoder.CreateAsync(encoderId, stream);
-            encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
-                (uint)rt.PixelWidth, (uint)rt.PixelHeight, 96, 96, bytes);
-            await encoder.FlushAsync();
-        }
-        finally
-        {
-            // Restore original dimensions
-            card.MaxWidth     = oldMaxW;
-            mainCanvas.Height = oldH;
-            for (int i = 0; i < heightSyncs.Length; i++)
-                heightSyncs[i].Height = oldSync[i];
-        }
+        using var stream  = await file.OpenAsync(FileAccessMode.ReadWrite);
+        var       encoder = await BitmapEncoder.CreateAsync(encoderId, stream);
+        encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+            (uint)rt.PixelWidth, (uint)rt.PixelHeight, 96, 96, bytes);
+        await encoder.FlushAsync();
     }
 
     /// <summary>
