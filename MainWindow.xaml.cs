@@ -15,6 +15,7 @@ namespace BMSMonitor;
 public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
+    private Services.LocalizationManager Lang => App.Lang;
 
     private readonly Dictionary<string, Type> _pages = new()
     {

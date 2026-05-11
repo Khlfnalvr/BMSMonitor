@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using BMSMonitor.Models;
 using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
@@ -15,6 +16,7 @@ public sealed partial class LoggingPage : Page
 {
     private MainViewModel  ViewModel => App.ViewModel;
     private LoggingService Logging   => ViewModel.Logging;
+    private Services.LocalizationManager Lang => App.Lang;
 
     private string _selectedFolder = LoggingService.DefaultLogsFolder;
     private DispatcherQueueTimer? _durationTimer;
@@ -23,9 +25,12 @@ public sealed partial class LoggingPage : Page
     private static readonly LogFormat[] Formats =
         [LogFormat.Csv, LogFormat.Tsv, LogFormat.Excel, LogFormat.Json];
 
-    // Column config persists across navigation (static)
-    private static readonly ObservableCollection<LogColumn> _columns =
-        LogColumn.CreateDefaults();
+    // Filtered view — only enabled columns, shown in the horizontal drag strip
+    private static readonly ObservableCollection<LogColumn> ActiveColumns = new();
+    private static bool _activeColsInitialized;
+
+    // Column config lives in ViewModel.LogColumns (persists across navigation)
+    private ObservableCollection<LogColumn> Columns => ViewModel.LogColumns;
 
     public LoggingPage()
     {
@@ -49,19 +54,65 @@ public sealed partial class LoggingPage : Page
         _durationTimer.Tick += (_, _) => UpdateDuration();
         _durationTimer.Start();
 
-        ViewModel.DataStream.CollectionChanged += (_, _) => UpdateStreamPlaceholder();
-        UpdateStreamPlaceholder();
+        ViewModel.DataStream.CollectionChanged += (_, _) => { UpdateStreamPlaceholder(); RebuildStreamTable(); };
 
-        // Bind column list (static collection — already populated)
-        ColumnListView.ItemsSource = _columns;
+        // Bind column collections and wire events
+        EnsureActiveColumnsInitialized();
+        ActiveColumnsList.ItemsSource = ActiveColumns;
+        ColumnGrid.ItemsSource = Columns;
+        ActiveColumnsList.DragItemsCompleted += ActiveColumnsList_DragItemsCompleted;
+
+        // Rebuild stream table when columns change (IsEnabled toggle, reorder, reset)
+        Columns.CollectionChanged += (_, _) => RebuildStreamTable();
+
+        RebuildStreamTable();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         Logging.StateChanged -= OnStateChanged;
-        ViewModel.DataStream.CollectionChanged -= (_, _) => UpdateStreamPlaceholder();
+        ViewModel.DataStream.CollectionChanged -= (_, _) => { UpdateStreamPlaceholder(); RebuildStreamTable(); };
         _durationTimer?.Stop();
         _durationTimer = null;
+    }
+
+    private void EnsureActiveColumnsInitialized()
+    {
+        if (_activeColsInitialized) return;
+        _activeColsInitialized = true;
+
+        foreach (var col in Columns.Where(c => c.IsEnabled))
+            ActiveColumns.Add(col);
+
+        foreach (var col in Columns)
+            col.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName != nameof(LogColumn.IsEnabled) || s is not LogColumn lc) return;
+                DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (lc.IsEnabled)
+                    {
+                        if (!ActiveColumns.Contains(lc))
+                            ActiveColumns.Add(lc);
+                    }
+                    else
+                    {
+                        ActiveColumns.Remove(lc);
+                    }
+                    RebuildStreamTable();
+                });
+            };
+    }
+
+    private void ActiveColumnsList_DragItemsCompleted(object sender, DragItemsCompletedEventArgs e)
+    {
+        // Sync Columns order to match the user's drag-reordered ActiveColumns
+        var disabled = Columns.Where(c => !c.IsEnabled).ToList();
+        var reordered = ActiveColumns.Concat(disabled).ToList();
+        Columns.Clear();
+        foreach (var col in reordered) Columns.Add(col);
+
+        RebuildStreamTable();
     }
 
     private void UpdateStreamPlaceholder()
@@ -78,9 +129,9 @@ public sealed partial class LoggingPage : Page
         bool active = Logging.IsLogging;
         var  fmt    = GetSelectedFormat();
 
-        StateText.Text       = active ? "Logging" : "Idle";
+        StateText.Text       = active ? Lang.Log_Logging : Lang.Log_Idle;
         SampleText.Text      = Logging.SampleCount.ToString("N0");
-        StartStopBtn.Content = active ? "Stop Logging" : "Start Logging";
+        StartStopBtn.Content = active ? Lang.Log_StopLogging : Lang.Log_StartLogging;
 
         // Lock controls while recording
         FileNameBox.IsEnabled  = !active;
@@ -88,7 +139,7 @@ public sealed partial class LoggingPage : Page
         BrowseBtn.IsEnabled    = !active;
 
         // Lock column config while recording
-        ColumnListView.IsEnabled  = !active;
+        ActiveColumnsList.IsEnabled = !active;
         SelectAllBtn.IsEnabled    = !active;
         DeselectAllBtn.IsEnabled  = !active;
         ResetColsBtn.IsEnabled    = !active;
@@ -101,15 +152,15 @@ public sealed partial class LoggingPage : Page
             FolderText.Text   = Path.GetDirectoryName(Logging.FilePath) ?? _selectedFolder;
             FileNameBox.Text  = Path.GetFileName(Logging.FilePath) ?? "";
             FullPathText.Text = Logging.FilePath ?? "";
-            HintText.Text     = "Recording in progress. Stop to close / write the file.";
+            HintText.Text     = Lang.Log_RecordingHint;
         }
         else
         {
             FolderText.Text   = _selectedFolder;
             FullPathText.Text = BuildPreviewPath();
             HintText.Text     = ViewModel.IsConnected
-                ? "Ready. Press Start Logging to begin recording."
-                : "Connect to the ESP32 first, then start logging.";
+                ? Lang.Log_ReadyHint
+                : Lang.Log_ConnectHint;
         }
 
         UpdateDuration();
@@ -153,23 +204,108 @@ public sealed partial class LoggingPage : Page
         return Path.Combine(_selectedFolder, name);
     }
 
+    // ── Dynamic stream table ─────────────────────────────────────────────
+
+    private void RebuildStreamTable()
+    {
+        StreamContainer.Children.Clear();
+        StreamContainer.RowDefinitions.Clear();
+        StreamContainer.ColumnDefinitions.Clear();
+
+        var enabled = Columns.Where(c => c.IsEnabled).ToList();
+        if (enabled.Count == 0)
+        {
+            StreamEmptyText.Visibility = Visibility.Visible;
+            return;
+        }
+        StreamEmptyText.Visibility = Visibility.Collapsed;
+
+        // Column defs — auto-width, last takes remaining space
+        for (int i = 0; i < enabled.Count; i++)
+        {
+            StreamContainer.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = i == enabled.Count - 1
+                    ? new GridLength(1, GridUnitType.Star)
+                    : GridLength.Auto
+            });
+        }
+
+        // ── Header row (row 0) ──
+        StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        for (int i = 0; i < enabled.Count; i++)
+        {
+            var tb = new TextBlock
+            {
+                Text = enabled[i].Label,
+                FontSize = 11,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Opacity = 0.6,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(i == 0 ? 0 : 12, 9, 0, 7)
+            };
+            Grid.SetColumn(tb, i);
+            Grid.SetRow(tb, 0);
+            StreamContainer.Children.Add(tb);
+        }
+
+        // ── Separator (row 1) ──
+        StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var sep = new Border
+        {
+            Height = 1,
+            Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"]
+        };
+        Grid.SetRow(sep, 1);
+        Grid.SetColumnSpan(sep, enabled.Count);
+        StreamContainer.Children.Add(sep);
+
+        // ── Data rows ──
+        int row = 2;
+        foreach (var logRow in ViewModel.DataStream)
+        {
+            StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            for (int i = 0; i < enabled.Count && i < logRow.Values.Count; i++)
+            {
+                var tb = new TextBlock
+                {
+                    Text = logRow.Values[i],
+                    FontSize = 12,
+                    Opacity = 0.8,
+                    FontFamily = new FontFamily("Consolas"),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(i == 0 ? 0 : 12, 5, 0, 5)
+                };
+                Grid.SetColumn(tb, i);
+                Grid.SetRow(tb, row);
+                StreamContainer.Children.Add(tb);
+            }
+            row++;
+        }
+    }
+
     // ── Column settings handlers ──────────────────────────────────────────
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var col in _columns) col.IsEnabled = true;
+        foreach (var col in Columns) col.IsEnabled = true;
     }
 
     private void DeselectAll_Click(object sender, RoutedEventArgs e)
     {
-        foreach (var col in _columns) col.IsEnabled = false;
+        foreach (var col in Columns) col.IsEnabled = false;
     }
 
     private void ResetColumns_Click(object sender, RoutedEventArgs e)
     {
         var defaults = LogColumn.CreateDefaults();
-        _columns.Clear();
-        foreach (var col in defaults) _columns.Add(col);
+        Columns.Clear();
+        foreach (var col in defaults) Columns.Add(col);
+
+        // Rebuild ActiveColumns from the new defaults
+        ActiveColumns.Clear();
+        foreach (var col in Columns.Where(c => c.IsEnabled))
+            ActiveColumns.Add(col);
     }
 
     private void ToggleCells_Click(object sender, RoutedEventArgs e)
@@ -181,9 +317,9 @@ public sealed partial class LoggingPage : Page
     private void ToggleTemp_Click(object sender, RoutedEventArgs e)
         => ToggleGroup("Temperatures");
 
-    private static void ToggleGroup(string group)
+    private void ToggleGroup(string group)
     {
-        var groupCols  = _columns.Where(c => c.Group == group).ToList();
+        var groupCols  = Columns.Where(c => c.Group == group).ToList();
         bool allEnabled = groupCols.All(c => c.IsEnabled);
         foreach (var col in groupCols) col.IsEnabled = !allEnabled;
     }
@@ -222,7 +358,7 @@ public sealed partial class LoggingPage : Page
         else
         {
             string path = BuildPreviewPath();
-            Logging.Start(path, GetSelectedFormat(), _columns);
+            Logging.Start(path, GetSelectedFormat(), Columns);
         }
     }
 

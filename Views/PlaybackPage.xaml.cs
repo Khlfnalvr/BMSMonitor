@@ -10,6 +10,7 @@ public sealed partial class PlaybackPage : Page
 {
     private MainViewModel  ViewModel => App.ViewModel;
     private PlaybackService Playback  => ViewModel.Playback;
+    private LocalizationManager Lang => App.Lang;
 
     private static readonly double[] Speeds = { 1.0, 2.0, 5.0, 10.0 };
 
@@ -50,17 +51,15 @@ public sealed partial class PlaybackPage : Page
                 : $"{dur.Minutes:D2}:{dur.Seconds:D2}";
 
             LoadStatusText.Text = $"Loaded {Playback.TotalFrames:N0} frames from \"{Playback.FileName}\".";
-            HintText.Text = Playback.IsPlaying
-                ? "Playback in progress. Use the bar at the bottom to pause or seek."
-                : "File loaded. Use the playback bar at the bottom to play.";
+            HintText.Text = Lang.Pb_HowToUse1;
         }
         else
         {
-            FilePathText.Text    = "No file loaded";
+            FilePathText.Text    = Lang.Pb_NoFileLoaded;
             TotalFramesText.Text = "—";
             DurationText.Text    = "—";
-            LoadStatusText.Text  = "Browse and open a BMS Monitor log file (.csv, .tsv, .xlsx, .json).";
-            HintText.Text        = "Browse and load a log file above, then use the playback bar that appears at the bottom of the window.";
+            LoadStatusText.Text  = Lang.Pb_LoadStatus;
+            HintText.Text        = Lang.Pb_HowToUse1;
         }
     }
 
@@ -78,7 +77,7 @@ public sealed partial class PlaybackPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
 
-        LoadStatusText.Text = "Loading…";
+        LoadStatusText.Text = "Loading…"; // brief status, no translation needed
         var err = Playback.LoadFile(file.Path);
         if (err is not null)
             LoadStatusText.Text = $"Error: {err}";

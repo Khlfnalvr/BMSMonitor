@@ -67,6 +67,7 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<CellViewModel> Cells        { get; } = new();
     public ObservableCollection<TempViewModel> Temperatures { get; } = new();
     public ObservableCollection<LogRow>        DataStream   { get; } = new();
+    public ObservableCollection<LogColumn>     LogColumns   { get; } = LogColumn.CreateDefaults();
     private const int StreamCapacity = 20;
     public BmsConfig Config { get; } = new();
 
@@ -149,19 +150,14 @@ public partial class MainViewModel : ObservableObject
         HasData = true;
         if (!Playback.IsLoaded) Logging.Log(data);   // don't re-log playback frames
 
+        // ── Check for abnormal conditions ─────────────────────────────
+        App.Notifications.CheckAndNotify(data, Config);
+
         // ── Live data stream (newest at top) ─────────────────────────
-        DataStream.Insert(0, new LogRow
-        {
-            Timestamp   = DateTime.Now.ToString("HH:mm:ss"),
-            Soc         = $"{data.Soc:F1}",
-            PackVoltage = $"{data.PackVoltage:F2}",
-            Current     = data.Current >= 0 ? $"+{data.Current:F2}" : $"{data.Current:F2}",
-            Status      = data.Status,
-            MinCell     = $"{data.Cells.Min():F3}",
-            MaxCell     = $"{data.Cells.Max():F3}",
-            Delta       = $"{(data.Cells.Max() - data.Cells.Min()) * 1000:F1}",
-            Balancing   = $"{data.Balancing.Count(b => b)}"
-        });
+        var row = new LogRow();
+        foreach (var col in LogColumns.Where(c => c.IsEnabled))
+            row.Values.Add(col.GetString(DateTime.Now, data));
+        DataStream.Insert(0, row);
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
 

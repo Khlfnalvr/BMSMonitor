@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 
 namespace BMSMonitor;
@@ -8,6 +9,8 @@ public partial class App : Application
 {
     public static MainWindow? CurrentWindow { get; private set; }
     public static MainViewModel ViewModel { get; private set; } = null!;
+    public static LocalizationManager Lang { get; } = LocalizationManager.Instance;
+    public static NotificationService Notifications { get; } = new();
 
     public App()
     {
@@ -22,6 +25,9 @@ public partial class App : Application
             CurrentWindow = new MainWindow();
             ViewModel = CurrentWindow.ViewModel;
             CurrentWindow.Activate();
+
+            // Register for Windows toast notifications (creates Start menu shortcut)
+            Notifications.Register();
         }
         catch (Exception ex)
         {

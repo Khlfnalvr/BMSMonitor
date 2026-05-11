@@ -10,7 +10,7 @@
                     HorizontalAlignment="Center">
 
             <!-- ── STATUS ──────────────────────────────────────────────────── -->
-            <TextBlock Text="LOGGING STATUS" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Log_SecStatus, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <Grid ColumnSpacing="0">
                     <Grid.ColumnDefinitions>
@@ -22,9 +22,9 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="STATE" Style="{StaticResource CardLabelStyle}"
+                        <TextBlock Text="{x:Bind Lang.Log_State, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"
                                    HorizontalAlignment="Center"/>
-                        <TextBlock x:Name="StateText" Text="Idle"
+                        <TextBlock x:Name="StateText" Text=""
                                    Style="{StaticResource MetricValueStyle}"
                                    HorizontalAlignment="Center"/>
                     </StackPanel>
@@ -34,7 +34,7 @@
                             Margin="0,4"/>
 
                     <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="SAMPLES" Style="{StaticResource CardLabelStyle}"
+                        <TextBlock Text="{x:Bind Lang.Log_Samples, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"
                                    HorizontalAlignment="Center"/>
                         <TextBlock x:Name="SampleText" Text="0"
                                    Style="{StaticResource MetricValueStyle}"
@@ -46,7 +46,7 @@
                             Margin="0,4"/>
 
                     <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="DURATION" Style="{StaticResource CardLabelStyle}"
+                        <TextBlock Text="{x:Bind Lang.Log_Duration, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"
                                    HorizontalAlignment="Center"/>
                         <TextBlock x:Name="DurationText" Text="—"
                                    Style="{StaticResource MetricValueStyle}"
@@ -56,7 +56,7 @@
             </Border>
 
             <!-- ── FILE SETTINGS ────────────────────────────────────────────── -->
-            <TextBlock Text="FILE SETTINGS" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Log_SecFileSettings, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="14">
 
@@ -67,7 +67,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Folder"
+                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Log_Folder, Mode=OneWay}"
                                    FontSize="13" VerticalAlignment="Center" Opacity="0.65"/>
                         <TextBlock x:Name="FolderText" Grid.Column="1"
                                    FontSize="12" Opacity="0.7"
@@ -75,7 +75,7 @@
                                    TextWrapping="NoWrap"
                                    TextTrimming="CharacterEllipsis"/>
                         <Button x:Name="BrowseBtn"
-                                Grid.Column="2" Content="Browse…"
+                                Grid.Column="2" Content="{x:Bind Lang.Log_Browse, Mode=OneWay}"
                                 Click="BrowseFolder_Click"
                                 VerticalAlignment="Center"/>
                     </Grid>
@@ -86,7 +86,7 @@
                             <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Format"
+                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Log_Format, Mode=OneWay}"
                                    FontSize="13" VerticalAlignment="Center" Opacity="0.65"/>
                         <ComboBox x:Name="FormatBox"
                                   Grid.Column="1"
@@ -105,11 +105,11 @@
                             <ColumnDefinition Width="80"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Filename"
+                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Log_Filename, Mode=OneWay}"
                                    FontSize="13" VerticalAlignment="Center" Opacity="0.65"/>
                         <TextBox x:Name="FileNameBox"
                                  Grid.Column="1"
-                                 PlaceholderText="auto-generated if left blank"
+                                 PlaceholderText="{x:Bind Lang.Log_PhAutoFilename, Mode=OneWay}"
                                  FontSize="12"/>
                     </Grid>
 
@@ -120,107 +120,21 @@
                 </StackPanel>
             </Border>
 
-            <!-- ── COLUMN SETTINGS ─────────────────────────────────────────── -->
-            <TextBlock Text="COLUMN SETTINGS" Style="{StaticResource SectionHeaderStyle}"/>
-            <Border Style="{StaticResource CardStyle}">
-                <StackPanel Spacing="10">
-                    <TextBlock FontSize="12" Opacity="0.6" TextWrapping="Wrap"
-                               Text="Pilih kolom yang ingin di-log dan atur urutannya dengan drag ≡. Dikunci saat logging aktif."/>
-
-                    <!-- Quick-select buttons -->
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="SelectAllBtn"   Content="Pilih Semua"   Click="SelectAll_Click"    FontSize="12" Padding="10,5"/>
-                        <Button x:Name="DeselectAllBtn" Content="Hapus Semua"   Click="DeselectAll_Click"  FontSize="12" Padding="10,5"/>
-                        <Button x:Name="ResetColsBtn"   Content="Reset Default" Click="ResetColumns_Click" FontSize="12" Padding="10,5"/>
-                    </StackPanel>
-
-                    <!-- Group toggles -->
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="Grup:" FontSize="12" Opacity="0.55" VerticalAlignment="Center"/>
-                        <Button x:Name="ToggleCellsBtn" Content="Cell Voltages" Click="ToggleCells_Click" FontSize="11" Padding="8,4"/>
-                        <Button x:Name="ToggleBalBtn"   Content="Balancing"     Click="ToggleBal_Click"   FontSize="11" Padding="8,4"/>
-                        <Button x:Name="ToggleTempBtn"  Content="Temperatures"  Click="ToggleTemp_Click"  FontSize="11" Padding="8,4"/>
-                    </StackPanel>
-
-                    <!-- Draggable / reorderable column list -->
-                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="6">
-                        <ListView x:Name="ColumnListView"
-                                  MaxHeight="300"
-                                  CanReorderItems="True"
-                                  CanDragItems="True"
-                                  AllowDrop="True"
-                                  SelectionMode="Single">
-                            <ListView.Resources>
-                                <SolidColorBrush x:Key="ListViewItemBackgroundSelected"            Color="Transparent"/>
-                                <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPointerOver" Color="{ThemeResource SubtleFillColorSecondaryBrush}"/>
-                                <SolidColorBrush x:Key="ListViewItemBackgroundSelectedPressed"     Color="{ThemeResource SubtleFillColorTertiaryBrush}"/>
-                            </ListView.Resources>
-                            <ListView.ItemContainerStyle>
-                                <Style TargetType="ListViewItem">
-                                    <Setter Property="Padding"                    Value="0"/>
-                                    <Setter Property="MinHeight"                  Value="0"/>
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                </Style>
-                            </ListView.ItemContainerStyle>
-                            <ListView.ItemTemplate>
-                                <DataTemplate x:DataType="models:LogColumn">
-                                    <Grid Padding="10,5" ColumnSpacing="10" Background="Transparent">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="18"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="32"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <!-- Drag handle -->
-                                        <TextBlock Grid.Column="0"
-                                                   Text="&#xE784;" FontFamily="Segoe MDL2 Assets"
-                                                   FontSize="11" Opacity="0.3"
-                                                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
-
-                                        <!-- Column label -->
-                                        <TextBlock Grid.Column="1"
-                                                   Text="{x:Bind Label}"
-                                                   FontSize="12.5" VerticalAlignment="Center"
-                                                   TextTrimming="CharacterEllipsis"/>
-
-                                        <!-- Group badge -->
-                                        <Border Grid.Column="2"
-                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
-                                                CornerRadius="4" Padding="6,2">
-                                            <TextBlock Text="{x:Bind Group}"
-                                                       FontSize="10" Opacity="0.55"
-                                                       VerticalAlignment="Center"/>
-                                        </Border>
-
-                                        <!-- Enable checkbox -->
-                                        <CheckBox Grid.Column="3"
-                                                  IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"
-                                                  MinWidth="0" Padding="0" Margin="0"
-                                                  HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ListView.ItemTemplate>
-                        </ListView>
-                    </Border>
-                </StackPanel>
-            </Border>
 
             <!-- ── CONTROLS ────────────────────────────────────────────────── -->
-            <TextBlock Text="CONTROLS" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Log_SecControls, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="12">
                     <TextBlock x:Name="HintText"
-                               Text="Connect to the ESP32 first, then start logging."
+                               Text=""
                                FontSize="12" Opacity="0.6" TextWrapping="Wrap"/>
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <Button x:Name="StartStopBtn"
-                                Content="Start Logging"
+                                Content=""
                                 Style="{ThemeResource AccentButtonStyle}"
                                 MinWidth="140"
                                 Click="StartStopBtn_Click"/>
-                        <Button Content="Open Folder"
+                        <Button Content="{x:Bind Lang.Log_OpenFolder, Mode=OneWay}"
                                 MinWidth="120"
                                 Click="OpenFolderBtn_Click"/>
                     </StackPanel>
@@ -228,89 +142,143 @@
             </Border>
 
             <!-- ── DATA FORMAT ──────────────────────────────────────────────── -->
-            <TextBlock Text="DATA FORMAT" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Log_SecDataFormat, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="6">
                     <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
-                               Text="Each row = one data frame received from the ESP32 (~1 Hz)."/>
+                               Text="{x:Bind Lang.Log_DataDesc1, Mode=OneWay}"/>
                     <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
-                               Text="Fields: Timestamp · PackVoltage_V · SOC_pct · Current_A · Status · Cell1_V … Cell20_V · Bal1 … Bal20 · Temp1_C … Temp10_C"/>
+                               Text="{x:Bind Lang.Log_DataDesc2, Mode=OneWay}"/>
                     <TextBlock FontSize="11" Opacity="0.45" TextWrapping="Wrap"
-                               Text="CSV / TSV: streamed to disk every frame.  Excel / JSON: buffered in memory and written when you press Stop."/>
+                               Text="{x:Bind Lang.Log_DataDesc3, Mode=OneWay}"/>
                 </StackPanel>
             </Border>
 
-
             <!-- ── LIVE DATA STREAM ──────────────────────────────────────────── -->
-            <TextBlock Text="LIVE DATA (20 TERBARU)" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Log_SecLiveData, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}" Padding="0">
-                <StackPanel>
-
-                    <!-- Header row -->
-                    <Grid Padding="14,9,14,7">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="88"/>
-                            <ColumnDefinition Width="56"/>
-                            <ColumnDefinition Width="68"/>
-                            <ColumnDefinition Width="76"/>
-                            <ColumnDefinition Width="90"/>
-                            <ColumnDefinition Width="70"/>
-                            <ColumnDefinition Width="70"/>
-                            <ColumnDefinition Width="68"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="TIMESTAMP"  Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="1" Text="SOC %"      Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="2" Text="PACK V"     Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="3" Text="CURRENT A"  Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="4" Text="STATUS"     Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="5" Text="MIN CELL V" Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="6" Text="MAX CELL V" Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="7" Text="DELTA mV"   Style="{StaticResource StreamHeaderStyle}"/>
-                        <TextBlock Grid.Column="8" Text="BAL CELLS"  Style="{StaticResource StreamHeaderStyle}"/>
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <Grid x:Name="StreamContainer" MinHeight="40" Padding="14,0">
+                        <TextBlock x:Name="StreamEmptyText"
+                                   Text="{x:Bind Lang.Log_NoData, Mode=OneWay}"
+                                   FontSize="11" Opacity="0.45"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
                     </Grid>
+                </ScrollViewer>
+            </Border>
 
-                    <!-- Header separator -->
-                    <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="14,0"/>
+            <!-- ── COLUMN SETTINGS ─────────────────────────────────────────── -->
+            <TextBlock Text="{x:Bind Lang.Log_SecColumnSettings, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="10">
+                    <TextBlock FontSize="12" Opacity="0.6" TextWrapping="Wrap"
+                               Text="{x:Bind Lang.Log_ColumnHint, Mode=OneWay}"/>
 
-                    <!-- Data rows — newest first -->
-                    <ItemsControl x:Name="StreamTable"
-                                  ItemsSource="{x:Bind ViewModel.DataStream}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="models:LogRow">
-                                <Grid Padding="14,5,14,5">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="88"/>
-                                        <ColumnDefinition Width="56"/>
-                                        <ColumnDefinition Width="68"/>
-                                        <ColumnDefinition Width="76"/>
-                                        <ColumnDefinition Width="90"/>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="70"/>
-                                        <ColumnDefinition Width="68"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{x:Bind Timestamp}"   Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="1" Text="{x:Bind Soc}"         Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="2" Text="{x:Bind PackVoltage}" Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="3" Text="{x:Bind Current}"     Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="4" Text="{x:Bind Status}"      Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="5" Text="{x:Bind MinCell}"     Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="6" Text="{x:Bind MaxCell}"     Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="7" Text="{x:Bind Delta}"       Style="{StaticResource StreamCellStyle}"/>
-                                    <TextBlock Grid.Column="8" Text="{x:Bind Balancing}"   Style="{StaticResource StreamCellStyle}"/>
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- Quick-select buttons -->
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button x:Name="SelectAllBtn"   Content="{x:Bind Lang.Log_SelectAll,   Mode=OneWay}" Click="SelectAll_Click"    FontSize="12" Padding="10,5"/>
+                        <Button x:Name="DeselectAllBtn" Content="{x:Bind Lang.Log_DeselectAll, Mode=OneWay}" Click="DeselectAll_Click"  FontSize="12" Padding="10,5"/>
+                        <Button x:Name="ResetColsBtn"   Content="{x:Bind Lang.Log_ResetDefault,Mode=OneWay}" Click="ResetColumns_Click" FontSize="12" Padding="10,5"/>
+                    </StackPanel>
 
-                    <!-- Placeholder saat belum ada data -->
-                    <TextBlock x:Name="StreamEmptyText"
-                               Text="Belum ada data — hubungkan ESP32 untuk melihat data stream."
-                               FontSize="11" Opacity="0.45"
-                               Margin="14,10,14,10"
-                               Visibility="Collapsed"/>
+                    <!-- Group toggles -->
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{x:Bind Lang.Log_Group, Mode=OneWay}" FontSize="12" Opacity="0.55" VerticalAlignment="Center"/>
+                        <Button x:Name="ToggleCellsBtn" Content="{x:Bind Lang.Log_CellVoltages, Mode=OneWay}" Click="ToggleCells_Click" FontSize="11" Padding="8,4"/>
+                        <Button x:Name="ToggleBalBtn"   Content="{x:Bind Lang.Log_Balancing,    Mode=OneWay}" Click="ToggleBal_Click"   FontSize="11" Padding="8,4"/>
+                        <Button x:Name="ToggleTempBtn"  Content="{x:Bind Lang.Log_Temperatures, Mode=OneWay}" Click="ToggleTemp_Click"  FontSize="11" Padding="8,4"/>
+                    </StackPanel>
 
+                    <!-- Selected columns — horizontal draggable strip -->
+                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="4">
+                        <ListView x:Name="ActiveColumnsList"
+                                  CanReorderItems="True"
+                                  CanDragItems="True"
+                                  AllowDrop="True"
+                                  SelectionMode="None"
+                                  ScrollViewer.HorizontalScrollMode="Enabled"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                  ScrollViewer.VerticalScrollMode="Disabled">
+                            <ListView.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <ItemsStackPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </ListView.ItemsPanel>
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="MinHeight" Value="0"/>
+                                    <Setter Property="MinWidth" Value="0"/>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:LogColumn">
+                                    <Grid Padding="8,4,12,4" ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="16"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="&#xE784;" FontFamily="Segoe MDL2 Assets"
+                                                   FontSize="10" Opacity="0.3"
+                                                   VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{x:Bind Label}" FontSize="12"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <Border Grid.Column="2"
+                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                CornerRadius="3" Padding="4,1">
+                                            <TextBlock Text="{x:Bind Group}"
+                                                       FontSize="9" Opacity="0.5"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+                    </Border>
+
+                    <!-- Available columns — multi-column checkbox grid -->
+                    <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            BorderThickness="1" CornerRadius="6" Padding="8">
+                        <ItemsRepeater x:Name="ColumnGrid">
+                            <ItemsRepeater.Layout>
+                                <UniformGridLayout Orientation="Horizontal"
+                                                   MaximumRowsOrColumns="3"
+                                                   MinColumnSpacing="4" MinRowSpacing="0"/>
+                            </ItemsRepeater.Layout>
+                            <ItemsRepeater.ItemTemplate>
+                                <DataTemplate x:DataType="models:LogColumn">
+                                    <Grid Padding="8,5" ColumnSpacing="8">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"
+                                                  MinWidth="0" Padding="0" Margin="0"
+                                                  VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{x:Bind Label}" FontSize="12"
+                                                   VerticalAlignment="Center"/>
+                                        <Border Grid.Column="2"
+                                                Background="{ThemeResource SubtleFillColorSecondaryBrush}"
+                                                CornerRadius="3" Padding="4,1">
+                                            <TextBlock Text="{x:Bind Group}"
+                                                       FontSize="9" Opacity="0.5"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsRepeater.ItemTemplate>
+                        </ItemsRepeater>
+                    </Border>
                 </StackPanel>
             </Border>
 

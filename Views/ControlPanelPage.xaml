@@ -6,19 +6,17 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
-        <!-- Page-local form layouts so we don't repeat ColumnDefinitions per row -->
         <Thickness x:Key="CardSpacing">0,8,0,0</Thickness>
     </Page.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
         <Grid Padding="32,20,32,40">
-            <!-- Centered, max-880px column. Stretches down to ~640px before scroll. -->
             <StackPanel Spacing="10" MaxWidth="880"
                         HorizontalAlignment="Center">
 
                 <!-- ── SERIAL CONNECTION ──────────────────────────────────── -->
-                <TextBlock Text="SERIAL CONNECTION" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecSerial, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="14">
                         <Grid ColumnSpacing="10">
@@ -28,14 +26,15 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="COM Port"
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ComPort, Mode=OneWay}"
                                        Style="{StaticResource FormLabelStyle}"/>
                             <ComboBox Grid.Column="1" x:Name="ComboCOM"
-                                      PlaceholderText="Scanning ports…"
+                                      PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"
                                       HorizontalAlignment="Stretch"/>
-                            <Button Grid.Column="2" Content="Refresh" Click="RefreshPorts_Click"/>
+                            <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshPorts_Click"/>
                             <Button Grid.Column="3" x:Name="ConnectBtn"
-                                    Content="Connect" Style="{ThemeResource AccentButtonStyle}"
+                                    Content=""
+                                    Style="{ThemeResource AccentButtonStyle}"
                                     Click="ConnectBtn_Click"/>
                         </Grid>
                         <Grid ColumnSpacing="10">
@@ -43,7 +42,8 @@
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Baud Rate" Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_BaudRate, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <ComboBox Grid.Column="1" x:Name="ComboBaud" HorizontalAlignment="Stretch">
                                 <ComboBoxItem Content="9600"/>
                                 <ComboBoxItem Content="19200"/>
@@ -61,19 +61,20 @@
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Status" Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ConnStatus, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                <TextBlock x:Name="ConnStatusText" FontSize="13" Text="Not connected"/>
+                                <TextBlock x:Name="ConnStatusText" FontSize="13" Text=""/>
                                 <TextBlock x:Name="AutoConnectStatusText"
                                            FontSize="11" Opacity="0.5" TextWrapping="Wrap"
-                                           Text="Auto-connect aktif — menunggu ESP32 BMS…"/>
+                                           Text="{x:Bind Lang.Ctrl_AutoConnectStatus, Mode=OneWay}"/>
                             </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>
 
                 <!-- ── BATTERY CAPACITY ─────────────────────────────────── -->
-                <TextBlock Text="BATTERY CAPACITY" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecCapacity, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <Grid ColumnSpacing="10">
                         <Grid.ColumnDefinitions>
@@ -82,7 +83,7 @@
                             <ColumnDefinition Width="40"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Nominal Capacity"
+                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_NominalCapacity, Mode=OneWay}"
                                    Style="{StaticResource FormLabelStyle}"/>
                         <NumberBox Grid.Column="1" x:Name="NbxCapacity"
                                    Value="20" Minimum="1" Maximum="500"
@@ -91,13 +92,13 @@
                                    HorizontalAlignment="Stretch"/>
                         <TextBlock Grid.Column="2" Text="Ah" VerticalAlignment="Center"
                                    Opacity="0.65" FontSize="13"/>
-                        <TextBlock Grid.Column="3" Text="Used to calculate remaining capacity (mAh) on dashboard."
+                        <TextBlock Grid.Column="3" Text="{x:Bind Lang.Ctrl_CapacityHint, Mode=OneWay}"
                                    FontSize="11" Opacity="0.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
                     </Grid>
                 </Border>
 
                 <!-- ── PROTECTION THRESHOLDS ─────────────────────────────── -->
-                <TextBlock Text="PROTECTION THRESHOLDS" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecProtection, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="14">
 
@@ -108,7 +109,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Overvoltage Cutoff"  Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OvervoltCutoff, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxOvervolt"
                                        Value="4.20" Minimum="3.5" Maximum="4.35"
                                        SmallChange="0.01" LargeChange="0.1"
@@ -125,7 +127,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Undervoltage Cutoff" Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_UnderVoltCutoff, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxUndervolt"
                                        Value="2.80" Minimum="2.0" Maximum="3.5"
                                        SmallChange="0.01" LargeChange="0.1"
@@ -142,7 +145,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Low Voltage Warning"  Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_LowVoltWarn, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxLowVolt"
                                        Value="3.00" Minimum="2.5" Maximum="3.8"
                                        SmallChange="0.01" LargeChange="0.1"
@@ -159,7 +163,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Over-Temp Warning"   Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OverTempWarn, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxTempWarn"
                                        Value="60" Minimum="30" Maximum="90"
                                        SmallChange="1" LargeChange="5"
@@ -176,7 +181,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Over-Temp Cutoff"    Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OverTempCutoff, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxTempCutoff"
                                        Value="70" Minimum="40" Maximum="100"
                                        SmallChange="1" LargeChange="5"
@@ -189,7 +195,7 @@
                 </Border>
 
                 <!-- ── CURRENT LIMITS ────────────────────────────────────── -->
-                <TextBlock Text="CURRENT LIMITS" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecCurrentLimits, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="14">
                         <Grid ColumnSpacing="10">
@@ -199,7 +205,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Max Charge Current"     Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxCharge, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxMaxCharge"
                                        Value="20" Minimum="1" Maximum="60"
                                        SmallChange="1" LargeChange="5"
@@ -215,7 +222,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Max Discharge Current"  Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxDischarge, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxMaxDischarge"
                                        Value="40" Minimum="1" Maximum="120"
                                        SmallChange="1" LargeChange="5"
@@ -231,7 +239,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Max DoD"                Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxDod, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxMaxDod"
                                        Value="80" Minimum="50" Maximum="100"
                                        SmallChange="1" LargeChange="5"
@@ -244,7 +253,7 @@
                 </Border>
 
                 <!-- ── BALANCING SETTINGS ────────────────────────────────── -->
-                <TextBlock Text="ACTIVE BALANCING (LTC8584)" Style="{StaticResource SectionHeaderStyle}"/>
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecBalancing, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="14">
                         <Grid ColumnSpacing="10">
@@ -254,7 +263,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Start Delta"  Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_StartDelta, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxBalStart"
                                        Value="20" Minimum="5" Maximum="100"
                                        SmallChange="1" LargeChange="5"
@@ -270,7 +280,8 @@
                                 <ColumnDefinition Width="40"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="Stop Delta"   Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_StopDelta, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
                             <NumberBox  Grid.Column="1" x:Name="NbxBalStop"
                                        Value="5" Minimum="1" Maximum="50"
                                        SmallChange="1" LargeChange="5"
@@ -282,13 +293,36 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ── LANGUAGE ──────────────────────────────────────────── -->
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecLanguage, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_Language, Mode=OneWay}"
+                                   Style="{StaticResource FormLabelStyle}"/>
+                        <ComboBox Grid.Column="1" x:Name="LangCombo"
+                                  HorizontalAlignment="Left" MinWidth="220"
+                                  SelectionChanged="LangCombo_SelectionChanged">
+                            <ComboBoxItem Content="Indonesia" Tag="id"/>
+                            <ComboBoxItem Content="Malay"     Tag="ms"/>
+                            <ComboBoxItem Content="English"   Tag="en"/>
+                            <ComboBoxItem Content="Nederlands" Tag="nl"/>
+                            <ComboBoxItem Content="中文"      Tag="zh"/>
+                        </ComboBox>
+                    </Grid>
+                </Border>
+
                 <!-- ── ACTION BUTTONS ─────────────────────────────────────── -->
                 <StackPanel Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Right"
                             Margin="0,16,0,0">
-                    <Button Content="Reset to Defaults" Click="ResetDefaults_Click"
+                    <Button Content="{x:Bind Lang.Ctrl_ResetDefaults, Mode=OneWay}"
+                            Click="ResetDefaults_Click"
                             MinWidth="140"/>
-                    <Button Content="Apply Settings"
+                    <Button Content="{x:Bind Lang.Ctrl_ApplySettings, Mode=OneWay}"
                             Style="{ThemeResource AccentButtonStyle}"
                             Click="ApplySettings_Click"
                             MinWidth="140"/>

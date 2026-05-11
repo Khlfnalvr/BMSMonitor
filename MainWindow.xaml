@@ -22,11 +22,11 @@
             Loaded="NavView_Loaded">
 
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Dashboard"     Tag="Dashboard"/>
-                <NavigationViewItem Content="Cell View"     Tag="CellView"/>
-                <NavigationViewItem Content="Control Panel" Tag="ControlPanel"/>
-                <NavigationViewItem Content="Logging"       Tag="Logging"/>
-                <NavigationViewItem Content="Playback"      Tag="Playback"/>
+                <NavigationViewItem Content="{x:Bind Lang.Nav_Dashboard,    Mode=OneWay}" Tag="Dashboard"/>
+                <NavigationViewItem Content="{x:Bind Lang.Nav_CellView,     Mode=OneWay}" Tag="CellView"/>
+                <NavigationViewItem Content="{x:Bind Lang.Nav_ControlPanel, Mode=OneWay}" Tag="ControlPanel"/>
+                <NavigationViewItem Content="{x:Bind Lang.Nav_Logging,      Mode=OneWay}" Tag="Logging"/>
+                <NavigationViewItem Content="{x:Bind Lang.Nav_Playback,     Mode=OneWay}" Tag="Playback"/>
             </NavigationView.MenuItems>
 
             <Frame x:Name="ContentFrame" Padding="0"/>
@@ -54,10 +54,9 @@
                 Grid.Row="0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top"
-                Height="32"
-                Padding="0,0,10,0">
-            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                <TextBlock Text="DARK"
+                Padding="0,0,12,0">
+            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="{x:Bind Lang.Ui_Dark, Mode=OneWay}"
                            FontSize="10" FontWeight="SemiBold"
                            CharacterSpacing="100" Opacity="0.5"
                            VerticalAlignment="Center"/>
@@ -66,9 +65,8 @@
                               ToolTipService.ToolTip="Dark / Light"
                               Toggled="ThemeSwitch_Toggled"
                               MinWidth="0"
-                              VerticalAlignment="Center"
-                              Margin="0,-4,0,-4"/>
-                <TextBlock Text="LIGHT"
+                              VerticalAlignment="Center"/>
+                <TextBlock Text="{x:Bind Lang.Ui_Light, Mode=OneWay}"
                            FontSize="10" FontWeight="SemiBold"
                            CharacterSpacing="100" Opacity="0.5"
                            VerticalAlignment="Center"/>

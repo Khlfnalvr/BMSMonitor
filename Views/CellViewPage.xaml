@@ -18,7 +18,7 @@
         <StackPanel Padding="20,16,20,32" Spacing="12">
 
             <!-- ══ CELL VOLTAGES ══════════════════════════════════════════ -->
-            <TextBlock Text="VOLTAGE SUMMARY" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Cell_SecVoltageSummary, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -31,35 +31,34 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="3">
-                        <TextBlock Text="MIN" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind Lang.Com_Min, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{x:Bind ViewModel.MinCellText, Mode=OneWay}"
                                    Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
                     </StackPanel>
                     <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2"/>
                     <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="3">
-                        <TextBlock Text="MAX" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind Lang.Com_Max, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{x:Bind ViewModel.MaxCellText, Mode=OneWay}"
                                    Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
                     </StackPanel>
                     <Border Grid.Column="3" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2"/>
                     <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="3">
-                        <TextBlock Text="AVG" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind Lang.Com_Avg, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{x:Bind ViewModel.AvgCellText, Mode=OneWay}"
                                    Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
                     </StackPanel>
                     <Border Grid.Column="5" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,2"/>
                     <StackPanel Grid.Column="6" HorizontalAlignment="Center" Spacing="3">
-                        <TextBlock Text="Δ DELTA" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_DeltaLabel, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
                         <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
                                    Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
             </Border>
 
-            <TextBlock Text="CELL GRID — 20S4P" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Cell_SecCellGrid, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Cells, Mode=OneWay}">
                 <ItemsRepeater.Layout>
-                    <!-- Max 10 columns; cells stretch to fill the row evenly. -->
                     <UniformGridLayout
                         Orientation="Horizontal"
                         MinItemWidth="110" MinItemHeight="84"
@@ -93,35 +92,32 @@
             <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,2,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Ellipse Width="9" Height="9" Fill="#FF25C685"/>
-                    <TextBlock Text="Normal" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind Lang.Cell_Normal, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Ellipse Width="9" Height="9" Fill="#FFFF8C00"/>
-                    <TextBlock Text="Low" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind Lang.Cell_Low, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Ellipse Width="9" Height="9" Fill="#FFDC3545"/>
-                    <TextBlock Text="Undervoltage" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind Lang.Cell_Undervoltage, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <Ellipse Width="9" Height="9" Fill="#FF6F42C1"/>
-                    <TextBlock Text="Overvoltage" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind Lang.Cell_Overvoltage, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                     <TextBlock Text="⚡" FontSize="10" Foreground="#FFFF8C00" VerticalAlignment="Center"/>
-                    <TextBlock Text="Balancing" FontSize="12" VerticalAlignment="Center"/>
+                    <TextBlock Text="{x:Bind Lang.Cell_Balancing, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
             </StackPanel>
 
             <!-- ══ TEMPERATURES ══════════════════════════════════════════ -->
-            <TextBlock Text="NTC THERMISTOR READINGS"
+            <TextBlock Text="{x:Bind Lang.Cell_SecNtcReadings, Mode=OneWay}"
                        Style="{StaticResource SectionHeaderStyle}"
                        Margin="0,16,0,0"/>
             <ItemsRepeater ItemsSource="{x:Bind ViewModel.Temperatures, Mode=OneWay}">
                 <ItemsRepeater.Layout>
-                    <!-- Max 5 columns; 10 NTC sensors → 5 across, 5 below.
-                         ItemsStretch="Fill" expands cards to fill the row width
-                         (no empty space on the right when full-screen). -->
                     <UniformGridLayout
                         Orientation="Horizontal"
                         MinItemWidth="200" MinItemHeight="120"
@@ -157,23 +153,23 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0" Spacing="4">
-                        <TextBlock Text="THRESHOLDS" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="Warning :  60 °C" FontSize="13"/>
-                        <TextBlock Text="Cutoff  :  70 °C" FontSize="13"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_Thresholds, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_ThreshWarn, Mode=OneWay}" FontSize="13"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_ThreshCutoff, Mode=OneWay}" FontSize="13"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="4">
-                        <TextBlock Text="LEGEND" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_Legend, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
-                            <TextBlock Text="Normal  (below 60°C)" FontSize="13"/>
+                            <TextBlock Text="{x:Bind Lang.Cell_NormalDesc, Mode=OneWay}" FontSize="13"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="8" Height="8" Fill="#FFFF8C00" VerticalAlignment="Center"/>
-                            <TextBlock Text="Warning (60 – 70°C)" FontSize="13"/>
+                            <TextBlock Text="{x:Bind Lang.Cell_WarnDesc, Mode=OneWay}" FontSize="13"/>
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="8" Height="8" Fill="#FFDC3545" VerticalAlignment="Center"/>
-                            <TextBlock Text="Cutoff  (above 70°C)" FontSize="13"/>
+                            <TextBlock Text="{x:Bind Lang.Cell_CutoffDesc, Mode=OneWay}" FontSize="13"/>
                         </StackPanel>
                     </StackPanel>
                 </Grid>

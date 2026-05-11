@@ -13,6 +13,7 @@ namespace BMSMonitor.Views;
 public sealed partial class DashboardPage : Page
 {
     private MainViewModel ViewModel => App.ViewModel;
+    private Services.LocalizationManager Lang => App.Lang;
 
     public DashboardPage()
     {

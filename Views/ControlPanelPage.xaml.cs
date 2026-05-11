@@ -8,6 +8,9 @@ namespace BMSMonitor.Views;
 public sealed partial class ControlPanelPage : Page
 {
     private MainViewModel ViewModel => App.ViewModel;
+    private LocalizationManager Lang => App.Lang;
+
+    private bool _langComboInitializing;
 
     public ControlPanelPage()
     {
@@ -16,8 +19,30 @@ public sealed partial class ControlPanelPage : Page
         RefreshPorts();
         HookSerial();
         SyncConnectButton();
+        InitLangCombo();
     }
 
+    // ── Language selector ─────────────────────────────────────────────────
+    private void InitLangCombo()
+    {
+        _langComboInitializing = true;
+        int idx = Array.IndexOf(LocalizationManager.SupportedLanguages, Lang.CurrentLanguage);
+        LangCombo.SelectedIndex = idx >= 0 ? idx : 2; // default English
+        _langComboInitializing = false;
+    }
+
+    private void LangCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_langComboInitializing) return;
+        if (LangCombo.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+        {
+            Lang.CurrentLanguage = tag;
+            // Re-sync button text that is set in code-behind
+            SyncConnectButton();
+        }
+    }
+
+    // ── Serial controls ───────────────────────────────────────────────────
     private void HookSerial()
     {
         ViewModel.Serial.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
@@ -27,10 +52,9 @@ public sealed partial class ControlPanelPage : Page
         });
         ViewModel.Serial.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
         {
-            // Suppress "Failed to open COMx" errors while auto-connect is scanning —
-            // those are expected when probing non-BMS ports.
+            // Suppress errors while auto-connect is scanning — expected when probing ports.
             if (!ViewModel.AutoConnect.IsSuspended) return;
-            FeedbackBar.Title    = "Serial error";
+            FeedbackBar.Title    = Lang.Fb_SerialError;
             FeedbackBar.Message  = msg;
             FeedbackBar.Severity = InfoBarSeverity.Error;
             FeedbackBar.IsOpen   = true;
@@ -42,13 +66,12 @@ public sealed partial class ControlPanelPage : Page
     private void SyncConnectButton()
     {
         bool connected = ViewModel.Serial.IsConnected;
-        ConnectBtn.Content   = connected ? "Disconnect" : "Connect";
-        ComboCOM.IsEnabled   = !connected;
-        ComboBaud.IsEnabled  = !connected;
-        if (!connected) ConnStatusText.Text = "Not connected";
+        ConnectBtn.Content  = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
+        ComboCOM.IsEnabled  = !connected;
+        ComboBaud.IsEnabled = !connected;
+        if (!connected) ConnStatusText.Text = Lang.Ctrl_NotConnected;
     }
 
-    // ── Serial controls ──────────────────────────────────────────────
     private void RefreshPorts()
     {
         var current = ComboCOM.SelectedItem as string;
@@ -59,11 +82,11 @@ public sealed partial class ControlPanelPage : Page
 
         if (ports.Length == 0)
         {
-            ComboCOM.PlaceholderText = "No COM ports detected";
+            ComboCOM.PlaceholderText = Lang.Ctrl_PhNoPorts;
             return;
         }
 
-        ComboCOM.PlaceholderText = "Select port…";
+        ComboCOM.PlaceholderText = Lang.Ctrl_PhScanning;
         if (current != null && ports.Contains(current))
             ComboCOM.SelectedItem = current;
         else
@@ -84,7 +107,6 @@ public sealed partial class ControlPanelPage : Page
     {
         if (ViewModel.Serial.IsConnected)
         {
-            // Manual disconnect → suspend auto-connect so we don't immediately reconnect
             ViewModel.AutoConnect.SuspendReconnect();
             ViewModel.Serial.Disconnect();
             return;
@@ -92,20 +114,19 @@ public sealed partial class ControlPanelPage : Page
 
         if (ComboCOM.SelectedItem is not string port)
         {
-            FeedbackBar.Title    = "Select a port";
-            FeedbackBar.Message  = "Pick a COM port from the dropdown first.";
+            FeedbackBar.Title    = Lang.Fb_SelectPort;
+            FeedbackBar.Message  = Lang.Fb_SelectPortMsg;
             FeedbackBar.Severity = InfoBarSeverity.Warning;
             FeedbackBar.IsOpen   = true;
             return;
         }
 
-        // Manual connect → resume auto-connect (so future unplug will auto-reconnect)
         ViewModel.AutoConnect.BaudRate = GetSelectedBaud();
         ViewModel.AutoConnect.ResumeReconnect();
         ViewModel.Serial.Connect(port, GetSelectedBaud());
     }
 
-    // ── Settings ─────────────────────────────────────────────────────
+    // ── Settings ──────────────────────────────────────────────────────────
     private void LoadConfig()
     {
         var cfg = ViewModel.Config;
@@ -137,8 +158,8 @@ public sealed partial class ControlPanelPage : Page
         cfg.BalancingStartDelta   = NbxBalStart.Value / 1000.0;
         cfg.BalancingStopDelta    = NbxBalStop.Value  / 1000.0;
 
-        FeedbackBar.Title    = "Settings applied";
-        FeedbackBar.Message  = "New thresholds are active.";
+        FeedbackBar.Title    = Lang.Fb_SettingsApplied;
+        FeedbackBar.Message  = Lang.Fb_SettingsAppliedMsg;
         FeedbackBar.Severity = InfoBarSeverity.Success;
         FeedbackBar.IsOpen   = true;
     }
@@ -157,8 +178,8 @@ public sealed partial class ControlPanelPage : Page
         NbxBalStart.Value     = 20;
         NbxBalStop.Value      = 5;
 
-        FeedbackBar.Title    = "Defaults restored";
-        FeedbackBar.Message  = "Values reset — click Apply to activate.";
+        FeedbackBar.Title    = Lang.Fb_DefaultsRestored;
+        FeedbackBar.Message  = Lang.Fb_DefaultsRestoredMsg;
         FeedbackBar.Severity = InfoBarSeverity.Informational;
         FeedbackBar.IsOpen   = true;
     }
