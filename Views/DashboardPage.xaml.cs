@@ -3,6 +3,7 @@ using System.Linq;
 using System.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
@@ -149,6 +150,7 @@ public sealed partial class DashboardPage : Page
         string socUnit = RedrawSocChart();
         string viUnit  = RedrawVIChart();
         UpdateXAxisLabels(socUnit, viUnit);
+        UpdateTrimBar();   // keep the trim selection in sync with the data range
     }
 
     private void SocChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -455,9 +457,7 @@ public sealed partial class DashboardPage : Page
 
     // ── Save chart (with size + aspect + format dialog) ────────────────────
 
-    private record ExportOptions(
-        int Width, int Height, string Format,
-        DateTime? FilterStart, DateTime? FilterEnd);
+    private record ExportOptions(int Width, int Height, string Format);
 
     private async void SaveSocChart_Click(object sender, RoutedEventArgs e)
     {
@@ -510,16 +510,6 @@ public sealed partial class DashboardPage : Page
         var file = await picker.PickSaveFileAsync();
         if (file is null) return;
 
-        // Apply time-range filter (if any) for the duration of the snapshot
-        bool filterApplied = opts.FilterStart.HasValue || opts.FilterEnd.HasValue;
-        if (filterApplied)
-        {
-            _filterStart = opts.FilterStart;
-            _filterEnd   = opts.FilterEnd;
-            RedrawSocChart();
-            RedrawVIChart();
-        }
-
         try
         {
             if (opts.Format == "svg")
@@ -540,23 +530,13 @@ public sealed partial class DashboardPage : Page
             };
             try { await err.ShowAsync(); } catch { }
         }
-        finally
-        {
-            if (filterApplied)
-            {
-                _filterStart = null;
-                _filterEnd   = null;
-                RedrawSocChart();
-                RedrawVIChart();
-            }
-        }
     }
 
     /// <summary>
-    /// Shows the export dialog (size + aspect + format + time range).
-    /// Returns null on cancel.
+    /// Shows the export dialog (size + aspect + format). Returns null on cancel.
+    /// Time range is set globally via the trim bar on the dashboard.
     /// </summary>
-    private async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
+    private static async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
     {
         // ── Controls ──────────────────────────────────────────────────────
         var aspect = new ComboBox
@@ -684,81 +664,6 @@ public sealed partial class DashboardPage : Page
 
         panel.Children.Add(sizeGrid);
 
-        // — Section: Time range —
-        panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("Time range"));
-
-        // Data availability hint
-        var earliest = ViewModel.EarliestTimestamp;
-        var latest   = ViewModel.LatestTimestamp;
-        string availability = (earliest, latest) switch
-        {
-            (DateTime e, DateTime l) => $"Available data: {e:HH:mm:ss} → {l:HH:mm:ss}",
-            _                        => "No data captured yet."
-        };
-
-        panel.Children.Add(new TextBlock
-        {
-            Text     = availability,
-            FontSize = 11, Opacity = 0.55, FontFamily = new FontFamily("Consolas"),
-            Margin   = new Thickness(0, 0, 0, 6)
-        });
-
-        var rangeMode = new RadioButtons { MaxColumns = 1 };
-        rangeMode.Items.Add("Use the chart's current view (default)");
-        rangeMode.Items.Add("Custom time range");
-        rangeMode.SelectedIndex = 0;
-
-        panel.Children.Add(rangeMode);
-
-        // Custom range picker (hidden by default)
-        var sessionDate = earliest?.Date ?? DateTime.Today;
-
-        var startTime = new TimePicker
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            ClockIdentifier     = "24HourClock",
-            MinuteIncrement     = 1,
-            Time                = (earliest ?? DateTime.Now.AddMinutes(-2)).TimeOfDay
-        };
-        var endTime = new TimePicker
-        {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            ClockIdentifier     = "24HourClock",
-            MinuteIncrement     = 1,
-            Time                = (latest ?? DateTime.Now).TimeOfDay
-        };
-
-        var rangeGrid = new Grid
-        {
-            ColumnSpacing = 12,
-            Margin        = new Thickness(0, 10, 0, 0),
-            Visibility    = Visibility.Collapsed
-        };
-        rangeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        rangeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-        rangeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        rangeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-        var sLab = FieldLabel("Start (HH:MM)"); Grid.SetColumn(sLab, 0); Grid.SetRow(sLab, 0);
-        var eLab = FieldLabel("End (HH:MM)");   Grid.SetColumn(eLab, 1); Grid.SetRow(eLab, 0);
-        Grid.SetColumn(startTime, 0);           Grid.SetRow(startTime, 1);
-        Grid.SetColumn(endTime,   1);           Grid.SetRow(endTime,   1);
-
-        rangeGrid.Children.Add(sLab);
-        rangeGrid.Children.Add(eLab);
-        rangeGrid.Children.Add(startTime);
-        rangeGrid.Children.Add(endTime);
-
-        panel.Children.Add(rangeGrid);
-
-        rangeMode.SelectionChanged += (_, _) =>
-        {
-            rangeGrid.Visibility = rangeMode.SelectedIndex == 1
-                ? Visibility.Visible
-                : Visibility.Collapsed;
-        };
-
         // — Section: Format —
         panel.Children.Add(Divider());
         panel.Children.Add(SectionHeader("File format"));
@@ -767,26 +672,19 @@ public sealed partial class DashboardPage : Page
         panel.Children.Add(new TextBlock
         {
             Text = "SVG exports the chart drawing area only (curves and ticks). " +
-                   "For complete figures with axis labels included, choose PNG or JPG.",
+                   "For complete figures with axis labels included, choose PNG or JPG.\n\n" +
+                   "Tip: use the trim bar below the V/I chart to select a specific " +
+                   "time segment before exporting.",
             FontSize     = 11,
             Opacity      = 0.55,
             TextWrapping = TextWrapping.Wrap,
             Margin       = new Thickness(0, 10, 0, 0)
         });
 
-        // Wrap in ScrollViewer — dialog can get tall on small screens
-        var scroll = new ScrollViewer
-        {
-            Content                       = panel,
-            VerticalScrollBarVisibility   = ScrollBarVisibility.Auto,
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            MaxHeight                     = 560
-        };
-
         var dialog = new ContentDialog
         {
             Title             = "Export chart",
-            Content           = scroll,
+            Content           = panel,
             PrimaryButtonText = "Save…",
             CloseButtonText   = "Cancel",
             DefaultButton     = ContentDialogButton.Primary,
@@ -798,20 +696,7 @@ public sealed partial class DashboardPage : Page
         string fmt = "png";
         if (format.SelectedItem is ComboBoxItem fi && fi.Tag is string ft) fmt = ft;
 
-        // Resolve time range if custom mode is selected
-        DateTime? filterStart = null, filterEnd = null;
-        if (rangeMode.SelectedIndex == 1)
-        {
-            filterStart = sessionDate.Add(startTime.Time);
-            filterEnd   = sessionDate.Add(endTime.Time);
-            // Swap if user entered reversed range
-            if (filterEnd < filterStart)
-                (filterStart, filterEnd) = (filterEnd, filterStart);
-        }
-
-        return new ExportOptions(
-            (int)widthBox.Value, (int)heightBox.Value, fmt,
-            filterStart, filterEnd);
+        return new ExportOptions((int)widthBox.Value, (int)heightBox.Value, fmt);
     }
 
     /// <summary>
@@ -980,4 +865,178 @@ public sealed partial class DashboardPage : Page
             .Replace("<",  "&lt;")
             .Replace(">",  "&gt;")
             .Replace("\"", "&quot;");
+
+    // ── Trim bar (video-editor style time range selector) ─────────────────
+    // Two draggable handles set the visible time window; the charts re-render
+    // to the selected range. Reset returns to the rolling-window mode.
+
+    private bool _draggingStart;
+    private bool _draggingEnd;
+
+    private void TrimCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        => UpdateTrimBar();
+
+    private void StartThumb_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        _draggingStart = true;
+        StartThumb.CapturePointer(e.Pointer);
+    }
+
+    private void EndThumb_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        _draggingEnd = true;
+        EndThumb.CapturePointer(e.Pointer);
+    }
+
+    private void Thumb_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_draggingStart && !_draggingEnd) return;
+
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest   = ViewModel.LatestTimestamp;
+        if (earliest is null || latest is null || earliest == latest) return;
+
+        double w = TrimCanvas.ActualWidth;
+        if (w <= 0) return;
+
+        double xCanvas = e.GetCurrentPoint(TrimCanvas).Position.X;
+        xCanvas = Math.Clamp(xCanvas, 0, w);
+
+        var ts = XToTimestamp(xCanvas, earliest.Value, latest.Value, w);
+
+        if (_draggingStart)
+        {
+            var endTs = _filterEnd ?? latest.Value;
+            if (ts >= endTs) ts = endTs.AddSeconds(-1);
+            _filterStart = ts;
+        }
+        else if (_draggingEnd)
+        {
+            var startTs = _filterStart ?? earliest.Value;
+            if (ts <= startTs) ts = startTs.AddSeconds(1);
+            _filterEnd = ts;
+        }
+
+        UpdateTrimBar();
+        RedrawSocChart();
+        RedrawVIChart();
+    }
+
+    private void Thumb_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (_draggingStart)
+        {
+            // Snap to "no trim at start" if dropped at the leftmost edge
+            var earliest = ViewModel.EarliestTimestamp;
+            if (earliest is not null && _filterStart is not null &&
+                (_filterStart.Value - earliest.Value).TotalSeconds < 1)
+                _filterStart = null;
+            StartThumb.ReleasePointerCapture(e.Pointer);
+        }
+        if (_draggingEnd)
+        {
+            var latest = ViewModel.LatestTimestamp;
+            if (latest is not null && _filterEnd is not null &&
+                (latest.Value - _filterEnd.Value).TotalSeconds < 1)
+                _filterEnd = null;
+            EndThumb.ReleasePointerCapture(e.Pointer);
+        }
+        _draggingStart = false;
+        _draggingEnd   = false;
+
+        UpdateTrimBar();
+        RedrawSocChart();
+        RedrawVIChart();
+    }
+
+    private void ResetTrim_Click(object sender, RoutedEventArgs e)
+    {
+        _filterStart = null;
+        _filterEnd   = null;
+        UpdateTrimBar();
+        RedrawSocChart();
+        RedrawVIChart();
+    }
+
+    /// <summary>
+    /// Repositions the trim track, selection, and handles based on the current
+    /// data range (earliest..latest) and active filter (_filterStart/_filterEnd).
+    /// </summary>
+    private void UpdateTrimBar()
+    {
+        if (TrimCanvas is null) return;
+
+        double w = TrimCanvas.ActualWidth;
+        if (w <= 0) return;
+
+        // Track always spans the full canvas
+        TrimTrack.Width = w;
+        Canvas.SetLeft(TrimTrack, 0);
+
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest   = ViewModel.LatestTimestamp;
+
+        bool noData = earliest is null || latest is null || earliest == latest;
+
+        // Disable interaction when there's no usable range
+        StartThumb.IsHitTestVisible = !noData;
+        EndThumb.IsHitTestVisible   = !noData;
+        ResetTrimBtn.IsEnabled      = _filterStart.HasValue || _filterEnd.HasValue;
+
+        if (noData)
+        {
+            DataStartLabel.Text = "—";
+            DataEndLabel.Text   = "—";
+            TrimRangeText.Text  = "No data captured yet";
+            // Park handles at extremes
+            Canvas.SetLeft(StartThumb, 0);
+            Canvas.SetLeft(EndThumb,   Math.Max(0, w - EndThumb.Width));
+            Canvas.SetLeft(TrimSelection, 0);
+            TrimSelection.Width = 0;
+            return;
+        }
+
+        DataStartLabel.Text = earliest!.Value.ToString("HH:mm:ss");
+        DataEndLabel.Text   = latest!.Value.ToString("HH:mm:ss");
+
+        var trimStart = _filterStart ?? earliest.Value;
+        var trimEnd   = _filterEnd   ?? latest.Value;
+
+        double startX = TimestampToX(trimStart, earliest.Value, latest.Value, w);
+        double endX   = TimestampToX(trimEnd,   earliest.Value, latest.Value, w);
+
+        // Center the thumbs on their target X
+        Canvas.SetLeft(StartThumb, startX - StartThumb.Width / 2);
+        Canvas.SetLeft(EndThumb,   endX   - EndThumb.Width   / 2);
+
+        // Selection highlight between the two handles
+        Canvas.SetLeft(TrimSelection, startX);
+        TrimSelection.Width = Math.Max(0, endX - startX);
+
+        // Status line
+        TimeSpan duration = trimEnd - trimStart;
+        string durStr = duration.TotalHours    >= 1 ? $"{duration.TotalHours:0.#} h"
+                      : duration.TotalMinutes  >= 1 ? $"{duration.TotalMinutes:0.#} min"
+                      :                                $"{duration.TotalSeconds:0} s";
+
+        TrimRangeText.Text = (_filterStart.HasValue || _filterEnd.HasValue)
+            ? $"Trim: {trimStart:HH:mm:ss} → {trimEnd:HH:mm:ss}  ·  {durStr}"
+            : $"Full range: {trimStart:HH:mm:ss} → {trimEnd:HH:mm:ss}  ·  {durStr}  (drag a handle to trim)";
+    }
+
+    private static double TimestampToX(DateTime t, DateTime earliest, DateTime latest, double w)
+    {
+        double totalSec = (latest - earliest).TotalSeconds;
+        if (totalSec <= 0) return 0;
+        double frac = (t - earliest).TotalSeconds / totalSec;
+        return Math.Clamp(frac, 0, 1) * w;
+    }
+
+    private static DateTime XToTimestamp(double x, DateTime earliest, DateTime latest, double w)
+    {
+        if (w <= 0) return earliest;
+        double frac = Math.Clamp(x / w, 0, 1);
+        double totalSec = (latest - earliest).TotalSeconds;
+        return earliest.AddSeconds(frac * totalSec);
+    }
 }

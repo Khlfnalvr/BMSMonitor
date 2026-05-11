@@ -243,6 +243,88 @@
                 </Grid>
             </Border>
 
+            <!-- ── TIME RANGE TRIM ──────────────────────────────────── -->
+            <TextBlock Text="Time Range (trim)" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TrimRangeText"
+                                   Text="No data captured yet"
+                                   FontFamily="Consolas" FontSize="12" Opacity="0.75"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" x:Name="ResetTrimBtn"
+                                Content="Reset"
+                                Click="ResetTrim_Click"
+                                FontSize="11" Padding="10,4"
+                                IsEnabled="False"/>
+                    </Grid>
+
+                    <!-- Trim bar canvas -->
+                    <Canvas x:Name="TrimCanvas" Height="34"
+                            HorizontalAlignment="Stretch"
+                            Background="Transparent"
+                            SizeChanged="TrimCanvas_SizeChanged">
+                        <!-- Background track (full data range) -->
+                        <Border x:Name="TrimTrack"
+                                Background="{ThemeResource ControlFillColorTertiaryBrush}"
+                                Height="8" CornerRadius="4"
+                                Canvas.Top="13"/>
+                        <!-- Selected segment (between handles) -->
+                        <Border x:Name="TrimSelection"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                Opacity="0.45"
+                                Height="8" CornerRadius="4"
+                                Canvas.Top="13"/>
+                        <!-- Start handle -->
+                        <Border x:Name="StartThumb"
+                                Width="14" Height="30"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource AccentFillColorTertiaryBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Canvas.Top="2"
+                                ManipulationMode="TranslateX"
+                                PointerPressed="StartThumb_PointerPressed"
+                                PointerMoved="Thumb_PointerMoved"
+                                PointerReleased="Thumb_PointerReleased"
+                                PointerCaptureLost="Thumb_PointerReleased"/>
+                        <!-- End handle -->
+                        <Border x:Name="EndThumb"
+                                Width="14" Height="30"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource AccentFillColorTertiaryBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Canvas.Top="2"
+                                ManipulationMode="TranslateX"
+                                PointerPressed="EndThumb_PointerPressed"
+                                PointerMoved="Thumb_PointerMoved"
+                                PointerReleased="Thumb_PointerReleased"
+                                PointerCaptureLost="Thumb_PointerReleased"/>
+                    </Canvas>
+
+                    <!-- Time labels (full range extents) -->
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="DataStartLabel" Text="—"
+                                   FontFamily="Consolas" FontSize="10" Opacity="0.55"/>
+                        <TextBlock Grid.Column="1" x:Name="DataEndLabel" Text="—"
+                                   FontFamily="Consolas" FontSize="10" Opacity="0.55"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock FontSize="10" Opacity="0.45" TextWrapping="Wrap"
+                               Text="Drag the handles to select a time range. The charts update live to the selected window. Reset to return to the rolling view."/>
+                </StackPanel>
+            </Border>
+
             <!-- ── VOLTAGE SUMMARY ────────────────────────────────────── -->
             <TextBlock Text="{x:Bind Lang.Dash_SecCellSummary, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
