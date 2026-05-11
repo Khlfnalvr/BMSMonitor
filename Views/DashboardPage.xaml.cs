@@ -449,8 +449,12 @@ public sealed partial class DashboardPage : Page
     /// </summary>
     private static async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
     {
-        // Aspect ratio combo
-        var aspect = new ComboBox { Width = 240, SelectedIndex = 0 };
+        // ── Controls ──────────────────────────────────────────────────────
+        var aspect = new ComboBox
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            SelectedIndex       = 0
+        };
         aspect.Items.Add(new ComboBoxItem { Content = "4:3 — paper / Origin default",    Tag = "1.3333" });
         aspect.Items.Add(new ComboBoxItem { Content = "3:2 — photo / wide paper",        Tag = "1.5"    });
         aspect.Items.Add(new ComboBoxItem { Content = "16:9 — slide / video",            Tag = "1.7778" });
@@ -458,27 +462,32 @@ public sealed partial class DashboardPage : Page
         aspect.Items.Add(new ComboBoxItem { Content = "1:1 — square (correlation)",      Tag = "1.0"    });
         aspect.Items.Add(new ComboBoxItem { Content = "Custom — set height manually",    Tag = "0"      });
 
-        // Width / Height boxes
         var widthBox = new NumberBox
         {
-            Width = 120, Value = 600, Minimum = 200, Maximum = 4000,
+            HorizontalAlignment     = HorizontalAlignment.Stretch,
+            Value = 600, Minimum = 200, Maximum = 4000,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
             SmallChange = 50, LargeChange = 100
         };
         var heightBox = new NumberBox
         {
-            Width = 120, Value = 450, Minimum = 150, Maximum = 4000,
+            HorizontalAlignment     = HorizontalAlignment.Stretch,
+            Value = 450, Minimum = 150, Maximum = 4000,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
             SmallChange = 25, LargeChange = 100,
             IsEnabled = false   // default aspect 4:3 is locked
         };
 
-        // Format combo
-        var format = new ComboBox { Width = 180, SelectedIndex = 0 };
-        format.Items.Add(new ComboBoxItem { Content = "PNG (raster, lossless)", Tag = "png" });
-        format.Items.Add(new ComboBoxItem { Content = "JPG (raster, smaller)",  Tag = "jpg" });
-        format.Items.Add(new ComboBoxItem { Content = "SVG (vector, editable)", Tag = "svg" });
+        var format = new ComboBox
+        {
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            SelectedIndex       = 0
+        };
+        format.Items.Add(new ComboBoxItem { Content = "PNG — raster, lossless", Tag = "png" });
+        format.Items.Add(new ComboBoxItem { Content = "JPG — raster, smaller",  Tag = "jpg" });
+        format.Items.Add(new ComboBoxItem { Content = "SVG — vector, editable", Tag = "svg" });
 
+        // ── Behavior: aspect-locked width/height linking ─────────────────
         bool internalUpdate = false;
 
         double GetAspect()
@@ -507,58 +516,88 @@ public sealed partial class DashboardPage : Page
             heightBox.IsEnabled = a <= 0;
             RecomputeHeight();
         };
-
         widthBox.ValueChanged += (_, _) => RecomputeHeight();
 
-        // Build content layout
-        TextBlock Label(string text) => new()
+        // ── Layout ────────────────────────────────────────────────────────
+        // Helper factories — small caption above a control, both stretched.
+        TextBlock FieldLabel(string text) => new()
         {
-            Text = text, FontSize = 12, Opacity = 0.65
+            Text       = text,
+            FontSize   = 12,
+            Opacity    = 0.7,
+            Margin     = new Thickness(0, 0, 0, 4)
         };
 
-        var panel = new StackPanel { Spacing = 10, MinWidth = 380 };
+        TextBlock SectionHeader(string text) => new()
+        {
+            Text       = text,
+            FontSize   = 13,
+            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Opacity    = 0.9,
+            Margin     = new Thickness(0, 4, 0, 6)
+        };
 
-        panel.Children.Add(Label("Aspect ratio"));
+        Border Divider() => new()
+        {
+            Height     = 1,
+            Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+            Margin     = new Thickness(0, 10, 0, 6)
+        };
+
+        var panel = new StackPanel { Spacing = 0, MinWidth = 440 };
+
+        // — Section: Dimensions —
+        panel.Children.Add(SectionHeader("Dimensions"));
+
+        panel.Children.Add(FieldLabel("Aspect ratio"));
         panel.Children.Add(aspect);
 
-        var sizeGrid = new Grid { ColumnSpacing = 12 };
+        // Width + Height side-by-side, each in its own grid column
+        var sizeGrid = new Grid
+        {
+            ColumnSpacing = 12,
+            Margin        = new Thickness(0, 10, 0, 0)
+        };
         sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var widthCol = new StackPanel { Spacing = 4 };
-        widthCol.Children.Add(Label("Width (px)"));
-        widthCol.Children.Add(widthBox);
-        Grid.SetColumn(widthCol, 0);
+        var wLab = FieldLabel("Width (px)");   Grid.SetColumn(wLab, 0); Grid.SetRow(wLab, 0);
+        var hLab = FieldLabel("Height (px)");  Grid.SetColumn(hLab, 1); Grid.SetRow(hLab, 0);
+        Grid.SetColumn(widthBox,  0);          Grid.SetRow(widthBox,  1);
+        Grid.SetColumn(heightBox, 1);          Grid.SetRow(heightBox, 1);
 
-        var heightCol = new StackPanel { Spacing = 4 };
-        heightCol.Children.Add(Label("Height (px)"));
-        heightCol.Children.Add(heightBox);
-        Grid.SetColumn(heightCol, 1);
+        sizeGrid.Children.Add(wLab);
+        sizeGrid.Children.Add(hLab);
+        sizeGrid.Children.Add(widthBox);
+        sizeGrid.Children.Add(heightBox);
 
-        sizeGrid.Children.Add(widthCol);
-        sizeGrid.Children.Add(heightCol);
         panel.Children.Add(sizeGrid);
 
-        panel.Children.Add(Label("File format"));
+        // — Section: Format —
+        panel.Children.Add(Divider());
+        panel.Children.Add(SectionHeader("File format"));
         panel.Children.Add(format);
 
-        var note = new TextBlock
+        panel.Children.Add(new TextBlock
         {
-            Text = "Note: SVG exports the chart drawing area (curves and ticks). " +
-                   "For figures with axis labels included, use PNG or JPG.",
-            FontSize = 11, Opacity = 0.55, TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, 4, 0, 0)
-        };
-        panel.Children.Add(note);
+            Text = "SVG exports the chart drawing area only (curves and ticks). " +
+                   "For complete figures with axis labels included, choose PNG or JPG.",
+            FontSize     = 11,
+            Opacity      = 0.55,
+            TextWrapping = TextWrapping.Wrap,
+            Margin       = new Thickness(0, 10, 0, 0)
+        });
 
         var dialog = new ContentDialog
         {
-            Title = "Export chart",
-            Content = panel,
+            Title             = "Export chart",
+            Content           = panel,
             PrimaryButtonText = "Save…",
-            CloseButtonText = "Cancel",
-            DefaultButton = ContentDialogButton.Primary,
-            XamlRoot = root
+            CloseButtonText   = "Cancel",
+            DefaultButton     = ContentDialogButton.Primary,
+            XamlRoot          = root
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
