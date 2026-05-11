@@ -2,11 +2,17 @@ using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
 using BMSMonitor.ViewModels;
 using Windows.Foundation;
+using Windows.Graphics.Imaging;
+using Windows.Storage;
+using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
 using Windows.UI;
 using Windows.UI.ViewManagement;
+using WinRT.Interop;
 
 namespace BMSMonitor.Views;
 
@@ -19,9 +25,56 @@ public sealed partial class DashboardPage : Page
     {
         InitializeComponent();
         ApplyChartColors();
+        PopulateTimeframeCombo();
+        UpdateXAxisLabels();
 
         Loaded   += (_, _) => ViewModel.HistoryUpdated += OnHistoryUpdated;
         Unloaded += (_, _) => ViewModel.HistoryUpdated -= OnHistoryUpdated;
+    }
+
+    private void PopulateTimeframeCombo()
+    {
+        TimeframeCombo.Items.Clear();
+        foreach (var (minutes, label) in MainViewModel.TimeframeOptions)
+            TimeframeCombo.Items.Add(label);
+        for (int i = 0; i < MainViewModel.TimeframeOptions.Length; i++)
+        {
+            if (Math.Abs(MainViewModel.TimeframeOptions[i].Minutes - ViewModel.HistoryTimeframeMinutes) < 0.001)
+            {
+                TimeframeCombo.SelectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    private void TimeframeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TimeframeCombo.SelectedIndex < 0 ||
+            TimeframeCombo.SelectedIndex >= MainViewModel.TimeframeOptions.Length)
+            return;
+
+        ViewModel.HistoryTimeframeMinutes = MainViewModel.TimeframeOptions[TimeframeCombo.SelectedIndex].Minutes;
+        UpdateXAxisLabels();
+    }
+
+    private void UpdateXAxisLabels()
+    {
+        string agoText, nowText;
+        if (ViewModel.HistoryTimeframeMinutes > 0)
+        {
+            double mins = ViewModel.HistoryTimeframeMinutes;
+            agoText = mins >= 1 ? $"← {mins:0.#} min ago" : $"← {mins * 60:0} s ago";
+        }
+        else
+        {
+            agoText = "← start";
+        }
+        nowText = "now →";
+
+        SocTimeAgoLabel.Text = agoText;
+        SocNowLabel.Text     = nowText;
+        VITimeAgoLabel.Text  = agoText;
+        VINowLabel.Text      = nowText;
     }
 
     // ── Chart colors ──────────────────────────────────────────────────────
@@ -74,18 +127,19 @@ public sealed partial class DashboardPage : Page
         double[] history = ViewModel.GetSocHistory();
         int      n       = history.Length;
 
+        // Use effective capacity: in "All" mode capacity is 0 → use actual count.
+        double cap    = ViewModel.HistoryCapacity;
+        if (cap <= 0 || cap > n) cap = n;
+        double xStep  = cap > 1 ? w / (cap - 1.0) : w;
+        double xStart = (cap - n) * xStep;
+
         if (n < 2)
         {
             SocLine.Points = [];
             SocFill.Points = [];
+            HideTimeTicks(SocTime0, SocTime1, SocTime2, SocTime3, SocTime4);
             return;
         }
-
-        // Oldest sample is placed at the left edge proportional to how full
-        // the buffer is — so the line always terminates at the right edge.
-        double cap    = MainViewModel.HistoryCapacity;
-        double xStep  = w / (cap - 1.0);
-        double xStart = (cap - n) * xStep;
 
         var linePoints = new PointCollection();
         var fillPoints = new PointCollection();
@@ -106,6 +160,10 @@ public sealed partial class DashboardPage : Page
 
         SocLine.Points = linePoints;
         SocFill.Points = fillPoints;
+
+        // ── X-axis time ticks ──────────────────────────────────────────────
+        UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes,
+            SocTime0, SocTime1, SocTime2, SocTime3, SocTime4);
     }
 
     private static void UpdateGridLine(Line line, double width, double y)
@@ -114,6 +172,48 @@ public sealed partial class DashboardPage : Page
         line.X2 = width;
         line.Y1 = y;
         line.Y2 = y;
+    }
+
+    private static void UpdateTimeTicks(double w, double h, double cap, int n, double timeframeMinutes,
+        TextBlock t0, TextBlock t1, TextBlock t2, TextBlock t3, TextBlock t4)
+    {
+        var ticks = new[] { (t0, 0.0), (t1, 0.25), (t2, 0.50), (t3, 0.75), (t4, 1.0) };
+        double xStep  = cap > 1 ? w / (cap - 1.0) : w;
+        double xStart = (cap - n) * xStep;
+
+        foreach (var (tb, frac) in ticks)
+        {
+            string label;
+            if (timeframeMinutes > 0)
+            {
+                double secsAgo = timeframeMinutes * 60 * (1.0 - frac);
+                if (secsAgo >= 60)
+                    label = $"-{secsAgo / 60:0.#}m";
+                else
+                    label = $"-{secsAgo:0}s";
+            }
+            else
+            {
+                if (frac == 0) label = "start";
+                else if (Math.Abs(frac - 1.0) < 0.001) label = "now";
+                else label = $"{frac * 100:0}%";
+            }
+
+            tb.Text = label;
+            tb.Visibility = Visibility.Visible;
+            double xPos = n > 1 ? xStart + frac * (n - 1) * xStep : frac * w;
+            Canvas.SetLeft(tb, Math.Max(0, xPos - 14));
+            Canvas.SetTop(tb, h - 14);
+        }
+    }
+
+    private static void HideTimeTicks(TextBlock t0, TextBlock t1, TextBlock t2, TextBlock t3, TextBlock t4)
+    {
+        t0.Visibility = Visibility.Collapsed;
+        t1.Visibility = Visibility.Collapsed;
+        t2.Visibility = Visibility.Collapsed;
+        t3.Visibility = Visibility.Collapsed;
+        t4.Visibility = Visibility.Collapsed;
     }
 
     // ── V/I dual-axis chart ───────────────────────────────────────────────
@@ -135,6 +235,7 @@ public sealed partial class DashboardPage : Page
         {
             VoltageLine.Points = new PointCollection();
             CurrentLine.Points = new PointCollection();
+            HideTimeTicks(VITime0, VITime1, VITime2, VITime3, VITime4);
             return;
         }
 
@@ -170,8 +271,9 @@ public sealed partial class DashboardPage : Page
         ILabel0.Text = $"{iRawMin:F1}";                     Canvas.SetTop(ILabel0, h - fontH);
 
         // ── Build polylines ────────────────────────────────────────────
-        double cap    = MainViewModel.HistoryCapacity;
-        double xStep  = w / (cap - 1.0);
+        double cap    = ViewModel.HistoryCapacity;
+        if (cap <= 0 || cap > n) cap = n;
+        double xStep  = cap > 1 ? w / (cap - 1.0) : w;
         double xStart = (cap - n) * xStep;
 
         var vPoints = new PointCollection();
@@ -188,5 +290,53 @@ public sealed partial class DashboardPage : Page
 
         VoltageLine.Points = vPoints;
         CurrentLine.Points = iPoints;
+
+        // ── X-axis time ticks ──────────────────────────────────────────────
+        UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes,
+            VITime0, VITime1, VITime2, VITime3, VITime4);
+    }
+
+    // ── Save chart as PNG ──────────────────────────────────────────────────
+    private async void SaveSocChart_Click(object sender, RoutedEventArgs e)
+        => await SaveElementAsPng(SocChartArea, "BMS_SOC_Chart");
+
+    private async void SaveVIChart_Click(object sender, RoutedEventArgs e)
+        => await SaveElementAsPng(VIChartArea, "BMS_VI_Chart");
+
+    private async Task SaveElementAsPng(FrameworkElement element, string defaultName)
+    {
+        try
+        {
+            var renderTarget = new RenderTargetBitmap();
+            await renderTarget.RenderAsync(element, (int)element.ActualWidth, (int)element.ActualHeight);
+
+            var picker = new FileSavePicker
+            {
+                SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+                SuggestedFileName = $"{defaultName}_{DateTime.Now:yyyyMMdd_HHmmss}.png"
+            };
+            picker.FileTypeChoices.Add("PNG Image", new[] { ".png" });
+
+            var hwnd = WindowNative.GetWindowHandle(App.CurrentWindow);
+            InitializeWithWindow.Initialize(picker, hwnd);
+
+            var file = await picker.PickSaveFileAsync();
+            if (file == null) return;
+
+            var pixels = await renderTarget.GetPixelsAsync();
+            var reader = DataReader.FromBuffer(pixels);
+            var bytes = new byte[pixels.Length];
+            reader.ReadBytes(bytes);
+
+            using var stream = await file.OpenAsync(FileAccessMode.ReadWrite);
+            var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
+            encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+                (uint)renderTarget.PixelWidth, (uint)renderTarget.PixelHeight, 96, 96, bytes);
+            await encoder.FlushAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"SaveChart failed: {ex.Message}");
+        }
     }
 }

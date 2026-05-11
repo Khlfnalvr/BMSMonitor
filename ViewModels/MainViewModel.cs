@@ -39,13 +39,47 @@ public partial class MainViewModel : ObservableObject
     // --- Live data indicator ---
     [ObservableProperty] private bool _hasData;
 
-    // --- SOC / V / I history (circular buffer, UI-thread only) ---
-    public const int HistoryCapacity = 120;            // 2 min at 1 Hz
-    private readonly double[] _socRing     = new double[HistoryCapacity];
-    private readonly double[] _voltageRing = new double[HistoryCapacity];
-    private readonly double[] _currentRing = new double[HistoryCapacity];
-    private int _ringHead;   // next write slot
-    private int _ringCount;  // valid samples so far
+    // --- SOC / V / I history (UI-thread only) ---
+    public static readonly (double Minutes, string Label)[] TimeframeOptions =
+    [
+        (0.5, "30s"),
+        (1,   "1 min"),
+        (2,   "2 min"),
+        (5,   "5 min"),
+        (10,  "10 min"),
+        (0,   "All"),
+    ];
+
+    private double _historyTimeframeMinutes = 2;
+    public double HistoryTimeframeMinutes
+    {
+        get => _historyTimeframeMinutes;
+        set
+        {
+            if (Math.Abs(_historyTimeframeMinutes - value) < 0.001) return;
+            _historyTimeframeMinutes = value;
+            TrimHistoryBuffers();
+            _dispatcherQueue.TryEnqueue(() => HistoryUpdated?.Invoke());
+        }
+    }
+
+    // Returns the sample capacity: 0 means unlimited (All).
+    public int HistoryCapacity =>
+        _historyTimeframeMinutes > 0 ? (int)(_historyTimeframeMinutes * 60) : 0;
+
+    private readonly List<double> _socHistory     = new(120);
+    private readonly List<double> _voltageHistory = new(120);
+    private readonly List<double> _currentHistory = new(120);
+
+    private void TrimHistoryBuffers()
+    {
+        int cap = HistoryCapacity;
+        if (cap <= 0) return;
+        while (_socHistory.Count     > cap) _socHistory.RemoveAt(0);
+        while (_voltageHistory.Count > cap) _voltageHistory.RemoveAt(0);
+        while (_currentHistory.Count > cap) _currentHistory.RemoveAt(0);
+    }
+
     public event Action? HistoryUpdated;
 
     // --- Formatted text ---
@@ -161,40 +195,20 @@ public partial class MainViewModel : ObservableObject
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
 
-        // Push SOC / V / I into circular buffers and notify chart.
-        _socRing[_ringHead]     = data.Soc;
-        _voltageRing[_ringHead] = data.PackVoltage;
-        _currentRing[_ringHead] = data.Current;
-        _ringHead  = (_ringHead + 1) % HistoryCapacity;
-        if (_ringCount < HistoryCapacity) _ringCount++;
+        // Push SOC / V / I into history lists and notify chart.
+        _socHistory.Add(data.Soc);
+        _voltageHistory.Add(data.PackVoltage);
+        _currentHistory.Add(data.Current);
+        TrimHistoryBuffers();
         HistoryUpdated?.Invoke();
     }
 
     // Returns samples in chronological order (oldest → newest).
-    public double[] GetSocHistory()
-    {
-        var result = new double[_ringCount];
-        int start = (_ringHead - _ringCount + HistoryCapacity) % HistoryCapacity;
-        for (int i = 0; i < _ringCount; i++)
-            result[i] = _socRing[(start + i) % HistoryCapacity];
-        return result;
-    }
+    public double[] GetSocHistory() => _socHistory.ToArray();
 
     // Returns V and I samples in chronological order (oldest → newest).
-    public (double[] voltages, double[] currents) GetViHistory()
-    {
-        int count = _ringCount;
-        var v = new double[count];
-        var c = new double[count];
-        int start = (_ringHead - count + HistoryCapacity) % HistoryCapacity;
-        for (int k = 0; k < count; k++)
-        {
-            int idx = (start + k) % HistoryCapacity;
-            v[k] = _voltageRing[idx];
-            c[k] = _currentRing[idx];
-        }
-        return (v, c);
-    }
+    public (double[] voltages, double[] currents) GetViHistory() =>
+        (_voltageHistory.ToArray(), _currentHistory.ToArray());
 
     private CellState GetCellState(double voltage)
     {

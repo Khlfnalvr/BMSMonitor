@@ -118,6 +118,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Dash_Now              => T(nameof(Dash_Now));
     public string Dash_NowArrow         => T(nameof(Dash_NowArrow));
     public string Dash_SecViHistory     => T(nameof(Dash_SecViHistory));
+    public string Dash_SaveChart        => T(nameof(Dash_SaveChart));
     public string Dash_VoltageV         => T(nameof(Dash_VoltageV));
     public string Dash_CurrentA         => T(nameof(Dash_CurrentA));
     public string Dash_SecCellSummary   => T(nameof(Dash_SecCellSummary));
@@ -293,6 +294,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Cell Delta",
             [nameof(Dash_Method)]           = "Method",
             [nameof(Dash_ActiveMethod)]     = "Active (LTC8584)",
+            [nameof(Dash_SaveChart)]        = "Save chart as PNG",
 
             [nameof(Cell_SecVoltageSummary)] = "VOLTAGE SUMMARY",
             [nameof(Cell_SecCellGrid)]       = "CELL GRID — 20S4P",
@@ -450,6 +452,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Delta Sel",
             [nameof(Dash_Method)]           = "Metode",
             [nameof(Dash_ActiveMethod)]     = "Aktif (LTC8584)",
+            [nameof(Dash_SaveChart)]        = "Simpan grafik sebagai PNG",
 
             [nameof(Cell_SecVoltageSummary)] = "RINGKASAN TEGANGAN",
             [nameof(Cell_SecCellGrid)]       = "GRID SEL — 20S4P",
@@ -607,6 +610,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Delta Sel",
             [nameof(Dash_Method)]           = "Kaedah",
             [nameof(Dash_ActiveMethod)]     = "Aktif (LTC8584)",
+            [nameof(Dash_SaveChart)]        = "Simpan graf sebagai PNG",
 
             [nameof(Cell_SecVoltageSummary)] = "RINGKASAN VOLTAN",
             [nameof(Cell_SecCellGrid)]       = "GRID SEL — 20S4P",
@@ -764,6 +768,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Cel Delta",
             [nameof(Dash_Method)]           = "Methode",
             [nameof(Dash_ActiveMethod)]     = "Actief (LTC8584)",
+            [nameof(Dash_SaveChart)]        = "Grafiek opslaan als PNG",
 
             [nameof(Cell_SecVoltageSummary)] = "SPANNING OVERZICHT",
             [nameof(Cell_SecCellGrid)]       = "CEL RASTER — 20S4P",
@@ -921,6 +926,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "电压差",
             [nameof(Dash_Method)]           = "方法",
             [nameof(Dash_ActiveMethod)]     = "主动 (LTC8584)",
+            [nameof(Dash_SaveChart)]        = "保存图表为 PNG",
 
             [nameof(Cell_SecVoltageSummary)] = "电压摘要",
             [nameof(Cell_SecCellGrid)]       = "电池格阵列 — 20S4P",
