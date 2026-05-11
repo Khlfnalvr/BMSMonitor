@@ -79,67 +79,6 @@
                 </Border>
             </Grid>
 
-            <!-- ── CHART LAYOUT SETTINGS ─────────────────────────────── -->
-            <Border Style="{StaticResource CardStyle}" Padding="14,10" Margin="0,4,0,0">
-                <Grid ColumnSpacing="16" RowSpacing="6">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock Grid.Column="0" Text="Chart Layout" FontSize="12"
-                               FontWeight="SemiBold" Opacity="0.65"
-                               VerticalAlignment="Center"/>
-
-                    <!-- Aspect ratio -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="Aspect:" FontSize="11" Opacity="0.55" VerticalAlignment="Center"/>
-                        <ComboBox x:Name="AspectCombo" Width="210" Height="28" SelectedIndex="0"
-                                  SelectionChanged="AspectCombo_SelectionChanged">
-                            <ComboBoxItem Content="4:3 — paper / Origin default" Tag="1.3333"/>
-                            <ComboBoxItem Content="3:2 — photo / wide paper"    Tag="1.5"/>
-                            <ComboBoxItem Content="16:9 — slide / video"        Tag="1.7778"/>
-                            <ComboBoxItem Content="φ — golden 1.618:1"          Tag="1.6180"/>
-                            <ComboBoxItem Content="1:1 — square (correlation)"  Tag="1.0"/>
-                            <ComboBoxItem Content="Free — set height manually"  Tag="0"/>
-                        </ComboBox>
-                    </StackPanel>
-
-                    <!-- Width -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="Width:" FontSize="11" Opacity="0.55" VerticalAlignment="Center"/>
-                        <Slider x:Name="WidthSlider" Width="140" Height="28"
-                                Minimum="300" Maximum="1400" Value="600"
-                                StepFrequency="20" SmallChange="20"
-                                ValueChanged="WidthSlider_ValueChanged"/>
-                        <TextBlock x:Name="WidthValue" Text="600" FontFamily="Consolas" FontSize="11"
-                                   Opacity="0.7" VerticalAlignment="Center"
-                                   Width="36" TextAlignment="Right"/>
-                        <TextBlock Text="px" FontSize="11" Opacity="0.55" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <!-- Height -->
-                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                        <TextBlock Text="Height:" FontSize="11" Opacity="0.55" VerticalAlignment="Center"/>
-                        <Slider x:Name="HeightSlider" Width="140" Height="28"
-                                Minimum="150" Maximum="900" Value="450"
-                                StepFrequency="15" SmallChange="15" IsEnabled="False"
-                                ValueChanged="HeightSlider_ValueChanged"/>
-                        <TextBlock x:Name="HeightValue" Text="450" FontFamily="Consolas" FontSize="11"
-                                   Opacity="0.7" VerticalAlignment="Center"
-                                   Width="36" TextAlignment="Right"/>
-                        <TextBlock Text="px" FontSize="11" Opacity="0.55" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Button Grid.Column="5" Content="Reset" Click="ResetChartSize_Click"
-                            Height="28" FontSize="11" Padding="10,0"/>
-                </Grid>
-            </Border>
-
             <!-- ── SOC HISTORY CHART ─────────────────────────────────── -->
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -159,7 +98,7 @@
                     <SymbolIcon Symbol="Save"/>
                 </Button>
             </Grid>
-            <Border x:Name="SocChartCard" Style="{StaticResource CardStyle}" HorizontalAlignment="Left">
+            <Border x:Name="SocChartCard" Style="{StaticResource CardStyle}">
                 <Grid x:Name="SocChartArea" RowSpacing="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -221,7 +160,7 @@
                     <SymbolIcon Symbol="Save"/>
                 </Button>
             </Grid>
-            <Border x:Name="VIChartCard" Style="{StaticResource CardStyle}" HorizontalAlignment="Left">
+            <Border x:Name="VIChartCard" Style="{StaticResource CardStyle}">
                 <Grid x:Name="VIChartArea" RowSpacing="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>

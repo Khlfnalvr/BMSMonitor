@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -28,13 +29,6 @@ public sealed partial class DashboardPage : Page
     private TextBlock[] _socTicks = [];
     private TextBlock[] _viTicks  = [];
 
-    // ── Chart layout defaults ──────────────────────────────────────────────
-    // 4:3 / 600×450 ≈ Origin Pro page (16.5 × 12 cm) — standard research figure.
-    private const double DefaultAspect = 4.0 / 3.0;
-    private const double DefaultWidth  = 600;
-    private const double DefaultHeight = 450;
-    private bool _applyingLayout;   // re-entrancy guard for slider events
-
     public DashboardPage()
     {
         InitializeComponent();
@@ -42,84 +36,9 @@ public sealed partial class DashboardPage : Page
         ApplyChartColors();
         PopulateTimeframeCombo();
         UpdateXAxisLabels();
-        ApplyChartLayout();   // apply default dimensions on first load
 
         Loaded   += (_, _) => ViewModel.HistoryUpdated += OnHistoryUpdated;
         Unloaded += (_, _) => ViewModel.HistoryUpdated -= OnHistoryUpdated;
-    }
-
-    // ── Chart layout (size & aspect ratio) ────────────────────────────────
-
-    private double GetSelectedAspect()
-    {
-        if (AspectCombo?.SelectedItem is ComboBoxItem item && item.Tag is string tag &&
-            double.TryParse(tag, NumberStyles.Any, CultureInfo.InvariantCulture, out double a))
-            return a;
-        return DefaultAspect;
-    }
-
-    private void AspectCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        => ApplyChartLayout();
-
-    private void WidthSlider_ValueChanged(object sender,
-        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (_applyingLayout) return;
-        ApplyChartLayout();
-    }
-
-    private void HeightSlider_ValueChanged(object sender,
-        Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
-    {
-        if (_applyingLayout) return;
-        ApplyChartLayout();
-    }
-
-    private void ResetChartSize_Click(object sender, RoutedEventArgs e)
-    {
-        _applyingLayout = true;
-        AspectCombo.SelectedIndex = 0;     // 4:3 paper default
-        WidthSlider.Value         = DefaultWidth;
-        HeightSlider.Value        = DefaultHeight;
-        _applyingLayout = false;
-        ApplyChartLayout();
-    }
-
-    /// <summary>
-    /// Recomputes chart card dimensions from the current control values.
-    /// When aspect ≠ Free: height = width / aspect (height slider read-only).
-    /// When aspect = Free: height comes directly from the height slider.
-    /// </summary>
-    private void ApplyChartLayout()
-    {
-        if (SocChartCard is null) return;   // not yet initialized
-
-        double w = WidthSlider.Value;
-        double aspect = GetSelectedAspect();
-        bool freeMode = aspect <= 0;
-        double h = freeMode ? HeightSlider.Value : w / aspect;
-
-        // Sync the height slider when aspect is locked (without re-firing handler)
-        _applyingLayout = true;
-        HeightSlider.IsEnabled = freeMode;
-        if (!freeMode) HeightSlider.Value = h;
-        _applyingLayout = false;
-
-        WidthValue.Text  = w.ToString("0", CultureInfo.InvariantCulture);
-        HeightValue.Text = h.ToString("0", CultureInfo.InvariantCulture);
-
-        // ── SOC chart ──
-        SocChartCard.MaxWidth   = w;
-        SocChartCanvas.Height   = h;
-        SocYAxisGrid.Height     = h;
-
-        // ── V/I chart ──
-        VIChartCard.MaxWidth    = w;
-        VIChartCanvas.Height    = h;
-        VAxisCanvas.Height      = h;
-        IAxisCanvas.Height      = h;
-
-        // Canvas SizeChanged will fire and trigger redraw — no explicit call needed.
     }
 
     private void InitializeTickPools()
@@ -255,7 +174,6 @@ public sealed partial class DashboardPage : Page
         double[] history = ViewModel.GetSocHistory();
         int      n       = history.Length;
 
-        // Use effective capacity: in "All" mode capacity is 0 → use actual count.
         double cap    = ViewModel.HistoryCapacity;
         if (cap <= 0 || cap > n) cap = n;
         double xStep  = cap > 1 ? w / (cap - 1.0) : w;
@@ -272,7 +190,6 @@ public sealed partial class DashboardPage : Page
         var linePoints = new PointCollection();
         var fillPoints = new PointCollection();
 
-        // Fill polygon: start at bottom-left corner
         fillPoints.Add(new Point(xStart, h));
 
         for (int i = 0; i < n; i++)
@@ -283,24 +200,20 @@ public sealed partial class DashboardPage : Page
             fillPoints.Add(new Point(x, y));
         }
 
-        // Close fill polygon at bottom-right corner
         fillPoints.Add(new Point(xStart + (n - 1) * xStep, h));
 
         SocLine.Points = linePoints;
         SocFill.Points = fillPoints;
 
-        // ── X-axis time ticks ──────────────────────────────────────────────
         return UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes, _socTicks);
     }
 
-    // ── V/I dual-axis chart ───────────────────────────────────────────────
     private string RedrawVIChart()
     {
         double w = VIChartCanvas.ActualWidth;
         double h = VIChartCanvas.ActualHeight;
         if (w == 0 || h == 0) return "";
 
-        // Always draw horizontal grid lines
         UpdateGridLine(VIGridH1, w, h * 0.25);
         UpdateGridLine(VIGridH2, w, h * 0.50);
         UpdateGridLine(VIGridH3, w, h * 0.75);
@@ -316,7 +229,6 @@ public sealed partial class DashboardPage : Page
             return "";
         }
 
-        // ── Auto-range voltage (nearest 5 V boundary) ──────────────────
         double vMin    = voltages.Min();
         double vMax    = voltages.Max();
         double vRawMin = Math.Floor(vMin   / 5.0) * 5.0;
@@ -324,7 +236,6 @@ public sealed partial class DashboardPage : Page
         if (vRawMax <= vRawMin) vRawMax = vRawMin + 5.0;
         double vRange  = vRawMax - vRawMin;
 
-        // ── Auto-range current (nearest 5 A boundary) ──────────────────
         double iMin    = currents.Min();
         double iMax    = currents.Max();
         double iRawMin = Math.Floor(iMin   / 5.0) * 5.0;
@@ -332,7 +243,6 @@ public sealed partial class DashboardPage : Page
         if (iRawMax <= iRawMin) iRawMax = iRawMin + 5.0;
         double iRange  = iRawMax - iRawMin;
 
-        // ── Position axis labels at 0 / 25 / 50 / 75 / 100 % ──────────
         const double fontH = 11.0;
 
         VLabel4.Text = $"{vRawMax:F0}";                     Canvas.SetTop(VLabel4, 0);
@@ -347,7 +257,6 @@ public sealed partial class DashboardPage : Page
         ILabel1.Text = $"{iRawMax - iRange * 0.75:F1}";    Canvas.SetTop(ILabel1, h * 0.75 - fontH / 2);
         ILabel0.Text = $"{iRawMin:F1}";                     Canvas.SetTop(ILabel0, h - fontH);
 
-        // ── Build polylines ────────────────────────────────────────────
         double cap    = ViewModel.HistoryCapacity;
         if (cap <= 0 || cap > n) cap = n;
         double xStep  = cap > 1 ? w / (cap - 1.0) : w;
@@ -368,7 +277,6 @@ public sealed partial class DashboardPage : Page
         VoltageLine.Points = vPoints;
         CurrentLine.Points = iPoints;
 
-        // ── X-axis time ticks ──────────────────────────────────────────────
         return UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes, _viTicks);
     }
 
@@ -388,25 +296,15 @@ public sealed partial class DashboardPage : Page
             ticks[i].Visibility = Visibility.Collapsed;
     }
 
-    /// <summary>
-    /// Draws X-axis tick labels. Tick count and step are chosen automatically
-    /// so values stay short (1–3 digits) and the spacing fits the canvas width.
-    /// </summary>
-    /// <returns>The time unit shown ("seconds" / "minutes" / "hours").</returns>
     private static string UpdateTimeTicks(double w, double h, double cap, int n,
         double timeframeMinutes, TextBlock[] ticks)
     {
-        // Total seconds the X-axis spans
         double totalSeconds = timeframeMinutes > 0
             ? timeframeMinutes * 60.0
-            : Math.Max(1, n - 1);   // "All" mode: assume 1 Hz sampling
+            : Math.Max(1, n - 1);
 
-        // Pick how many ticks to try for — wider canvas → more ticks (~70 px each)
         int targetTicks = (int)Math.Clamp(w / 70.0, 6, 18);
-
         var (unit, divisor, step) = PickAxisScale(totalSeconds, targetTicks);
-
-        // Format: integer if step is whole, one decimal otherwise (e.g. 0.5)
         string fmt = step >= 1.0 ? "F0" : "F1";
 
         double totalUnits = totalSeconds / divisor;
@@ -414,21 +312,16 @@ public sealed partial class DashboardPage : Page
         double xStart     = (cap - n) * xStep;
 
         int used = 0;
-        // Iterate ticks 0 .. totalUnits (inclusive), stepping by `step`
         for (double v = 0.0; v <= totalUnits + 1e-9 && used < ticks.Length; v += step)
         {
-            // Position: fraction along the timeframe
             double frac = totalUnits > 0 ? v / totalUnits : 0;
             double xPos = n > 1 ? xStart + frac * (n - 1) * xStep : frac * w;
-
-            // Round value to avoid floating-point noise (0.30000000004 → 0.3)
             double display = Math.Round(v, fmt == "F1" ? 1 : 0);
 
             var tb = ticks[used];
             tb.Text       = display.ToString(fmt, CultureInfo.InvariantCulture);
             tb.Visibility = Visibility.Visible;
 
-            // Center label under tick X (≈ 5.5 px per char at Consolas 9pt)
             double halfW = tb.Text.Length * 2.8;
             double left  = Math.Clamp(xPos - halfW, 0, Math.Max(0, w - halfW * 2));
             Canvas.SetLeft(tb, left);
@@ -437,48 +330,27 @@ public sealed partial class DashboardPage : Page
             used++;
         }
 
-        // Hide unused ticks in the pool
         for (int i = used; i < ticks.Length; i++)
             ticks[i].Visibility = Visibility.Collapsed;
 
         return unit;
     }
 
-    /// <summary>
-    /// Chooses a sensible (unit, step) for the X axis so values stay short.
-    /// Returns the unit string, the seconds-per-unit divisor, and the step
-    /// expressed in that unit (e.g. 5 seconds, 0.5 minutes).
-    /// </summary>
     private static (string unit, double divisor, double step)
         PickAxisScale(double totalSeconds, int targetTicks)
     {
         string unit;
         double divisor;
 
-        if (totalSeconds < 90)
-        {
-            unit = "seconds"; divisor = 1.0;
-        }
-        else if (totalSeconds < 5400)   // < 90 min
-        {
-            unit = "minutes"; divisor = 60.0;
-        }
-        else
-        {
-            unit = "hours";   divisor = 3600.0;
-        }
+        if (totalSeconds < 90)        { unit = "seconds"; divisor = 1.0;    }
+        else if (totalSeconds < 5400) { unit = "minutes"; divisor = 60.0;   }
+        else                          { unit = "hours";   divisor = 3600.0; }
 
         double totalInUnit = totalSeconds / divisor;
         double rawStep     = totalInUnit / Math.Max(1, targetTicks - 1);
-        double step        = NiceStep(rawStep);
-
-        return (unit, divisor, step);
+        return (unit, divisor, NiceStep(rawStep));
     }
 
-    /// <summary>
-    /// Snaps a raw interval to a "nice" value: 1, 2, 5 × 10^k.
-    /// Produces clean tick labels like 0, 5, 10 — never 0, 4.27, 8.54.
-    /// </summary>
     private static double NiceStep(double rawStep)
     {
         if (rawStep <= 0) return 1;
@@ -495,47 +367,372 @@ public sealed partial class DashboardPage : Page
         return niceFraction * pow;
     }
 
-    // ── Save chart as PNG ──────────────────────────────────────────────────
+    // ── Save chart (with size + aspect + format dialog) ────────────────────
+
+    private record ExportOptions(int Width, int Height, string Format);
+
     private async void SaveSocChart_Click(object sender, RoutedEventArgs e)
-        => await SaveElementAsPng(SocChartArea, "BMS_SOC_Chart");
+    {
+        await SaveChartFlow(
+            renderElement: SocChartArea,
+            card:          SocChartCard,
+            mainCanvas:    SocChartCanvas,
+            heightSyncs:   new FrameworkElement[] { SocYAxisGrid },
+            defaultName:   "BMS_SOC_Chart");
+    }
 
     private async void SaveVIChart_Click(object sender, RoutedEventArgs e)
-        => await SaveElementAsPng(VIChartArea, "BMS_VI_Chart");
-
-    private async Task SaveElementAsPng(FrameworkElement element, string defaultName)
     {
+        await SaveChartFlow(
+            renderElement: VIChartArea,
+            card:          VIChartCard,
+            mainCanvas:    VIChartCanvas,
+            heightSyncs:   new FrameworkElement[] { VAxisCanvas, IAxisCanvas },
+            defaultName:   "BMS_VI_Chart");
+    }
+
+    private async Task SaveChartFlow(
+        FrameworkElement renderElement,
+        Border card,
+        Canvas mainCanvas,
+        FrameworkElement[] heightSyncs,
+        string defaultName)
+    {
+        var root = renderElement.XamlRoot;
+        if (root is null) return;
+
+        var opts = await ShowExportDialog(root);
+        if (opts is null) return;
+
+        // File save picker
+        var picker = new FileSavePicker
+        {
+            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+            SuggestedFileName      = $"{defaultName}_{DateTime.Now:yyyyMMdd_HHmmss}"
+        };
+
+        switch (opts.Format)
+        {
+            case "png": picker.FileTypeChoices.Add("PNG image",   new[] { ".png" }); break;
+            case "jpg": picker.FileTypeChoices.Add("JPEG image",  new[] { ".jpg" }); break;
+            case "svg": picker.FileTypeChoices.Add("SVG vector",  new[] { ".svg" }); break;
+        }
+
+        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
+        var file = await picker.PickSaveFileAsync();
+        if (file is null) return;
+
         try
         {
-            var renderTarget = new RenderTargetBitmap();
-            await renderTarget.RenderAsync(element, (int)element.ActualWidth, (int)element.ActualHeight);
-
-            var picker = new FileSavePicker
-            {
-                SuggestedStartLocation = PickerLocationId.PicturesLibrary,
-                SuggestedFileName = $"{defaultName}_{DateTime.Now:yyyyMMdd_HHmmss}.png"
-            };
-            picker.FileTypeChoices.Add("PNG Image", new[] { ".png" });
-
-            var hwnd = WindowNative.GetWindowHandle(App.CurrentWindow);
-            InitializeWithWindow.Initialize(picker, hwnd);
-
-            var file = await picker.PickSaveFileAsync();
-            if (file == null) return;
-
-            var pixels = await renderTarget.GetPixelsAsync();
-            var reader = DataReader.FromBuffer(pixels);
-            var bytes = new byte[pixels.Length];
-            reader.ReadBytes(bytes);
-
-            using var stream = await file.OpenAsync(FileAccessMode.ReadWrite);
-            var encoder = await BitmapEncoder.CreateAsync(BitmapEncoder.PngEncoderId, stream);
-            encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
-                (uint)renderTarget.PixelWidth, (uint)renderTarget.PixelHeight, 96, 96, bytes);
-            await encoder.FlushAsync();
+            if (opts.Format == "svg")
+                await SaveAsSvg(mainCanvas, file, opts.Width, opts.Height);
+            else
+                await SaveAsRaster(renderElement, card, mainCanvas, heightSyncs,
+                                   file, opts, opts.Format == "jpg");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"SaveChart failed: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
+            var err = new ContentDialog
+            {
+                Title = "Save failed",
+                Content = ex.Message,
+                CloseButtonText = "OK",
+                XamlRoot = root
+            };
+            try { await err.ShowAsync(); } catch { }
         }
     }
+
+    /// <summary>
+    /// Shows the export dialog (size + aspect + format). Returns null on cancel.
+    /// </summary>
+    private static async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
+    {
+        // Aspect ratio combo
+        var aspect = new ComboBox { Width = 240, SelectedIndex = 0 };
+        aspect.Items.Add(new ComboBoxItem { Content = "4:3 — paper / Origin default",    Tag = "1.3333" });
+        aspect.Items.Add(new ComboBoxItem { Content = "3:2 — photo / wide paper",        Tag = "1.5"    });
+        aspect.Items.Add(new ComboBoxItem { Content = "16:9 — slide / video",            Tag = "1.7778" });
+        aspect.Items.Add(new ComboBoxItem { Content = "φ — golden 1.618:1",              Tag = "1.6180" });
+        aspect.Items.Add(new ComboBoxItem { Content = "1:1 — square (correlation)",      Tag = "1.0"    });
+        aspect.Items.Add(new ComboBoxItem { Content = "Custom — set height manually",    Tag = "0"      });
+
+        // Width / Height boxes
+        var widthBox = new NumberBox
+        {
+            Width = 120, Value = 600, Minimum = 200, Maximum = 4000,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+            SmallChange = 50, LargeChange = 100
+        };
+        var heightBox = new NumberBox
+        {
+            Width = 120, Value = 450, Minimum = 150, Maximum = 4000,
+            SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
+            SmallChange = 25, LargeChange = 100,
+            IsEnabled = false   // default aspect 4:3 is locked
+        };
+
+        // Format combo
+        var format = new ComboBox { Width = 180, SelectedIndex = 0 };
+        format.Items.Add(new ComboBoxItem { Content = "PNG (raster, lossless)", Tag = "png" });
+        format.Items.Add(new ComboBoxItem { Content = "JPG (raster, smaller)",  Tag = "jpg" });
+        format.Items.Add(new ComboBoxItem { Content = "SVG (vector, editable)", Tag = "svg" });
+
+        bool internalUpdate = false;
+
+        double GetAspect()
+        {
+            if (aspect.SelectedItem is ComboBoxItem item && item.Tag is string tag &&
+                double.TryParse(tag, NumberStyles.Any, CultureInfo.InvariantCulture, out double a))
+                return a;
+            return 0;
+        }
+
+        void RecomputeHeight()
+        {
+            if (internalUpdate) return;
+            double a = GetAspect();
+            if (a > 0)
+            {
+                internalUpdate = true;
+                heightBox.Value = Math.Round(widthBox.Value / a);
+                internalUpdate = false;
+            }
+        }
+
+        aspect.SelectionChanged += (_, _) =>
+        {
+            double a = GetAspect();
+            heightBox.IsEnabled = a <= 0;
+            RecomputeHeight();
+        };
+
+        widthBox.ValueChanged += (_, _) => RecomputeHeight();
+
+        // Build content layout
+        TextBlock Label(string text) => new()
+        {
+            Text = text, FontSize = 12, Opacity = 0.65
+        };
+
+        var panel = new StackPanel { Spacing = 10, MinWidth = 380 };
+
+        panel.Children.Add(Label("Aspect ratio"));
+        panel.Children.Add(aspect);
+
+        var sizeGrid = new Grid { ColumnSpacing = 12 };
+        sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var widthCol = new StackPanel { Spacing = 4 };
+        widthCol.Children.Add(Label("Width (px)"));
+        widthCol.Children.Add(widthBox);
+        Grid.SetColumn(widthCol, 0);
+
+        var heightCol = new StackPanel { Spacing = 4 };
+        heightCol.Children.Add(Label("Height (px)"));
+        heightCol.Children.Add(heightBox);
+        Grid.SetColumn(heightCol, 1);
+
+        sizeGrid.Children.Add(widthCol);
+        sizeGrid.Children.Add(heightCol);
+        panel.Children.Add(sizeGrid);
+
+        panel.Children.Add(Label("File format"));
+        panel.Children.Add(format);
+
+        var note = new TextBlock
+        {
+            Text = "Note: SVG exports the chart drawing area (curves and ticks). " +
+                   "For figures with axis labels included, use PNG or JPG.",
+            FontSize = 11, Opacity = 0.55, TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 4, 0, 0)
+        };
+        panel.Children.Add(note);
+
+        var dialog = new ContentDialog
+        {
+            Title = "Export chart",
+            Content = panel,
+            PrimaryButtonText = "Save…",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = root
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
+
+        string fmt = "png";
+        if (format.SelectedItem is ComboBoxItem fi && fi.Tag is string ft) fmt = ft;
+
+        return new ExportOptions((int)widthBox.Value, (int)heightBox.Value, fmt);
+    }
+
+    /// <summary>
+    /// Renders the chart to a raster image at the requested dimensions.
+    /// Temporarily resizes the chart card so the chart re-layouts at the
+    /// target size, snapshots it, then restores the original dimensions.
+    /// </summary>
+    private static async Task SaveAsRaster(
+        FrameworkElement renderElement,
+        Border card,
+        Canvas mainCanvas,
+        FrameworkElement[] heightSyncs,
+        StorageFile file,
+        ExportOptions opts,
+        bool jpeg)
+    {
+        // Snapshot original dimensions
+        double oldMaxW = card.MaxWidth;
+        double oldH    = mainCanvas.Height;
+        var    oldSync = heightSyncs.Select(s => s.Height).ToArray();
+
+        try
+        {
+            // Resize chart card so it actually re-layouts to target size
+            card.MaxWidth      = opts.Width;
+            mainCanvas.Height  = opts.Height;
+            foreach (var s in heightSyncs) s.Height = opts.Height;
+
+            card.UpdateLayout();
+            renderElement.UpdateLayout();
+            await Task.Yield();           // let layout settle one cycle
+            renderElement.UpdateLayout(); // second pass — picks up new chart canvas size
+
+            // Snapshot
+            var rt = new RenderTargetBitmap();
+            await rt.RenderAsync(renderElement);
+
+            var pixels = await rt.GetPixelsAsync();
+            var bytes  = new byte[pixels.Length];
+            DataReader.FromBuffer(pixels).ReadBytes(bytes);
+
+            var encoderId = jpeg ? BitmapEncoder.JpegEncoderId : BitmapEncoder.PngEncoderId;
+
+            using var stream  = await file.OpenAsync(FileAccessMode.ReadWrite);
+            var       encoder = await BitmapEncoder.CreateAsync(encoderId, stream);
+            encoder.SetPixelData(BitmapPixelFormat.Bgra8, BitmapAlphaMode.Premultiplied,
+                (uint)rt.PixelWidth, (uint)rt.PixelHeight, 96, 96, bytes);
+            await encoder.FlushAsync();
+        }
+        finally
+        {
+            // Restore original dimensions
+            card.MaxWidth     = oldMaxW;
+            mainCanvas.Height = oldH;
+            for (int i = 0; i < heightSyncs.Length; i++)
+                heightSyncs[i].Height = oldSync[i];
+        }
+    }
+
+    /// <summary>
+    /// Serializes the chart canvas's primitive shapes into an SVG document.
+    /// The viewBox preserves the chart's logical coordinate space so the
+    /// output renders cleanly at any size in the SVG width/height attribute.
+    /// </summary>
+    private static async Task SaveAsSvg(Canvas canvas, StorageFile file, int width, int height)
+    {
+        double srcW = canvas.ActualWidth;
+        double srcH = canvas.ActualHeight;
+        if (srcW <= 0 || srcH <= 0)
+            throw new InvalidOperationException("Chart canvas has no size.");
+
+        var inv = CultureInfo.InvariantCulture;
+        var sb = new StringBuilder();
+
+        sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+        sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" " +
+                      $"width=\"{width}\" height=\"{height}\" " +
+                      $"viewBox=\"0 0 {srcW.ToString("0.##", inv)} {srcH.ToString("0.##", inv)}\">");
+
+        foreach (var child in canvas.Children)
+        {
+            if (child is not FrameworkElement fe || fe.Visibility != Visibility.Visible)
+                continue;
+
+            switch (child)
+            {
+                case Line l:
+                    sb.AppendLine(SvgLine(l, inv));
+                    break;
+                case Polyline pl:
+                    sb.AppendLine(SvgPolyline(pl, inv));
+                    break;
+                case Polygon pg:
+                    sb.AppendLine(SvgPolygon(pg, inv));
+                    break;
+                case TextBlock tb:
+                    sb.AppendLine(SvgText(tb, inv));
+                    break;
+            }
+        }
+
+        sb.AppendLine("</svg>");
+
+        await FileIO.WriteTextAsync(file, sb.ToString());
+    }
+
+    private static string SvgLine(Line l, CultureInfo inv)
+    {
+        string stroke   = BrushToHex(l.Stroke);
+        string dashAttr = l.StrokeDashArray is { Count: > 0 } da
+            ? $" stroke-dasharray=\"{string.Join(",", da.Select(d => d.ToString("0.##", inv)))}\""
+            : "";
+        return $"<line x1=\"{l.X1.ToString("0.##", inv)}\" y1=\"{l.Y1.ToString("0.##", inv)}\" " +
+               $"x2=\"{l.X2.ToString("0.##", inv)}\" y2=\"{l.Y2.ToString("0.##", inv)}\" " +
+               $"stroke=\"{stroke}\" stroke-width=\"{l.StrokeThickness.ToString("0.##", inv)}\"{dashAttr}/>";
+    }
+
+    private static string SvgPolyline(Polyline p, CultureInfo inv)
+    {
+        if (p.Points.Count == 0) return "";
+        string points  = string.Join(" ",
+            p.Points.Select(pt => $"{pt.X.ToString("0.##", inv)},{pt.Y.ToString("0.##", inv)}"));
+        string stroke  = BrushToHex(p.Stroke);
+        string fill    = p.Fill is null ? "none" : BrushToHex(p.Fill);
+        string dashAttr = p.StrokeDashArray is { Count: > 0 } da
+            ? $" stroke-dasharray=\"{string.Join(",", da.Select(d => d.ToString("0.##", inv)))}\""
+            : "";
+        return $"<polyline points=\"{points}\" stroke=\"{stroke}\" fill=\"{fill}\" " +
+               $"stroke-width=\"{p.StrokeThickness.ToString("0.##", inv)}\"{dashAttr} stroke-linejoin=\"round\"/>";
+    }
+
+    private static string SvgPolygon(Polygon p, CultureInfo inv)
+    {
+        if (p.Points.Count == 0) return "";
+        string points = string.Join(" ",
+            p.Points.Select(pt => $"{pt.X.ToString("0.##", inv)},{pt.Y.ToString("0.##", inv)}"));
+        string fill   = BrushToHex(p.Fill);
+        string fo     = p.Opacity.ToString("0.##", inv);
+        return $"<polygon points=\"{points}\" fill=\"{fill}\" fill-opacity=\"{fo}\"/>";
+    }
+
+    private static string SvgText(TextBlock tb, CultureInfo inv)
+    {
+        double x = double.IsNaN(Canvas.GetLeft(tb)) ? 0 : Canvas.GetLeft(tb);
+        double y = double.IsNaN(Canvas.GetTop(tb))  ? 0 : Canvas.GetTop(tb);
+        // SVG text is baseline-anchored; offset by ascender
+        y += tb.FontSize * 0.85;
+        string color  = BrushToHex(tb.Foreground);
+        string fo     = tb.Opacity.ToString("0.##", inv);
+        string family = tb.FontFamily?.Source ?? "sans-serif";
+        return $"<text x=\"{x.ToString("0.##", inv)}\" y=\"{y.ToString("0.##", inv)}\" " +
+               $"font-family=\"{family}\" font-size=\"{tb.FontSize.ToString("0.##", inv)}\" " +
+               $"fill=\"{color}\" fill-opacity=\"{fo}\">{XmlEscape(tb.Text)}</text>";
+    }
+
+    private static string BrushToHex(Brush? b)
+    {
+        if (b is SolidColorBrush scb)
+            return $"#{scb.Color.R:X2}{scb.Color.G:X2}{scb.Color.B:X2}";
+        return "#808080";
+    }
+
+    private static string XmlEscape(string? s) =>
+        (s ?? "")
+            .Replace("&",  "&amp;")
+            .Replace("<",  "&lt;")
+            .Replace(">",  "&gt;")
+            .Replace("\"", "&quot;");
 }
