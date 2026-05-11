@@ -131,20 +131,20 @@
                             <Polyline x:Name="SocLine"   StrokeThickness="2"
                                       StrokeLineJoin="Round" Fill="Transparent"/>
                             <!-- X-axis time ticks -->
-                            <TextBlock x:Name="SocTime0" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="SocTime1" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="SocTime2" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="SocTime3" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="SocTime4" FontSize="8" Opacity="0.35"/>
+                            <TextBlock x:Name="SocTime0" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="SocTime1" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="SocTime2" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="SocTime3" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="SocTime4" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
                         </Canvas>
                     </Grid>
 
-                    <!-- X-axis legend -->
+                    <!-- X-axis legend: window duration -->
                     <Grid Grid.Row="1" Margin="36,0,0,0">
                         <TextBlock x:Name="SocTimeAgoLabel" FontSize="10" Opacity="0.4"
                                    HorizontalAlignment="Left"/>
                         <TextBlock x:Name="SocNowLabel" FontSize="10" Opacity="0.4"
-                                   HorizontalAlignment="Right"/>
+                                   HorizontalAlignment="Right" FontFamily="Consolas"/>
                     </Grid>
                 </Grid>
             </Border>
@@ -205,11 +205,11 @@
                                       StrokeLineJoin="Round" Fill="Transparent"
                                       StrokeDashArray="5,2"/>
                             <!-- X-axis time ticks -->
-                            <TextBlock x:Name="VITime0" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="VITime1" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="VITime2" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="VITime3" FontSize="8" Opacity="0.35"/>
-                            <TextBlock x:Name="VITime4" FontSize="8" Opacity="0.35"/>
+                            <TextBlock x:Name="VITime0" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="VITime1" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="VITime2" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="VITime3" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
+                            <TextBlock x:Name="VITime4" FontSize="9" Opacity="0.55" FontFamily="Consolas"/>
                         </Canvas>
 
                         <!-- Current Y-axis labels (right, left-aligned) -->
@@ -240,12 +240,12 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- X-axis labels -->
+                    <!-- X-axis labels: window duration -->
                     <Grid Grid.Row="2" Margin="44,0,44,0">
                         <TextBlock x:Name="VITimeAgoLabel" FontSize="10" Opacity="0.4"
                                    HorizontalAlignment="Left"/>
                         <TextBlock x:Name="VINowLabel" FontSize="10" Opacity="0.4"
-                                   HorizontalAlignment="Right"/>
+                                   HorizontalAlignment="Right" FontFamily="Consolas"/>
                     </Grid>
                 </Grid>
             </Border>

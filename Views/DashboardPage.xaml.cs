@@ -59,22 +59,27 @@ public sealed partial class DashboardPage : Page
 
     private void UpdateXAxisLabels()
     {
-        string agoText, nowText;
+        // Left label: human-readable window size
+        string windowLabel;
         if (ViewModel.HistoryTimeframeMinutes > 0)
         {
             double mins = ViewModel.HistoryTimeframeMinutes;
-            agoText = mins >= 1 ? $"← {mins:0.#} min ago" : $"← {mins * 60:0} s ago";
+            windowLabel = mins >= 1
+                ? $"Window: {mins:0.#} min  (1 sample/s)"
+                : $"Window: {mins * 60:0} s  (1 sample/s)";
         }
         else
         {
-            agoText = "← start";
+            windowLabel = "Window: All data  (1 sample/s)";
         }
-        nowText = "now →";
 
-        SocTimeAgoLabel.Text = agoText;
-        SocNowLabel.Text     = nowText;
-        VITimeAgoLabel.Text  = agoText;
-        VINowLabel.Text      = nowText;
+        // Right label: current time — updated on every tick redraw
+        string nowLabel = DateTime.Now.ToString("HH:mm:ss");
+
+        SocTimeAgoLabel.Text = windowLabel;
+        SocNowLabel.Text     = nowLabel;
+        VITimeAgoLabel.Text  = windowLabel;
+        VINowLabel.Text      = nowLabel;
     }
 
     // ── Chart colors ──────────────────────────────────────────────────────
@@ -105,6 +110,7 @@ public sealed partial class DashboardPage : Page
     {
         RedrawSocChart();
         RedrawVIChart();
+        UpdateXAxisLabels();   // keep "now" timestamp in bottom-right current
     }
 
     private void SocChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
@@ -177,33 +183,54 @@ public sealed partial class DashboardPage : Page
     private static void UpdateTimeTicks(double w, double h, double cap, int n, double timeframeMinutes,
         TextBlock t0, TextBlock t1, TextBlock t2, TextBlock t3, TextBlock t4)
     {
+        // fractions: 0 = oldest visible point, 1 = "now" (rightmost)
         var ticks = new[] { (t0, 0.0), (t1, 0.25), (t2, 0.50), (t3, 0.75), (t4, 1.0) };
         double xStep  = cap > 1 ? w / (cap - 1.0) : w;
         double xStart = (cap - n) * xStep;
+        var    now    = DateTime.Now;
+
+        // Approximate char width for "HH:mm:ss" at Consolas 9pt ≈ 46px
+        const double labelHalfW = 23;
 
         foreach (var (tb, frac) in ticks)
         {
             string label;
+
             if (timeframeMinutes > 0)
             {
-                double secsAgo = timeframeMinutes * 60 * (1.0 - frac);
-                if (secsAgo >= 60)
-                    label = $"-{secsAgo / 60:0.#}m";
-                else
-                    label = $"-{secsAgo:0}s";
+                // Fixed window: each tick = a specific clock time
+                double secsAgo = timeframeMinutes * 60.0 * (1.0 - frac);
+                label = now.AddSeconds(-secsAgo).ToString("HH:mm:ss");
             }
             else
             {
-                if (frac == 0) label = "start";
-                else if (Math.Abs(frac - 1.0) < 0.001) label = "now";
-                else label = $"{frac * 100:0}%";
+                // "All" mode: estimate time from sample count (assume 1 Hz)
+                if (n < 2)
+                {
+                    // Not enough data — show only the rightmost tick
+                    label = Math.Abs(frac - 1.0) < 0.001 ? now.ToString("HH:mm:ss") : "";
+                }
+                else
+                {
+                    double secsAgo = (n - 1) * (1.0 - frac);
+                    label = now.AddSeconds(-secsAgo).ToString("HH:mm:ss");
+                }
             }
 
-            tb.Text = label;
+            if (string.IsNullOrEmpty(label))
+            {
+                tb.Visibility = Visibility.Collapsed;
+                continue;
+            }
+
+            tb.Text       = label;
             tb.Visibility = Visibility.Visible;
+
             double xPos = n > 1 ? xStart + frac * (n - 1) * xStep : frac * w;
-            Canvas.SetLeft(tb, Math.Max(0, xPos - 14));
-            Canvas.SetTop(tb, h - 14);
+            // Clamp so label never bleeds outside the canvas
+            double left = Math.Clamp(xPos - labelHalfW, 0, Math.Max(0, w - labelHalfW * 2));
+            Canvas.SetLeft(tb, left);
+            Canvas.SetTop(tb, h - 15);
         }
     }
 
