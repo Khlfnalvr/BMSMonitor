@@ -41,7 +41,6 @@ public sealed partial class DashboardPage : Page
         InitializeComponent();
         InitializeTickPools();
         ApplyChartColors();
-        PopulateTimeframeCombo();
         UpdateXAxisLabels();
 
         Loaded   += (_, _) => ViewModel.HistoryUpdated += OnHistoryUpdated;
@@ -70,54 +69,17 @@ public sealed partial class DashboardPage : Page
         Visibility      = Visibility.Collapsed
     };
 
-    private void PopulateTimeframeCombo()
-    {
-        TimeframeCombo.Items.Clear();
-        foreach (var (minutes, label) in MainViewModel.TimeframeOptions)
-            TimeframeCombo.Items.Add(label);
-        for (int i = 0; i < MainViewModel.TimeframeOptions.Length; i++)
-        {
-            if (Math.Abs(MainViewModel.TimeframeOptions[i].Minutes - ViewModel.HistoryTimeframeMinutes) < 0.001)
-            {
-                TimeframeCombo.SelectedIndex = i;
-                break;
-            }
-        }
-    }
-
-    private void TimeframeCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (TimeframeCombo.SelectedIndex < 0 ||
-            TimeframeCombo.SelectedIndex >= MainViewModel.TimeframeOptions.Length)
-            return;
-
-        ViewModel.HistoryTimeframeMinutes = MainViewModel.TimeframeOptions[TimeframeCombo.SelectedIndex].Minutes;
-        UpdateXAxisLabels();
-    }
-
     /// <summary>
     /// Updates the bottom legend strip under each chart.
-    /// Left: window size (e.g. "Window: 2 min · 1 sample/s").
-    /// Right: time unit (e.g. "time (seconds)" / "(minutes)" / "(hours)").
+    /// Left: sample rate hint.  Right: time unit ("seconds" / "minutes" / "hours").
     /// </summary>
     private void UpdateXAxisLabels(string socUnit = "", string viUnit = "")
     {
-        string windowLabel;
-        if (ViewModel.HistoryTimeframeMinutes > 0)
-        {
-            double mins = ViewModel.HistoryTimeframeMinutes;
-            windowLabel = mins >= 1
-                ? $"Window: {mins:0.#} min  ·  1 sample/s"
-                : $"Window: {mins * 60:0} s  ·  1 sample/s";
-        }
-        else
-        {
-            windowLabel = "Window: All data  ·  1 sample/s";
-        }
+        const string rate = "1 sample/s";
 
-        SocTimeAgoLabel.Text = windowLabel;
+        SocTimeAgoLabel.Text = rate;
         SocNowLabel.Text     = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
-        VITimeAgoLabel.Text  = windowLabel;
+        VITimeAgoLabel.Text  = rate;
         VINowLabel.Text      = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
     }
 
@@ -996,8 +958,10 @@ public sealed partial class DashboardPage : Page
             return;
         }
 
-        DataStartLabel.Text = earliest!.Value.ToString("HH:mm:ss");
-        DataEndLabel.Text   = latest!.Value.ToString("HH:mm:ss");
+        // Elapsed time = offset from the very first sample of the session
+        // (first sample = 00:00:00, last sample = total elapsed duration)
+        DataStartLabel.Text = "00:00:00";
+        DataEndLabel.Text   = FormatElapsed(latest!.Value - earliest!.Value);
 
         var trimStart = _filterStart ?? earliest.Value;
         var trimEnd   = _filterEnd   ?? latest.Value;
@@ -1013,15 +977,29 @@ public sealed partial class DashboardPage : Page
         Canvas.SetLeft(TrimSelection, startX);
         TrimSelection.Width = Math.Max(0, endX - startX);
 
-        // Status line
-        TimeSpan duration = trimEnd - trimStart;
+        // Status line uses elapsed time relative to session start
+        TimeSpan trimStartElapsed = trimStart - earliest.Value;
+        TimeSpan trimEndElapsed   = trimEnd   - earliest.Value;
+        TimeSpan duration         = trimEnd   - trimStart;
+
         string durStr = duration.TotalHours    >= 1 ? $"{duration.TotalHours:0.#} h"
                       : duration.TotalMinutes  >= 1 ? $"{duration.TotalMinutes:0.#} min"
                       :                                $"{duration.TotalSeconds:0} s";
 
+        string startStr = FormatElapsed(trimStartElapsed);
+        string endStr   = FormatElapsed(trimEndElapsed);
+
         TrimRangeText.Text = (_filterStart.HasValue || _filterEnd.HasValue)
-            ? $"Trim: {trimStart:HH:mm:ss} → {trimEnd:HH:mm:ss}  ·  {durStr}"
-            : $"Full range: {trimStart:HH:mm:ss} → {trimEnd:HH:mm:ss}  ·  {durStr}  (drag a handle to trim)";
+            ? $"Trim: {startStr} → {endStr}  ·  {durStr}"
+            : $"Full range: {startStr} → {endStr}  ·  {durStr}  (drag a handle to trim)";
+    }
+
+    /// <summary>Formats a duration as HH:MM:SS, where 00:00:00 = first sample.</summary>
+    private static string FormatElapsed(TimeSpan ts)
+    {
+        if (ts.Ticks < 0) ts = TimeSpan.Zero;
+        int hours = (int)Math.Floor(ts.TotalHours);
+        return $"{hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
     }
 
     private static double TimestampToX(DateTime t, DateTime earliest, DateTime latest, double w)

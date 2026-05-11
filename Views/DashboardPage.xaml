@@ -85,12 +85,10 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-                    <TextBlock Text="{x:Bind Lang.Dash_SecSocHistory, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                    <ComboBox x:Name="TimeframeCombo" Width="80" Height="28"
-                              SelectionChanged="TimeframeCombo_SelectionChanged"
-                              SelectedIndex="2"/>
-                </StackPanel>
+                <TextBlock Grid.Column="0"
+                           Text="{x:Bind Lang.Dash_SecSocHistory, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"
+                           VerticalAlignment="Center"/>
                 <Button Grid.Column="1" x:Name="SaveSocBtn"
                         Width="36" Height="28" Padding="0"
                         Click="SaveSocChart_Click"

@@ -50,7 +50,9 @@ public partial class MainViewModel : ObservableObject
         (0,   "All"),
     ];
 
-    private double _historyTimeframeMinutes = 2;
+    // 0 = unlimited (keep all samples); chart range is now controlled by the
+    // trim bar on the dashboard, not by a fixed rolling window.
+    private double _historyTimeframeMinutes = 0;
     public double HistoryTimeframeMinutes
     {
         get => _historyTimeframeMinutes;
