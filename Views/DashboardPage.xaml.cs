@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -21,9 +22,16 @@ public sealed partial class DashboardPage : Page
     private MainViewModel ViewModel => App.ViewModel;
     private Services.LocalizationManager Lang => App.Lang;
 
+    // ── Dynamic X-axis tick pools ──────────────────────────────────────────
+    // Pre-allocated once; reused on every redraw (no UIElement churn).
+    private const int MaxTicks = 24;
+    private TextBlock[] _socTicks = [];
+    private TextBlock[] _viTicks  = [];
+
     public DashboardPage()
     {
         InitializeComponent();
+        InitializeTickPools();
         ApplyChartColors();
         PopulateTimeframeCombo();
         UpdateXAxisLabels();
@@ -31,6 +39,28 @@ public sealed partial class DashboardPage : Page
         Loaded   += (_, _) => ViewModel.HistoryUpdated += OnHistoryUpdated;
         Unloaded += (_, _) => ViewModel.HistoryUpdated -= OnHistoryUpdated;
     }
+
+    private void InitializeTickPools()
+    {
+        _socTicks = new TextBlock[MaxTicks];
+        _viTicks  = new TextBlock[MaxTicks];
+        for (int i = 0; i < MaxTicks; i++)
+        {
+            _socTicks[i] = MakeTickLabel();
+            SocChartCanvas.Children.Add(_socTicks[i]);
+            _viTicks[i] = MakeTickLabel();
+            VIChartCanvas.Children.Add(_viTicks[i]);
+        }
+    }
+
+    private static TextBlock MakeTickLabel() => new()
+    {
+        FontSize        = 9,
+        Opacity         = 0.55,
+        FontFamily      = new FontFamily("Consolas"),
+        TextAlignment   = TextAlignment.Center,
+        Visibility      = Visibility.Collapsed
+    };
 
     private void PopulateTimeframeCombo()
     {
@@ -57,29 +87,30 @@ public sealed partial class DashboardPage : Page
         UpdateXAxisLabels();
     }
 
-    private void UpdateXAxisLabels()
+    /// <summary>
+    /// Updates the bottom legend strip under each chart.
+    /// Left: window size (e.g. "Window: 2 min · 1 sample/s").
+    /// Right: time unit (e.g. "time (seconds)" / "(minutes)" / "(hours)").
+    /// </summary>
+    private void UpdateXAxisLabels(string socUnit = "", string viUnit = "")
     {
-        // Left label: human-readable window size
         string windowLabel;
         if (ViewModel.HistoryTimeframeMinutes > 0)
         {
             double mins = ViewModel.HistoryTimeframeMinutes;
             windowLabel = mins >= 1
-                ? $"Window: {mins:0.#} min  (1 sample/s)"
-                : $"Window: {mins * 60:0} s  (1 sample/s)";
+                ? $"Window: {mins:0.#} min  ·  1 sample/s"
+                : $"Window: {mins * 60:0} s  ·  1 sample/s";
         }
         else
         {
-            windowLabel = "Window: All data  (1 sample/s)";
+            windowLabel = "Window: All data  ·  1 sample/s";
         }
 
-        // Right label: current time — updated on every tick redraw
-        string nowLabel = DateTime.Now.ToString("HH:mm:ss");
-
         SocTimeAgoLabel.Text = windowLabel;
-        SocNowLabel.Text     = nowLabel;
+        SocNowLabel.Text     = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
         VITimeAgoLabel.Text  = windowLabel;
-        VINowLabel.Text      = nowLabel;
+        VINowLabel.Text      = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
     }
 
     // ── Chart colors ──────────────────────────────────────────────────────
@@ -108,22 +139,31 @@ public sealed partial class DashboardPage : Page
     // ── Chart drawing ─────────────────────────────────────────────────────
     private void OnHistoryUpdated()
     {
-        RedrawSocChart();
-        RedrawVIChart();
-        UpdateXAxisLabels();   // keep "now" timestamp in bottom-right current
+        string socUnit = RedrawSocChart();
+        string viUnit  = RedrawVIChart();
+        UpdateXAxisLabels(socUnit, viUnit);
     }
 
     private void SocChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
-        => RedrawSocChart();
+    {
+        string u = RedrawSocChart();
+        if (!string.IsNullOrEmpty(u))
+            SocNowLabel.Text = $"time ({u})";
+    }
 
     private void VIChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
-        => RedrawVIChart();
+    {
+        string u = RedrawVIChart();
+        if (!string.IsNullOrEmpty(u))
+            VINowLabel.Text = $"time ({u})";
+    }
 
-    private void RedrawSocChart()
+    /// <returns>The x-axis unit ("seconds" / "minutes" / "hours") or empty if no data.</returns>
+    private string RedrawSocChart()
     {
         double w = SocChartCanvas.ActualWidth;
         double h = SocChartCanvas.ActualHeight;
-        if (w == 0 || h == 0) return;
+        if (w == 0 || h == 0) return "";
 
         // Horizontal grid lines at 25 / 50 / 75 %
         UpdateGridLine(GridLine25, w, h * 0.75);
@@ -143,8 +183,8 @@ public sealed partial class DashboardPage : Page
         {
             SocLine.Points = [];
             SocFill.Points = [];
-            HideTimeTicks(SocTime0, SocTime1, SocTime2, SocTime3, SocTime4);
-            return;
+            HideTicks(_socTicks);
+            return "";
         }
 
         var linePoints = new PointCollection();
@@ -168,87 +208,15 @@ public sealed partial class DashboardPage : Page
         SocFill.Points = fillPoints;
 
         // ── X-axis time ticks ──────────────────────────────────────────────
-        UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes,
-            SocTime0, SocTime1, SocTime2, SocTime3, SocTime4);
-    }
-
-    private static void UpdateGridLine(Line line, double width, double y)
-    {
-        line.X1 = 0;
-        line.X2 = width;
-        line.Y1 = y;
-        line.Y2 = y;
-    }
-
-    private static void UpdateTimeTicks(double w, double h, double cap, int n, double timeframeMinutes,
-        TextBlock t0, TextBlock t1, TextBlock t2, TextBlock t3, TextBlock t4)
-    {
-        // fractions: 0 = oldest visible point, 1 = "now" (rightmost)
-        var ticks = new[] { (t0, 0.0), (t1, 0.25), (t2, 0.50), (t3, 0.75), (t4, 1.0) };
-        double xStep  = cap > 1 ? w / (cap - 1.0) : w;
-        double xStart = (cap - n) * xStep;
-        var    now    = DateTime.Now;
-
-        // Approximate char width for "HH:mm:ss" at Consolas 9pt ≈ 46px
-        const double labelHalfW = 23;
-
-        foreach (var (tb, frac) in ticks)
-        {
-            string label;
-
-            if (timeframeMinutes > 0)
-            {
-                // Fixed window: each tick = a specific clock time
-                double secsAgo = timeframeMinutes * 60.0 * (1.0 - frac);
-                label = now.AddSeconds(-secsAgo).ToString("HH:mm:ss");
-            }
-            else
-            {
-                // "All" mode: estimate time from sample count (assume 1 Hz)
-                if (n < 2)
-                {
-                    // Not enough data — show only the rightmost tick
-                    label = Math.Abs(frac - 1.0) < 0.001 ? now.ToString("HH:mm:ss") : "";
-                }
-                else
-                {
-                    double secsAgo = (n - 1) * (1.0 - frac);
-                    label = now.AddSeconds(-secsAgo).ToString("HH:mm:ss");
-                }
-            }
-
-            if (string.IsNullOrEmpty(label))
-            {
-                tb.Visibility = Visibility.Collapsed;
-                continue;
-            }
-
-            tb.Text       = label;
-            tb.Visibility = Visibility.Visible;
-
-            double xPos = n > 1 ? xStart + frac * (n - 1) * xStep : frac * w;
-            // Clamp so label never bleeds outside the canvas
-            double left = Math.Clamp(xPos - labelHalfW, 0, Math.Max(0, w - labelHalfW * 2));
-            Canvas.SetLeft(tb, left);
-            Canvas.SetTop(tb, h - 15);
-        }
-    }
-
-    private static void HideTimeTicks(TextBlock t0, TextBlock t1, TextBlock t2, TextBlock t3, TextBlock t4)
-    {
-        t0.Visibility = Visibility.Collapsed;
-        t1.Visibility = Visibility.Collapsed;
-        t2.Visibility = Visibility.Collapsed;
-        t3.Visibility = Visibility.Collapsed;
-        t4.Visibility = Visibility.Collapsed;
+        return UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes, _socTicks);
     }
 
     // ── V/I dual-axis chart ───────────────────────────────────────────────
-    private void RedrawVIChart()
+    private string RedrawVIChart()
     {
         double w = VIChartCanvas.ActualWidth;
         double h = VIChartCanvas.ActualHeight;
-        if (w == 0 || h == 0) return;
+        if (w == 0 || h == 0) return "";
 
         // Always draw horizontal grid lines
         UpdateGridLine(VIGridH1, w, h * 0.25);
@@ -262,8 +230,8 @@ public sealed partial class DashboardPage : Page
         {
             VoltageLine.Points = new PointCollection();
             CurrentLine.Points = new PointCollection();
-            HideTimeTicks(VITime0, VITime1, VITime2, VITime3, VITime4);
-            return;
+            HideTicks(_viTicks);
+            return "";
         }
 
         // ── Auto-range voltage (nearest 5 V boundary) ──────────────────
@@ -283,7 +251,7 @@ public sealed partial class DashboardPage : Page
         double iRange  = iRawMax - iRawMin;
 
         // ── Position axis labels at 0 / 25 / 50 / 75 / 100 % ──────────
-        const double fontH = 11.0;   // approximate TextBlock height for 9pt
+        const double fontH = 11.0;
 
         VLabel4.Text = $"{vRawMax:F0}";                     Canvas.SetTop(VLabel4, 0);
         VLabel3.Text = $"{vRawMax - vRange * 0.25:F0}";    Canvas.SetTop(VLabel3, h * 0.25 - fontH / 2);
@@ -319,8 +287,130 @@ public sealed partial class DashboardPage : Page
         CurrentLine.Points = iPoints;
 
         // ── X-axis time ticks ──────────────────────────────────────────────
-        UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes,
-            VITime0, VITime1, VITime2, VITime3, VITime4);
+        return UpdateTimeTicks(w, h, cap, n, ViewModel.HistoryTimeframeMinutes, _viTicks);
+    }
+
+    // ── Tick rendering ────────────────────────────────────────────────────
+
+    private static void UpdateGridLine(Line line, double width, double y)
+    {
+        line.X1 = 0;
+        line.X2 = width;
+        line.Y1 = y;
+        line.Y2 = y;
+    }
+
+    private static void HideTicks(TextBlock[] ticks)
+    {
+        for (int i = 0; i < ticks.Length; i++)
+            ticks[i].Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>
+    /// Draws X-axis tick labels. Tick count and step are chosen automatically
+    /// so values stay short (1–3 digits) and the spacing fits the canvas width.
+    /// </summary>
+    /// <returns>The time unit shown ("seconds" / "minutes" / "hours").</returns>
+    private static string UpdateTimeTicks(double w, double h, double cap, int n,
+        double timeframeMinutes, TextBlock[] ticks)
+    {
+        // Total seconds the X-axis spans
+        double totalSeconds = timeframeMinutes > 0
+            ? timeframeMinutes * 60.0
+            : Math.Max(1, n - 1);   // "All" mode: assume 1 Hz sampling
+
+        // Pick how many ticks to try for — wider canvas → more ticks (~70 px each)
+        int targetTicks = (int)Math.Clamp(w / 70.0, 6, 18);
+
+        var (unit, divisor, step) = PickAxisScale(totalSeconds, targetTicks);
+
+        // Format: integer if step is whole, one decimal otherwise (e.g. 0.5)
+        string fmt = step >= 1.0 ? "F0" : "F1";
+
+        double totalUnits = totalSeconds / divisor;
+        double xStep      = cap > 1 ? w / (cap - 1.0) : w;
+        double xStart     = (cap - n) * xStep;
+
+        int used = 0;
+        // Iterate ticks 0 .. totalUnits (inclusive), stepping by `step`
+        for (double v = 0.0; v <= totalUnits + 1e-9 && used < ticks.Length; v += step)
+        {
+            // Position: fraction along the timeframe
+            double frac = totalUnits > 0 ? v / totalUnits : 0;
+            double xPos = n > 1 ? xStart + frac * (n - 1) * xStep : frac * w;
+
+            // Round value to avoid floating-point noise (0.30000000004 → 0.3)
+            double display = Math.Round(v, fmt == "F1" ? 1 : 0);
+
+            var tb = ticks[used];
+            tb.Text       = display.ToString(fmt, CultureInfo.InvariantCulture);
+            tb.Visibility = Visibility.Visible;
+
+            // Center label under tick X (≈ 5.5 px per char at Consolas 9pt)
+            double halfW = tb.Text.Length * 2.8;
+            double left  = Math.Clamp(xPos - halfW, 0, Math.Max(0, w - halfW * 2));
+            Canvas.SetLeft(tb, left);
+            Canvas.SetTop(tb, h - 14);
+
+            used++;
+        }
+
+        // Hide unused ticks in the pool
+        for (int i = used; i < ticks.Length; i++)
+            ticks[i].Visibility = Visibility.Collapsed;
+
+        return unit;
+    }
+
+    /// <summary>
+    /// Chooses a sensible (unit, step) for the X axis so values stay short.
+    /// Returns the unit string, the seconds-per-unit divisor, and the step
+    /// expressed in that unit (e.g. 5 seconds, 0.5 minutes).
+    /// </summary>
+    private static (string unit, double divisor, double step)
+        PickAxisScale(double totalSeconds, int targetTicks)
+    {
+        string unit;
+        double divisor;
+
+        if (totalSeconds < 90)
+        {
+            unit = "seconds"; divisor = 1.0;
+        }
+        else if (totalSeconds < 5400)   // < 90 min
+        {
+            unit = "minutes"; divisor = 60.0;
+        }
+        else
+        {
+            unit = "hours";   divisor = 3600.0;
+        }
+
+        double totalInUnit = totalSeconds / divisor;
+        double rawStep     = totalInUnit / Math.Max(1, targetTicks - 1);
+        double step        = NiceStep(rawStep);
+
+        return (unit, divisor, step);
+    }
+
+    /// <summary>
+    /// Snaps a raw interval to a "nice" value: 1, 2, 5 × 10^k.
+    /// Produces clean tick labels like 0, 5, 10 — never 0, 4.27, 8.54.
+    /// </summary>
+    private static double NiceStep(double rawStep)
+    {
+        if (rawStep <= 0) return 1;
+        double exponent = Math.Floor(Math.Log10(rawStep));
+        double pow      = Math.Pow(10, exponent);
+        double fraction = rawStep / pow;
+
+        double niceFraction =
+              fraction < 1.5 ? 1
+            : fraction < 3   ? 2
+            : fraction < 7   ? 5
+            :                  10;
+
+        return niceFraction * pow;
     }
 
     // ── Save chart as PNG ──────────────────────────────────────────────────
