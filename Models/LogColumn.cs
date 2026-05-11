@@ -6,8 +6,9 @@ using System.Runtime.CompilerServices;
 namespace BMSMonitor.Models;
 
 /// <summary>
-/// One loggable column. Supports enable/disable toggle and drag-to-reorder
-/// (the ObservableCollection order determines the output column order).
+/// One loggable column. Supports enable/disable toggle and drag-to-reorder.
+/// Key parsing is cached after first access so GetString/GetObject are O(1)
+/// on every subsequent call (no repeated StartsWith/TryParse on hot path).
 /// </summary>
 public sealed class LogColumn : INotifyPropertyChanged
 {
@@ -31,69 +32,86 @@ public sealed class LogColumn : INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? n = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
 
+    // ── Cached key metadata (parsed once on first use) ────────────────────
+
+    private enum ColKind : byte
+    { Timestamp, PackVoltage, Soc, Current, Status, Cell, Bal, Temp, Unknown }
+
+    private ColKind _kind = (ColKind)255; // sentinel = not parsed yet
+    private int     _idx;
+
+    private void EnsureParsed()
+    {
+        if (_kind != (ColKind)255) return;
+
+        _kind = Key switch
+        {
+            "Timestamp"     => ColKind.Timestamp,
+            "PackVoltage_V" => ColKind.PackVoltage,
+            "SOC_pct"       => ColKind.Soc,
+            "Current_A"     => ColKind.Current,
+            "Status"        => ColKind.Status,
+            _               => ColKind.Unknown
+        };
+
+        if (_kind == ColKind.Unknown)
+        {
+            if (Key.StartsWith("Cell", StringComparison.Ordinal) &&
+                Key.EndsWith("_V", StringComparison.Ordinal) &&
+                int.TryParse(Key.AsSpan(4, Key.Length - 6), out int ci) &&
+                ci is >= 1 and <= 20)
+            { _kind = ColKind.Cell; _idx = ci - 1; }
+
+            else if (Key.StartsWith("Bal", StringComparison.Ordinal) &&
+                     !Key.Contains('_') &&
+                     int.TryParse(Key.AsSpan(3), out int bi) &&
+                     bi is >= 1 and <= 20)
+            { _kind = ColKind.Bal; _idx = bi - 1; }
+
+            else if (Key.StartsWith("Temp", StringComparison.Ordinal) &&
+                     Key.EndsWith("_C", StringComparison.Ordinal) &&
+                     int.TryParse(Key.AsSpan(4, Key.Length - 6), out int ti) &&
+                     ti is >= 1 and <= 10)
+            { _kind = ColKind.Temp; _idx = ti - 1; }
+        }
+    }
+
     // ── Value extraction ──────────────────────────────────────────────────
 
-    /// <summary>Formatted string for CSV / TSV output.</summary>
+    /// <summary>Formatted string for CSV / TSV / live-stream output.</summary>
     public string GetString(DateTime ts, BmsData d)
     {
-        switch (Key)
+        EnsureParsed();
+        return _kind switch
         {
-            case "Timestamp":     return ts.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            case "PackVoltage_V": return d.PackVoltage.ToString("F3", CultureInfo.InvariantCulture);
-            case "SOC_pct":       return d.Soc.ToString("F2", CultureInfo.InvariantCulture);
-            case "Current_A":     return d.Current.ToString("F3", CultureInfo.InvariantCulture);
-            case "Status":        return d.Status;
-        }
-        if (TryCellIndex(out int ci)) return d.Cells[ci].ToString("F4", CultureInfo.InvariantCulture);
-        if (TryBalIndex (out int bi)) return d.Balancing[bi] ? "1" : "0";
-        if (TryTempIndex(out int ti)) return d.Temps[ti].ToString("F2", CultureInfo.InvariantCulture);
-        return "";
+            ColKind.Timestamp   => ts.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+            ColKind.PackVoltage => d.PackVoltage.ToString("F3", CultureInfo.InvariantCulture),
+            ColKind.Soc         => d.Soc.ToString("F2", CultureInfo.InvariantCulture),
+            ColKind.Current     => d.Current.ToString("F3", CultureInfo.InvariantCulture),
+            ColKind.Status      => d.Status,
+            ColKind.Cell        => d.Cells[_idx].ToString("F4", CultureInfo.InvariantCulture),
+            ColKind.Bal         => d.Balancing[_idx] ? "1" : "0",
+            ColKind.Temp        => d.Temps[_idx].ToString("F2", CultureInfo.InvariantCulture),
+            _                   => ""
+        };
     }
 
     /// <summary>Typed object for Excel / JSON output.</summary>
     public object GetObject(DateTime ts, BmsData d)
     {
-        switch (Key)
+        EnsureParsed();
+        return _kind switch
         {
-            case "Timestamp":     return ts.ToString("yyyy-MM-dd HH:mm:ss.fff");
-            case "PackVoltage_V": return d.PackVoltage;
-            case "SOC_pct":       return d.Soc;
-            case "Current_A":     return d.Current;
-            case "Status":        return d.Status;
-        }
-        if (TryCellIndex(out int ci)) return d.Cells[ci];
-        if (TryBalIndex (out int bi)) return (object)(d.Balancing[bi] ? 1 : 0);
-        if (TryTempIndex(out int ti)) return d.Temps[ti];
-        return "";
-    }
-
-    // ── Index parsers ─────────────────────────────────────────────────────
-
-    private bool TryCellIndex(out int idx)
-    {
-        idx = 0;
-        if (Key.StartsWith("Cell") && Key.EndsWith("_V") &&
-            int.TryParse(Key[4..^2], out int n) && n is >= 1 and <= 20)
-        { idx = n - 1; return true; }
-        return false;
-    }
-
-    private bool TryBalIndex(out int idx)
-    {
-        idx = 0;
-        if (Key.StartsWith("Bal") && !Key.Contains('_') &&
-            int.TryParse(Key[3..], out int n) && n is >= 1 and <= 20)
-        { idx = n - 1; return true; }
-        return false;
-    }
-
-    private bool TryTempIndex(out int idx)
-    {
-        idx = 0;
-        if (Key.StartsWith("Temp") && Key.EndsWith("_C") &&
-            int.TryParse(Key[4..^2], out int n) && n is >= 1 and <= 10)
-        { idx = n - 1; return true; }
-        return false;
+            ColKind.Timestamp   => ts.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+            ColKind.PackVoltage => (object)d.PackVoltage,
+            ColKind.Soc         => (object)d.Soc,
+            ColKind.Current     => (object)d.Current,
+            ColKind.Status      => d.Status,
+            ColKind.Cell        => (object)d.Cells[_idx],
+            ColKind.Bal         => (object)(d.Balancing[_idx] ? 1 : 0),
+            ColKind.Temp        => (object)d.Temps[_idx],
+            _                   => ""
+        };
     }
 
     // ── Factory ───────────────────────────────────────────────────────────
@@ -109,11 +127,11 @@ public sealed class LogColumn : INotifyPropertyChanged
             new() { Key = "Status",        Label = "Status",           Group = "Core" },
         };
         for (int i = 1; i <= 20; i++)
-            list.Add(new() { Key = $"Cell{i}_V", Label = $"Cell {i} (V)",    Group = "Cells" });
+            list.Add(new() { Key = $"Cell{i}_V", Label = $"Cell {i} (V)",   Group = "Cells" });
         for (int i = 1; i <= 20; i++)
-            list.Add(new() { Key = $"Bal{i}",    Label = $"Balancing {i}",   Group = "Balancing" });
+            list.Add(new() { Key = $"Bal{i}",    Label = $"Balancing {i}",  Group = "Balancing" });
         for (int i = 1; i <= 10; i++)
-            list.Add(new() { Key = $"Temp{i}_C", Label = $"Temp {i} (°C)",  Group = "Temperatures" });
+            list.Add(new() { Key = $"Temp{i}_C", Label = $"Temp {i} (°C)", Group = "Temperatures" });
         return list;
     }
 }

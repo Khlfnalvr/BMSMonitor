@@ -24,12 +24,28 @@
     <InformationalVersion>1.0.1</InformationalVersion>
   </PropertyGroup>
 
+  <!-- Publish / release optimizations -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!--
+      Partial trim: removes unused assemblies but preserves all types within
+      assemblies (safe for WinUI 3 / XAML reflection). Reduces publish size.
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
+    <!--
+      ReadyToRun pre-JIT speeds first-launch load time at the cost of larger
+      binaries. Disable for smaller output; enable if startup latency matters.
+    -->
+    <PublishReadyToRun>false</PublishReadyToRun>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="MiniExcel" Version="1.34.2" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <!-- Upgraded from 8.0.0 to align with net10 runtime -->
+    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>

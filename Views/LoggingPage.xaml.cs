@@ -32,6 +32,13 @@ public sealed partial class LoggingPage : Page
     // Column config lives in ViewModel.LogColumns (persists across navigation)
     private ObservableCollection<LogColumn> Columns => ViewModel.LogColumns;
 
+    // ── Stream table cache ─────────────────────────────────────────────────
+    // Grid structure is built ONCE per column-layout change.
+    // On data updates only TextBlock.Text is changed — no UIElement churn.
+    private List<LogColumn>? _streamColumns;   // current column layout in the grid
+    private TextBlock[,]?    _streamCells;     // [row, col] — data rows only
+    private const int StreamCapacity = 20;
+
     public LoggingPage()
     {
         InitializeComponent();
@@ -54,7 +61,7 @@ public sealed partial class LoggingPage : Page
         _durationTimer.Tick += (_, _) => UpdateDuration();
         _durationTimer.Start();
 
-        ViewModel.DataStream.CollectionChanged += (_, _) => { UpdateStreamPlaceholder(); RebuildStreamTable(); };
+        ViewModel.DataStream.CollectionChanged += OnDataStreamChanged;
 
         // Bind column collections and wire events
         EnsureActiveColumnsInitialized();
@@ -62,19 +69,42 @@ public sealed partial class LoggingPage : Page
         ColumnGrid.ItemsSource = Columns;
         ActiveColumnsList.DragItemsCompleted += ActiveColumnsList_DragItemsCompleted;
 
-        // Rebuild stream table when columns change (IsEnabled toggle, reorder, reset)
-        Columns.CollectionChanged += (_, _) => RebuildStreamTable();
+        // Rebuild structure when columns change (enable/disable/reorder/reset)
+        Columns.CollectionChanged += OnColumnsCollectionChanged;
 
-        RebuildStreamTable();
+        // Initial build
+        BuildStreamStructure();
+        RefreshStreamData();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         Logging.StateChanged -= OnStateChanged;
-        ViewModel.DataStream.CollectionChanged -= (_, _) => { UpdateStreamPlaceholder(); RebuildStreamTable(); };
+        ViewModel.DataStream.CollectionChanged -= OnDataStreamChanged;
+        Columns.CollectionChanged -= OnColumnsCollectionChanged;
         _durationTimer?.Stop();
         _durationTimer = null;
     }
+
+    // ── Stream table event handlers ───────────────────────────────────────
+
+    // New data arrived — just update text, no structural rebuild.
+    private void OnDataStreamChanged(object? sender,
+        System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        UpdateStreamPlaceholder();
+        RefreshStreamData();
+    }
+
+    // Column layout changed — structural rebuild required.
+    private void OnColumnsCollectionChanged(object? sender,
+        System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+    {
+        BuildStreamStructure();
+        RefreshStreamData();
+    }
+
+    // ── Column initialization ─────────────────────────────────────────────
 
     private void EnsureActiveColumnsInitialized()
     {
@@ -99,7 +129,8 @@ public sealed partial class LoggingPage : Page
                     {
                         ActiveColumns.Remove(lc);
                     }
-                    RebuildStreamTable();
+                    BuildStreamStructure();
+                    RefreshStreamData();
                 });
             };
     }
@@ -107,27 +138,154 @@ public sealed partial class LoggingPage : Page
     private void ActiveColumnsList_DragItemsCompleted(object sender, DragItemsCompletedEventArgs e)
     {
         // Sync Columns order to match the user's drag-reordered ActiveColumns
-        var disabled = Columns.Where(c => !c.IsEnabled).ToList();
+        var disabled  = Columns.Where(c => !c.IsEnabled).ToList();
         var reordered = ActiveColumns.Concat(disabled).ToList();
         Columns.Clear();
         foreach (var col in reordered) Columns.Add(col);
 
-        RebuildStreamTable();
+        BuildStreamStructure();
+        RefreshStreamData();
     }
 
     private void UpdateStreamPlaceholder()
     {
         StreamEmptyText.Visibility = ViewModel.DataStream.Count == 0
-            ? Microsoft.UI.Xaml.Visibility.Visible
-            : Microsoft.UI.Xaml.Visibility.Collapsed;
+            ? Visibility.Visible
+            : Visibility.Collapsed;
     }
+
+    // ── Stream table rendering ────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds the fixed grid structure (column defs, header, separator, and
+    /// pre-allocated data rows). Called only when the column layout changes.
+    /// </summary>
+    private void BuildStreamStructure()
+    {
+        StreamContainer.Children.Clear();
+        StreamContainer.RowDefinitions.Clear();
+        StreamContainer.ColumnDefinitions.Clear();
+        _streamCells   = null;
+        _streamColumns = null;
+
+        var enabled = Columns.Where(c => c.IsEnabled).ToList();
+        if (enabled.Count == 0)
+        {
+            StreamEmptyText.Visibility = Visibility.Visible;
+            return;
+        }
+        StreamEmptyText.Visibility = Visibility.Collapsed;
+
+        int colCount = enabled.Count;
+
+        // Column definitions — auto-width, last column takes remaining space
+        for (int i = 0; i < colCount; i++)
+        {
+            StreamContainer.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = i == colCount - 1
+                    ? new GridLength(1, GridUnitType.Star)
+                    : GridLength.Auto
+            });
+        }
+
+        // ── Row 0: Header ──
+        StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        for (int i = 0; i < colCount; i++)
+        {
+            var tb = new TextBlock
+            {
+                Text = enabled[i].Label,
+                FontSize = 11,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Opacity = 0.6,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(i == 0 ? 0 : 12, 9, 0, 7)
+            };
+            Grid.SetColumn(tb, i);
+            Grid.SetRow(tb, 0);
+            StreamContainer.Children.Add(tb);
+        }
+
+        // ── Row 1: Separator ──
+        StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        var sep = new Border
+        {
+            Height = 1,
+            Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"]
+        };
+        Grid.SetRow(sep, 1);
+        Grid.SetColumnSpan(sep, colCount);
+        StreamContainer.Children.Add(sep);
+
+        // ── Rows 2…21: Pre-allocated data cells ──
+        var cells = new TextBlock[StreamCapacity, colCount];
+        for (int r = 0; r < StreamCapacity; r++)
+        {
+            StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            for (int c = 0; c < colCount; c++)
+            {
+                var tb = new TextBlock
+                {
+                    FontSize = 12,
+                    Opacity = 0.8,
+                    FontFamily = new FontFamily("Consolas"),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(c == 0 ? 0 : 12, 5, 0, 5),
+                    Visibility = Visibility.Collapsed   // hidden until data arrives
+                };
+                Grid.SetColumn(tb, c);
+                Grid.SetRow(tb, r + 2);
+                StreamContainer.Children.Add(tb);
+                cells[r, c] = tb;
+            }
+        }
+
+        _streamCells   = cells;
+        _streamColumns = enabled;
+    }
+
+    /// <summary>
+    /// Updates only the text of pre-allocated data cells — no UIElement allocation.
+    /// Called on every data-stream update.
+    /// </summary>
+    private void RefreshStreamData()
+    {
+        if (_streamCells is null || _streamColumns is null) return;
+
+        int rowCount = Math.Min(ViewModel.DataStream.Count, StreamCapacity);
+        int colCount = _streamColumns.Count;
+
+        for (int r = 0; r < StreamCapacity; r++)
+        {
+            bool hasData = r < rowCount;
+            var  logRow  = hasData ? ViewModel.DataStream[r] : null;
+
+            for (int c = 0; c < colCount; c++)
+            {
+                var tb = _streamCells[r, c];
+                if (hasData && logRow != null && c < logRow.Values.Count)
+                {
+                    tb.Text = logRow.Values[c];
+                    if (tb.Visibility != Visibility.Visible)
+                        tb.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    if (tb.Visibility != Visibility.Collapsed)
+                        tb.Visibility = Visibility.Collapsed;
+                }
+            }
+        }
+    }
+
+    // ── State / UI ────────────────────────────────────────────────────────
 
     private void OnStateChanged() => DispatcherQueue.TryEnqueue(RefreshUi);
 
     private void RefreshUi()
     {
         bool active = Logging.IsLogging;
-        var  fmt    = GetSelectedFormat();
 
         StateText.Text       = active ? Lang.Log_Logging : Lang.Log_Idle;
         SampleText.Text      = Logging.SampleCount.ToString("N0");
@@ -204,86 +362,6 @@ public sealed partial class LoggingPage : Page
         return Path.Combine(_selectedFolder, name);
     }
 
-    // ── Dynamic stream table ─────────────────────────────────────────────
-
-    private void RebuildStreamTable()
-    {
-        StreamContainer.Children.Clear();
-        StreamContainer.RowDefinitions.Clear();
-        StreamContainer.ColumnDefinitions.Clear();
-
-        var enabled = Columns.Where(c => c.IsEnabled).ToList();
-        if (enabled.Count == 0)
-        {
-            StreamEmptyText.Visibility = Visibility.Visible;
-            return;
-        }
-        StreamEmptyText.Visibility = Visibility.Collapsed;
-
-        // Column defs — auto-width, last takes remaining space
-        for (int i = 0; i < enabled.Count; i++)
-        {
-            StreamContainer.ColumnDefinitions.Add(new ColumnDefinition
-            {
-                Width = i == enabled.Count - 1
-                    ? new GridLength(1, GridUnitType.Star)
-                    : GridLength.Auto
-            });
-        }
-
-        // ── Header row (row 0) ──
-        StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        for (int i = 0; i < enabled.Count; i++)
-        {
-            var tb = new TextBlock
-            {
-                Text = enabled[i].Label,
-                FontSize = 11,
-                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                Opacity = 0.6,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(i == 0 ? 0 : 12, 9, 0, 7)
-            };
-            Grid.SetColumn(tb, i);
-            Grid.SetRow(tb, 0);
-            StreamContainer.Children.Add(tb);
-        }
-
-        // ── Separator (row 1) ──
-        StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var sep = new Border
-        {
-            Height = 1,
-            Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"]
-        };
-        Grid.SetRow(sep, 1);
-        Grid.SetColumnSpan(sep, enabled.Count);
-        StreamContainer.Children.Add(sep);
-
-        // ── Data rows ──
-        int row = 2;
-        foreach (var logRow in ViewModel.DataStream)
-        {
-            StreamContainer.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            for (int i = 0; i < enabled.Count && i < logRow.Values.Count; i++)
-            {
-                var tb = new TextBlock
-                {
-                    Text = logRow.Values[i],
-                    FontSize = 12,
-                    Opacity = 0.8,
-                    FontFamily = new FontFamily("Consolas"),
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Margin = new Thickness(i == 0 ? 0 : 12, 5, 0, 5)
-                };
-                Grid.SetColumn(tb, i);
-                Grid.SetRow(tb, row);
-                StreamContainer.Children.Add(tb);
-            }
-            row++;
-        }
-    }
-
     // ── Column settings handlers ──────────────────────────────────────────
 
     private void SelectAll_Click(object sender, RoutedEventArgs e)
@@ -319,7 +397,7 @@ public sealed partial class LoggingPage : Page
 
     private void ToggleGroup(string group)
     {
-        var groupCols  = Columns.Where(c => c.Group == group).ToList();
+        var groupCols   = Columns.Where(c => c.Group == group).ToList();
         bool allEnabled = groupCols.All(c => c.IsEnabled);
         foreach (var col in groupCols) col.IsEnabled = !allEnabled;
     }

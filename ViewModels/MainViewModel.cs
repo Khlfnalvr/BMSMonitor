@@ -67,17 +67,18 @@ public partial class MainViewModel : ObservableObject
     public int HistoryCapacity =>
         _historyTimeframeMinutes > 0 ? (int)(_historyTimeframeMinutes * 60) : 0;
 
-    private readonly List<double> _socHistory     = new(120);
-    private readonly List<double> _voltageHistory = new(120);
-    private readonly List<double> _currentHistory = new(120);
+    // Queue<T> dequeues from front in O(1) — much cheaper than List.RemoveAt(0).
+    private readonly Queue<double> _socHistory     = new(120);
+    private readonly Queue<double> _voltageHistory = new(120);
+    private readonly Queue<double> _currentHistory = new(120);
 
     private void TrimHistoryBuffers()
     {
         int cap = HistoryCapacity;
         if (cap <= 0) return;
-        while (_socHistory.Count     > cap) _socHistory.RemoveAt(0);
-        while (_voltageHistory.Count > cap) _voltageHistory.RemoveAt(0);
-        while (_currentHistory.Count > cap) _currentHistory.RemoveAt(0);
+        while (_socHistory.Count     > cap) _socHistory.Dequeue();
+        while (_voltageHistory.Count > cap) _voltageHistory.Dequeue();
+        while (_currentHistory.Count > cap) _currentHistory.Dequeue();
     }
 
     public event Action? HistoryUpdated;
@@ -195,10 +196,10 @@ public partial class MainViewModel : ObservableObject
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
 
-        // Push SOC / V / I into history lists and notify chart.
-        _socHistory.Add(data.Soc);
-        _voltageHistory.Add(data.PackVoltage);
-        _currentHistory.Add(data.Current);
+        // Push SOC / V / I into history queues and notify chart.
+        _socHistory.Enqueue(data.Soc);
+        _voltageHistory.Enqueue(data.PackVoltage);
+        _currentHistory.Enqueue(data.Current);
         TrimHistoryBuffers();
         HistoryUpdated?.Invoke();
     }
