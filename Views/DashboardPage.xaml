@@ -323,6 +323,96 @@
                 </StackPanel>
             </Border>
 
+            <!-- ── TEMPERATURE HISTORY CHART ─────────────────────────── -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{x:Bind Lang.Dash_SecTempHistory, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1" x:Name="SaveTempBtn"
+                        Width="36" Height="28" Padding="0"
+                        Click="SaveTempChart_Click"
+                        ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
+                    <SymbolIcon Symbol="Save"/>
+                </Button>
+            </Grid>
+            <Border x:Name="TempChartCard" Style="{StaticResource CardStyle}">
+                <Grid x:Name="TempChartArea" RowSpacing="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 3-column layout: C-axis | canvas | F-axis -->
+                    <Grid Grid.Row="0" ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="42"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Celsius Y-axis labels (left, right-aligned) -->
+                        <Canvas x:Name="CAxisCanvas" Grid.Column="0" Height="160">
+                            <TextBlock Text="°C" FontSize="9" FontWeight="SemiBold" Opacity="0.7"
+                                       Width="36" TextAlignment="Right" Canvas.Top="0"/>
+                            <TextBlock x:Name="CLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="14"/>
+                            <TextBlock x:Name="CLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="46"/>
+                            <TextBlock x:Name="CLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="86"/>
+                            <TextBlock x:Name="CLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="126"/>
+                            <TextBlock x:Name="CLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="148"/>
+                        </Canvas>
+
+                        <!-- Chart canvas -->
+                        <Canvas x:Name="TempChartCanvas" Grid.Column="1" Height="160"
+                                SizeChanged="TempChartCanvas_SizeChanged">
+                            <Line x:Name="TempGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="TempGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="TempGridH3" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <!-- 10 sensor polylines (pre-created in code-behind) -->
+                        </Canvas>
+
+                        <!-- Fahrenheit Y-axis labels (right, left-aligned) -->
+                        <Canvas x:Name="FAxisCanvas" Grid.Column="2" Height="160">
+                            <TextBlock Text="°F" FontSize="9" FontWeight="SemiBold" Opacity="0.7"
+                                       Canvas.Left="2" Canvas.Top="0"/>
+                            <TextBlock x:Name="FLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="14"/>
+                            <TextBlock x:Name="FLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="46"/>
+                            <TextBlock x:Name="FLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="86"/>
+                            <TextBlock x:Name="FLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="126"/>
+                            <TextBlock x:Name="FLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="148"/>
+                        </Canvas>
+                    </Grid>
+
+                    <!-- Legend (populated in code-behind) -->
+                    <StackPanel Grid.Row="1" x:Name="TempLegendPanel"
+                                Orientation="Horizontal" Spacing="12"
+                                HorizontalAlignment="Center" Margin="0,4,0,0"/>
+
+                    <!-- X-axis labels -->
+                    <Grid Grid.Row="2" Margin="48,0,48,0">
+                        <TextBlock x:Name="TempTimeAgoLabel" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock x:Name="TempNowLabel" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Right" FontFamily="Consolas"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
             <!-- ── VOLTAGE SUMMARY ────────────────────────────────────── -->
             <TextBlock Text="{x:Bind Lang.Dash_SecCellSummary, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
@@ -369,71 +459,34 @@
                 </Grid>
             </Border>
 
-            <!-- ── TEMPERATURE & BALANCING ───────────────────────────── -->
-            <Grid ColumnSpacing="10" Margin="0,8,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <!-- ── BALANCING STATUS ─────────────────────────────────────── -->
+            <TextBlock Text="{x:Bind Lang.Dash_BalancingStatus, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                <!-- Temperature Sensors -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="0">
-                    <StackPanel Spacing="0">
-                        <TextBlock Text="{x:Bind Lang.Dash_TempSensors, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"
-                                   Margin="0,0,0,10"/>
-                        <ItemsRepeater ItemsSource="{x:Bind ViewModel.Temperatures, Mode=OneWay}">
-                            <ItemsRepeater.ItemTemplate>
-                                <DataTemplate x:DataType="vm:TempViewModel">
-                                    <Grid Margin="0,5">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="56"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{x:Bind Label}" FontSize="13" Opacity="0.65"
-                                                   VerticalAlignment="Center"/>
-                                        <ProgressBar Grid.Column="1"
-                                                     Value="{x:Bind TempRaw, Mode=OneWay}"
-                                                     Minimum="0" Maximum="80"
-                                                     Height="6" CornerRadius="3"
-                                                     VerticalAlignment="Center"
-                                                     Margin="0,0,12,0"/>
-                                        <TextBlock Grid.Column="2"
-                                                   Text="{x:Bind TempText, Mode=OneWay}"
-                                                   FontSize="13" FontWeight="SemiBold"
-                                                   VerticalAlignment="Center" Width="70"
-                                                   TextAlignment="Right"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsRepeater.ItemTemplate>
-                        </ItemsRepeater>
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Dash_ActiveCells, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                        <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
+                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
-                </Border>
 
-                <!-- Balancing Status -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="1">
-                    <StackPanel Spacing="12">
-                        <TextBlock Text="{x:Bind Lang.Dash_BalancingStatus, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{x:Bind Lang.Dash_ActiveCells, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                            <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
-                                       FontSize="20" FontWeight="SemiBold"/>
-                        </StackPanel>
-
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{x:Bind Lang.Dash_CellDelta, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                            <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
-                                       FontSize="20" FontWeight="SemiBold"/>
-                        </StackPanel>
-
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="{x:Bind Lang.Dash_Method, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                            <TextBlock Text="{x:Bind Lang.Dash_ActiveMethod, Mode=OneWay}" FontSize="14"/>
-                        </StackPanel>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Dash_CellDelta, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </StackPanel>
-                </Border>
-            </Grid>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Dash_Method, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                        <TextBlock Text="{x:Bind Lang.Dash_ActiveMethod, Mode=OneWay}" FontSize="14" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
         </StackPanel>
     </ScrollViewer>

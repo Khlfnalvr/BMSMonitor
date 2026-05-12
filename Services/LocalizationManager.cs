@@ -119,6 +119,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Dash_NowArrow         => T(nameof(Dash_NowArrow));
     public string Dash_SecViHistory     => T(nameof(Dash_SecViHistory));
     public string Dash_SaveChart        => T(nameof(Dash_SaveChart));
+    public string Dash_SecTempHistory   => T(nameof(Dash_SecTempHistory));
+    public string Dash_TempC            => T(nameof(Dash_TempC));
+    public string Dash_TempF            => T(nameof(Dash_TempF));
     public string Dash_VoltageV         => T(nameof(Dash_VoltageV));
     public string Dash_CurrentA         => T(nameof(Dash_CurrentA));
     public string Dash_SecCellSummary   => T(nameof(Dash_SecCellSummary));
@@ -295,6 +298,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_Method)]           = "Method",
             [nameof(Dash_ActiveMethod)]     = "Active (LTC8584)",
             [nameof(Dash_SaveChart)]        = "Save chart as PNG",
+            [nameof(Dash_SecTempHistory)]   = "TEMPERATURE HISTORY",
+            [nameof(Dash_TempC)]            = "°C",
+            [nameof(Dash_TempF)]            = "°F",
 
             [nameof(Cell_SecVoltageSummary)] = "VOLTAGE SUMMARY",
             [nameof(Cell_SecCellGrid)]       = "CELL GRID — 20S4P",
@@ -453,6 +459,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_Method)]           = "Metode",
             [nameof(Dash_ActiveMethod)]     = "Aktif (LTC8584)",
             [nameof(Dash_SaveChart)]        = "Simpan grafik sebagai PNG",
+            [nameof(Dash_SecTempHistory)]   = "RIWAYAT SUHU",
+            [nameof(Dash_TempC)]            = "°C",
+            [nameof(Dash_TempF)]            = "°F",
 
             [nameof(Cell_SecVoltageSummary)] = "RINGKASAN TEGANGAN",
             [nameof(Cell_SecCellGrid)]       = "GRID SEL — 20S4P",
@@ -611,6 +620,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_Method)]           = "Kaedah",
             [nameof(Dash_ActiveMethod)]     = "Aktif (LTC8584)",
             [nameof(Dash_SaveChart)]        = "Simpan graf sebagai PNG",
+            [nameof(Dash_SecTempHistory)]   = "SEJARAH SUHU",
+            [nameof(Dash_TempC)]            = "°C",
+            [nameof(Dash_TempF)]            = "°F",
 
             [nameof(Cell_SecVoltageSummary)] = "RINGKASAN VOLTAN",
             [nameof(Cell_SecCellGrid)]       = "GRID SEL — 20S4P",
@@ -769,6 +781,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_Method)]           = "Methode",
             [nameof(Dash_ActiveMethod)]     = "Actief (LTC8584)",
             [nameof(Dash_SaveChart)]        = "Grafiek opslaan als PNG",
+            [nameof(Dash_SecTempHistory)]   = "TEMPERATUUR GESCHIEDENIS",
+            [nameof(Dash_TempC)]            = "°C",
+            [nameof(Dash_TempF)]            = "°F",
 
             [nameof(Cell_SecVoltageSummary)] = "SPANNING OVERZICHT",
             [nameof(Cell_SecCellGrid)]       = "CEL RASTER — 20S4P",
@@ -927,6 +942,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_Method)]           = "方法",
             [nameof(Dash_ActiveMethod)]     = "主动 (LTC8584)",
             [nameof(Dash_SaveChart)]        = "保存图表为 PNG",
+            [nameof(Dash_SecTempHistory)]   = "温度历史",
+            [nameof(Dash_TempC)]            = "°C",
+            [nameof(Dash_TempF)]            = "°F",
 
             [nameof(Cell_SecVoltageSummary)] = "电压摘要",
             [nameof(Cell_SecCellGrid)]       = "电池格阵列 — 20S4P",

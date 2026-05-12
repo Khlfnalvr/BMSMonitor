@@ -27,8 +27,15 @@ public sealed partial class DashboardPage : Page
     // ── Dynamic X-axis tick pools ──────────────────────────────────────────
     // Pre-allocated once; reused on every redraw (no UIElement churn).
     private const int MaxTicks = 24;
-    private TextBlock[] _socTicks = [];
-    private TextBlock[] _viTicks  = [];
+    private TextBlock[] _socTicks  = [];
+    private TextBlock[] _viTicks   = [];
+    private TextBlock[] _tempTicks = [];
+
+    // ── Temperature sensor polylines (10 sensors) ──────────────────────────
+    private const int TempSensorCount = 10;
+    private readonly Polyline[] _tempLines = new Polyline[TempSensorCount];
+    private readonly Border[] _tempLegendItems = new Border[TempSensorCount];
+    private int? _selectedTempSensor;  // null = none, int = spotlighted sensor
 
     // ── Time-range filter (used only during export) ────────────────────────
     // When set, RedrawSocChart/RedrawVIChart trim data to this range.
@@ -40,6 +47,7 @@ public sealed partial class DashboardPage : Page
     {
         InitializeComponent();
         InitializeTickPools();
+        InitializeTempLegend();
         ApplyChartColors();
         UpdateXAxisLabels();
 
@@ -59,12 +67,112 @@ public sealed partial class DashboardPage : Page
     {
         _socTicks = new TextBlock[MaxTicks];
         _viTicks  = new TextBlock[MaxTicks];
+        _tempTicks = new TextBlock[MaxTicks];
         for (int i = 0; i < MaxTicks; i++)
         {
             _socTicks[i] = MakeTickLabel();
             SocChartCanvas.Children.Add(_socTicks[i]);
             _viTicks[i] = MakeTickLabel();
             VIChartCanvas.Children.Add(_viTicks[i]);
+            _tempTicks[i] = MakeTickLabel();
+            TempChartCanvas.Children.Add(_tempTicks[i]);
+        }
+
+        // Create 10 polylines for temperature sensors
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            var line = new Polyline
+            {
+                StrokeThickness = 1.5,
+                StrokeLineJoin  = PenLineJoin.Round,
+                Fill            = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
+                Stroke          = new SolidColorBrush(TempSensorColor(s)),
+                Tag             = s
+            };
+            int sensor = s; // capture for lambda
+            line.PointerEntered  += (_, _) => { _selectedTempSensor = sensor; UpdateTempSpotlight(); };
+            line.PointerExited   += (_, _) => { if (_selectedTempSensor == sensor) _selectedTempSensor = null; UpdateTempSpotlight(); };
+            line.Tapped          += (_, _) => { _selectedTempSensor = _selectedTempSensor == sensor ? null : sensor; UpdateTempSpotlight(); };
+            _tempLines[s] = line;
+            TempChartCanvas.Children.Add(line);
+        }
+    }
+
+    private static Color TempSensorColor(int index) => index switch
+    {
+        0 => Color.FromArgb(255, 244,  67,  54),   // red
+        1 => Color.FromArgb(255,  33, 150, 243),   // blue
+        2 => Color.FromArgb(255,  76, 175,  80),   // green
+        3 => Color.FromArgb(255, 255, 152,   0),   // orange
+        4 => Color.FromArgb(255, 156,  39, 176),   // purple
+        5 => Color.FromArgb(255,   0, 188, 212),   // cyan
+        6 => Color.FromArgb(255, 205, 220,  57),   // lime
+        7 => Color.FromArgb(255, 255,  87,  34),   // deep orange
+        8 => Color.FromArgb(255, 121,  85,  72),   // brown
+        9 => Color.FromArgb(255, 158, 158, 158),   // grey
+        _ => Color.FromArgb(255, 128, 128, 128),
+    };
+
+    private void InitializeTempLegend()
+    {
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            int sensor = s;
+            var color = TempSensorColor(s);
+
+            var dot = new Rectangle
+            {
+                Width = 12, Height = 12, RadiusX = 2, RadiusY = 2,
+                Fill = new SolidColorBrush(color),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var label = new TextBlock
+            {
+                Text = $"NTC {s + 1}",
+                FontSize = 10, Opacity = 0.7,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+
+            var border = new Border
+            {
+                Padding = new Thickness(4, 2, 4, 2),
+                CornerRadius = new CornerRadius(3),
+                Child = panel,
+                Tag = sensor
+            };
+
+            border.PointerEntered += (_, _) => { _selectedTempSensor = sensor; UpdateTempSpotlight(); };
+            border.PointerExited  += (_, _) => { if (_selectedTempSensor == sensor) _selectedTempSensor = null; UpdateTempSpotlight(); };
+            border.Tapped         += (_, _) => { _selectedTempSensor = _selectedTempSensor == sensor ? null : sensor; UpdateTempSpotlight(); };
+
+            panel.Children.Add(dot);
+            panel.Children.Add(label);
+            _tempLegendItems[s] = border;
+            TempLegendPanel.Children.Add(border);
+        }
+    }
+
+    private void UpdateTempSpotlight()
+    {
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            bool spotlight = _selectedTempSensor == null || _selectedTempSensor == s;
+            double opacity = spotlight ? 1.0 : 0.15;
+            double thickness = spotlight ? 2.5 : 0.8;
+
+            _tempLines[s].Opacity = opacity;
+            _tempLines[s].StrokeThickness = thickness;
+
+            if (_tempLegendItems[s].Child is StackPanel sp)
+            {
+                sp.Opacity = spotlight ? 1.0 : 0.25;
+                _tempLegendItems[s].Background = spotlight
+                    ? new SolidColorBrush(Color.FromArgb(30, TempSensorColor(s).R, TempSensorColor(s).G, TempSensorColor(s).B))
+                    : null;
+            }
         }
     }
 
@@ -77,18 +185,16 @@ public sealed partial class DashboardPage : Page
         Visibility      = Visibility.Collapsed
     };
 
-    /// <summary>
-    /// Updates the bottom legend strip under each chart.
-    /// Left: sample rate hint.  Right: time unit ("seconds" / "minutes" / "hours").
-    /// </summary>
-    private void UpdateXAxisLabels(string socUnit = "", string viUnit = "")
+    private void UpdateXAxisLabels(string socUnit = "", string viUnit = "", string tempUnit = "")
     {
         const string rate = "1 sample/s";
 
-        SocTimeAgoLabel.Text = rate;
-        SocNowLabel.Text     = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
-        VITimeAgoLabel.Text  = rate;
-        VINowLabel.Text      = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
+        SocTimeAgoLabel.Text  = rate;
+        SocNowLabel.Text      = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
+        VITimeAgoLabel.Text   = rate;
+        VINowLabel.Text       = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
+        TempTimeAgoLabel.Text = rate;
+        TempNowLabel.Text     = string.IsNullOrEmpty(tempUnit) ? "" : $"time ({tempUnit})";
     }
 
     // ── Chart colors ──────────────────────────────────────────────────────
@@ -117,9 +223,10 @@ public sealed partial class DashboardPage : Page
     // ── Chart drawing ─────────────────────────────────────────────────────
     private void OnHistoryUpdated()
     {
-        string socUnit = RedrawSocChart();
-        string viUnit  = RedrawVIChart();
-        UpdateXAxisLabels(socUnit, viUnit);
+        string socUnit  = RedrawSocChart();
+        string viUnit   = RedrawVIChart();
+        string tempUnit = RedrawTempChart();
+        UpdateXAxisLabels(socUnit, viUnit, tempUnit);
         UpdateTrimBar();
     }
 
@@ -142,6 +249,13 @@ public sealed partial class DashboardPage : Page
         string u = RedrawVIChart();
         if (!string.IsNullOrEmpty(u))
             VINowLabel.Text = $"time ({u})";
+    }
+
+    private void TempChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        string u = RedrawTempChart();
+        if (!string.IsNullOrEmpty(u))
+            TempNowLabel.Text = $"time ({u})";
     }
 
     /// <summary>
@@ -345,6 +459,104 @@ public sealed partial class DashboardPage : Page
         return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _viTicks);
     }
 
+    /// <returns>The x-axis unit ("seconds" / "minutes" / "hours") or empty if no data.</returns>
+    private string RedrawTempChart()
+    {
+        double w = TempChartCanvas.ActualWidth;
+        double h = TempChartCanvas.ActualHeight;
+        if (w == 0 || h == 0) return "";
+
+        // Horizontal grid lines
+        UpdateGridLine(TempGridH1, w, h * 0.25);
+        UpdateGridLine(TempGridH2, w, h * 0.50);
+        UpdateGridLine(TempGridH3, w, h * 0.75);
+
+        double[][] allTemps = ViewModel.GetTempHistory();
+        if (allTemps.Length == 0 || allTemps[0].Length < 2)
+        {
+            foreach (var line in _tempLines) line.Points = [];
+            HideTicks(_tempTicks);
+            return "";
+        }
+
+        int n = allTemps[0].Length;
+        var (rangeStart, rangeEnd, timeframeMinutes) = GetActiveRange(n);
+        n = Math.Max(0, rangeEnd - rangeStart);
+
+        if (n < 2)
+        {
+            foreach (var line in _tempLines) line.Points = [];
+            HideTicks(_tempTicks);
+            return "";
+        }
+
+        // ── Auto-range all sensors together ──────────────────────────────
+        double tMin = double.MaxValue, tMax = double.MinValue;
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            for (int i = rangeStart; i < rangeEnd; i++)
+            {
+                double t = allTemps[s][i];
+                if (t < tMin) tMin = t;
+                if (t > tMax) tMax = t;
+            }
+        }
+        if (tMax <= tMin) tMax = tMin + 10;
+        double tRange = tMax - tMin;
+
+        // ── Celsius Y-axis labels (left) ─────────────────────────────────
+        const double fontH = 11.0;
+        const double unitLabelH = 14.0;   // space reserved for "°C" / "°F" header
+        CLabel4.Text = $"{tMax:F0}";                     Canvas.SetTop(CLabel4, unitLabelH);
+        CLabel3.Text = $"{tMax - tRange * 0.25:F0}";    Canvas.SetTop(CLabel3, h * 0.25 - fontH / 2);
+        CLabel2.Text = $"{tMax - tRange * 0.50:F0}";    Canvas.SetTop(CLabel2, h * 0.50 - fontH / 2);
+        CLabel1.Text = $"{tMax - tRange * 0.75:F0}";    Canvas.SetTop(CLabel1, h * 0.75 - fontH / 2);
+        CLabel0.Text = $"{tMin:F0}";                     Canvas.SetTop(CLabel0, h - fontH);
+
+        // ── Fahrenheit Y-axis labels (right) ─────────────────────────────
+        double fMin = tMin * 9.0 / 5.0 + 32.0;
+        double fMax = tMax * 9.0 / 5.0 + 32.0;
+        double fRange = fMax - fMin;
+        FLabel4.Text = $"{fMax:F0}";                     Canvas.SetTop(FLabel4, unitLabelH);
+        FLabel3.Text = $"{fMax - fRange * 0.25:F0}";    Canvas.SetTop(FLabel3, h * 0.25 - fontH / 2);
+        FLabel2.Text = $"{fMax - fRange * 0.50:F0}";    Canvas.SetTop(FLabel2, h * 0.50 - fontH / 2);
+        FLabel1.Text = $"{fMax - fRange * 0.75:F0}";    Canvas.SetTop(FLabel1, h * 0.75 - fontH / 2);
+        FLabel0.Text = $"{fMin:F0}";                     Canvas.SetTop(FLabel0, h - fontH);
+
+        // ── X-axis positioning (same logic as other charts) ──────────────
+        double cap;
+        double xStep;
+        double xStart;
+        if (_filterStart.HasValue || _filterEnd.HasValue)
+        {
+            cap    = n;
+            xStep  = n > 1 ? w / (n - 1.0) : w;
+            xStart = 0;
+        }
+        else
+        {
+            cap = ViewModel.HistoryCapacity;
+            if (cap <= 0 || cap > n) cap = n;
+            xStep  = cap > 1 ? w / (cap - 1.0) : w;
+            xStart = (cap - n) * xStep;
+        }
+
+        // ── Build polylines for each sensor ──────────────────────────────
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            var points = new PointCollection();
+            for (int j = 0; j < n; j++)
+            {
+                double x = xStart + j * xStep;
+                double y = h * (1.0 - (allTemps[s][rangeStart + j] - tMin) / tRange);
+                points.Add(new Point(x, y));
+            }
+            _tempLines[s].Points = points;
+        }
+
+        return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _tempTicks);
+    }
+
     // ── Tick rendering ────────────────────────────────────────────────────
 
     private static void UpdateGridLine(Line line, double width, double y)
@@ -434,7 +646,7 @@ public sealed partial class DashboardPage : Page
 
     // ── Save chart (with size + aspect + format dialog) ────────────────────
 
-    private record ExportOptions(int Width, int Height, string Format);
+    private record ExportOptions(int Width, int Height, string Format, int? StartSec = null, int? EndSec = null);
 
     private async void SaveSocChart_Click(object sender, RoutedEventArgs e)
     {
@@ -456,6 +668,16 @@ public sealed partial class DashboardPage : Page
             defaultName:   "BMS_VI_Chart");
     }
 
+    private async void SaveTempChart_Click(object sender, RoutedEventArgs e)
+    {
+        await SaveChartFlow(
+            renderElement: TempChartArea,
+            card:          TempChartCard,
+            mainCanvas:    TempChartCanvas,
+            heightSyncs:   new FrameworkElement[] { CAxisCanvas, FAxisCanvas },
+            defaultName:   "BMS_Temp_Chart");
+    }
+
     private async Task SaveChartFlow(
         FrameworkElement renderElement,
         Border card,
@@ -466,60 +688,97 @@ public sealed partial class DashboardPage : Page
         var root = renderElement.XamlRoot;
         if (root is null) return;
 
-        var opts = await ShowExportDialog(root);
+        var timestamps = ViewModel.GetTimestamps();
+        var opts = await ShowExportDialog(root, renderElement, timestamps);
         if (opts is null) return;
 
-        // File save picker
-        var picker = new FileSavePicker
-        {
-            SuggestedStartLocation = PickerLocationId.PicturesLibrary,
-            SuggestedFileName      = $"{defaultName}_{DateTime.Now:yyyyMMdd_HHmmss}"
-        };
-
-        switch (opts.Format)
-        {
-            case "png": picker.FileTypeChoices.Add("PNG image",   new[] { ".png" }); break;
-            case "jpg": picker.FileTypeChoices.Add("JPEG image",  new[] { ".jpg" }); break;
-            case "svg": picker.FileTypeChoices.Add("SVG vector",  new[] { ".svg" }); break;
-        }
-
-        InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
-        var file = await picker.PickSaveFileAsync();
-        if (file is null) return;
-
+        // Apply time filter for this export only
+        var prevStart = _filterStart;
+        var prevEnd   = _filterEnd;
         try
         {
-            if (opts.Format == "svg")
-                await SaveAsSvg(mainCanvas, file, opts.Width, opts.Height);
-            else
-                await SaveAsRaster(renderElement, card, mainCanvas, heightSyncs,
-                                   file, opts, opts.Format == "jpg");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
-            var err = new ContentDialog
+            if (opts.StartSec.HasValue || opts.EndSec.HasValue)
             {
-                Title           = "Save failed",
-                Content         = ex.Message,
-                CloseButtonText = "OK",
-                XamlRoot        = root
+                var ts = ViewModel.GetTimestamps();
+                if (ts.Length > 0)
+                {
+                    var baseTime = ts[0];
+                    if (opts.StartSec.HasValue)
+                        _filterStart = baseTime.AddSeconds(opts.StartSec.Value);
+                    if (opts.EndSec.HasValue)
+                        _filterEnd   = baseTime.AddSeconds(opts.EndSec.Value);
+                }
+                OnHistoryUpdated(); // redraw with filter applied
+            }
+
+            // File save picker
+            var picker = new FileSavePicker
+            {
+                SuggestedStartLocation = PickerLocationId.PicturesLibrary,
+                SuggestedFileName      = $"{defaultName}_{DateTime.Now:yyyyMMdd_HHmmss}"
             };
-            try { await err.ShowAsync(); } catch { }
+
+            switch (opts.Format)
+            {
+                case "png": picker.FileTypeChoices.Add("PNG image",   new[] { ".png" }); break;
+                case "jpg": picker.FileTypeChoices.Add("JPEG image",  new[] { ".jpg" }); break;
+                case "svg": picker.FileTypeChoices.Add("SVG vector",  new[] { ".svg" }); break;
+            }
+
+            InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
+            var file = await picker.PickSaveFileAsync();
+            if (file is null) return;
+
+            try
+            {
+                if (opts.Format == "svg")
+                    await SaveAsSvg(mainCanvas, file, opts.Width, opts.Height);
+                else
+                    await SaveAsRaster(renderElement, card, mainCanvas, heightSyncs,
+                                       file, opts, opts.Format == "jpg");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
+                var err = new ContentDialog
+                {
+                    Title           = "Save failed",
+                    Content         = ex.Message,
+                    CloseButtonText = "OK",
+                    XamlRoot        = root
+                };
+                try { await err.ShowAsync(); } catch { }
+            }
+        }
+        finally
+        {
+            _filterStart = prevStart;
+            _filterEnd   = prevEnd;
+            OnHistoryUpdated(); // restore normal view
         }
     }
 
     /// <summary>
-    /// Shows the export dialog (size + aspect + format). Returns null on cancel.
-    /// Time range is set globally via the trim bar on the dashboard.
+    /// Shows the export dialog with live preview and a visual trim bar.
+    /// Returns null on cancel.
     /// </summary>
-    private static async Task<ExportOptions?> ShowExportDialog(XamlRoot root)
+    private async Task<ExportOptions?> ShowExportDialog(
+        XamlRoot root, FrameworkElement previewElement, DateTime[] timestamps)
     {
+        var totalSec = timestamps.Length > 1
+            ? (int)(timestamps[^1] - timestamps[0]).TotalSeconds
+            : 0;
+
+        // Dialog-level trim state (seconds from data start)
+        double trimStart = 0;
+        double trimEnd   = totalSec;
+        bool draggingStart = false;
+        bool draggingEnd   = false;
+
         // ── Controls ──────────────────────────────────────────────────────
         var aspect = new ComboBox
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            SelectedIndex       = 0
+            HorizontalAlignment = HorizontalAlignment.Stretch, SelectedIndex = 0
         };
         aspect.Items.Add(new ComboBoxItem { Content = "4:3 — paper / Origin default",    Tag = "1.3333" });
         aspect.Items.Add(new ComboBoxItem { Content = "3:2 — photo / wide paper",        Tag = "1.5"    });
@@ -530,30 +789,168 @@ public sealed partial class DashboardPage : Page
 
         var widthBox = new NumberBox
         {
-            HorizontalAlignment     = HorizontalAlignment.Stretch,
-            Value = 600, Minimum = 200, Maximum = 4000,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Value = 800, Minimum = 200, Maximum = 4000,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
             SmallChange = 50, LargeChange = 100
         };
         var heightBox = new NumberBox
         {
-            HorizontalAlignment     = HorizontalAlignment.Stretch,
-            Value = 450, Minimum = 150, Maximum = 4000,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            Value = 600, Minimum = 150, Maximum = 4000,
             SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Inline,
             SmallChange = 25, LargeChange = 100,
-            IsEnabled = false   // default aspect 4:3 is locked
+            IsEnabled = false
         };
 
         var format = new ComboBox
         {
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            SelectedIndex       = 0
+            HorizontalAlignment = HorizontalAlignment.Stretch, SelectedIndex = 0
         };
         format.Items.Add(new ComboBoxItem { Content = "PNG — raster, lossless", Tag = "png" });
         format.Items.Add(new ComboBoxItem { Content = "JPG — raster, smaller",  Tag = "jpg" });
         format.Items.Add(new ComboBoxItem { Content = "SVG — vector, editable", Tag = "svg" });
 
-        // ── Behavior: aspect-locked width/height linking ─────────────────
+        // Preview image
+        var previewImage = new Image
+        {
+            Stretch = Stretch.Uniform, HorizontalAlignment = HorizontalAlignment.Center,
+            MaxHeight = 200, Margin = new Thickness(0, 6, 0, 8)
+        };
+
+        // ── Trim bar canvas ──────────────────────────────────────────────────
+        var trimCanvas = new Canvas { Height = 34, HorizontalAlignment = HorizontalAlignment.Stretch };
+
+        var trimTrack = new Border
+        {
+            Background = (Brush)Application.Current.Resources["ControlFillColorTertiaryBrush"],
+            Height = 8, CornerRadius = new CornerRadius(4)
+        };
+        Canvas.SetTop(trimTrack, 13);
+        trimCanvas.Children.Add(trimTrack);
+
+        var trimSelection = new Border
+        {
+            Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
+            Opacity = 0.45, Height = 8, CornerRadius = new CornerRadius(4)
+        };
+        Canvas.SetTop(trimSelection, 13);
+        trimCanvas.Children.Add(trimSelection);
+
+        var startThumb = new Border
+        {
+            Width = 14, Height = 30, CornerRadius = new CornerRadius(3),
+            Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
+            BorderBrush = (Brush)Application.Current.Resources["AccentFillColorTertiaryBrush"],
+            BorderThickness = new Thickness(1),
+        };
+        Canvas.SetTop(startThumb, 2);
+        trimCanvas.Children.Add(startThumb);
+
+        var endThumb = new Border
+        {
+            Width = 14, Height = 30, CornerRadius = new CornerRadius(3),
+            Background = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"],
+            BorderBrush = (Brush)Application.Current.Resources["AccentFillColorTertiaryBrush"],
+            BorderThickness = new Thickness(1),
+        };
+        Canvas.SetTop(endThumb, 2);
+        trimCanvas.Children.Add(endThumb);
+
+        // Trim bar range label
+        var trimLabel = new TextBlock
+        {
+            FontFamily = new FontFamily("Consolas"), FontSize = 11, Opacity = 0.6
+        };
+
+        void UpdateTrimDisplay()
+        {
+            double w = trimCanvas.ActualWidth;
+            if (w <= 0) return;
+
+            trimTrack.Width = w;
+            Canvas.SetLeft(trimTrack, 0);
+
+            double startX = totalSec > 0 ? (trimStart / totalSec) * w : 0;
+            double endX   = totalSec > 0 ? (trimEnd   / totalSec) * w : w;
+
+            Canvas.SetLeft(startThumb, startX - startThumb.Width / 2);
+            Canvas.SetLeft(endThumb,   endX   - endThumb.Width   / 2);
+            Canvas.SetLeft(trimSelection, startX);
+            trimSelection.Width = Math.Max(0, endX - startX);
+
+            trimLabel.Text = $"{(int)trimStart:N0}s – {(int)trimEnd:N0}s  ({(int)(trimEnd - trimStart)}s)";
+        }
+
+        trimCanvas.SizeChanged += (_, _) => UpdateTrimDisplay();
+
+        // ── Preview updater (debounced) — declared early so trim handlers can call it ──
+        CancellationTokenSource? previewCts = null;
+        async void SchedulePreviewUpdate()
+        {
+            previewCts?.Cancel();
+            previewCts = new CancellationTokenSource();
+            var token = previewCts.Token;
+            try
+            {
+                await Task.Delay(250, token);
+                if (!token.IsCancellationRequested)
+                {
+                    var src = await RenderPreviewAsync(previewElement,
+                        Math.Min(420, (int)widthBox.Value),
+                        Math.Min(280, (int)heightBox.Value));
+                    if (!token.IsCancellationRequested && src is not null)
+                        previewImage.Source = src;
+                }
+            }
+            catch { }
+        }
+
+        // ── Trim bar pointer handlers ────────────────────────────────────────
+        startThumb.PointerPressed += (_, e) => { draggingStart = true; startThumb.CapturePointer(e.Pointer); };
+        endThumb.PointerPressed   += (_, e) => { draggingEnd   = true; endThumb.CapturePointer(e.Pointer); };
+
+        var trimMoved = new PointerEventHandler((_, e) =>
+        {
+            if (!draggingStart && !draggingEnd) return;
+            double w = trimCanvas.ActualWidth;
+            if (w <= 0 || totalSec <= 0) return;
+
+            double x = Math.Clamp(e.GetCurrentPoint(trimCanvas).Position.X, 0, w);
+            double sec = (x / w) * totalSec;
+
+            if (draggingStart)
+            {
+                if (sec >= trimEnd) sec = trimEnd - 1;
+                if (sec < 0) sec = 0;
+                trimStart = sec;
+            }
+            else if (draggingEnd)
+            {
+                if (sec <= trimStart) sec = trimStart + 1;
+                if (sec > totalSec) sec = totalSec;
+                trimEnd = sec;
+            }
+
+            UpdateTrimDisplay();
+            SchedulePreviewUpdate();
+        });
+
+        var trimReleased = new PointerEventHandler((_, e) =>
+        {
+            if (draggingStart) { startThumb.ReleasePointerCapture(e.Pointer); draggingStart = false; }
+            if (draggingEnd)   { endThumb.ReleasePointerCapture(e.Pointer);   draggingEnd   = false; }
+            UpdateTrimDisplay();
+        });
+
+        startThumb.PointerMoved += trimMoved;
+        endThumb.PointerMoved   += trimMoved;
+        startThumb.PointerReleased += trimReleased;
+        endThumb.PointerReleased   += trimReleased;
+        startThumb.PointerCaptureLost += trimReleased;
+        endThumb.PointerCaptureLost   += trimReleased;
+
+        // ── Aspect-locked linking ──────────────────────────────────────────
         bool internalUpdate = false;
 
         double GetAspect()
@@ -576,104 +973,137 @@ public sealed partial class DashboardPage : Page
             }
         }
 
+        // ── Live data subscription ──────────────────────────────────────────
+        void OnDataUpdated() => SchedulePreviewUpdate();
+        ViewModel.HistoryUpdated += OnDataUpdated;
+
+        // Initial preview
+        _ = Task.Run(async () => { await Task.Delay(150); DispatcherQueue.TryEnqueue(SchedulePreviewUpdate); });
+
+        // ── Event wiring ────────────────────────────────────────────────────
         aspect.SelectionChanged += (_, _) =>
         {
             double a = GetAspect();
             heightBox.IsEnabled = a <= 0;
             RecomputeHeight();
+            SchedulePreviewUpdate();
         };
-        widthBox.ValueChanged += (_, _) => RecomputeHeight();
+        widthBox.ValueChanged  += (_, _) => { RecomputeHeight(); SchedulePreviewUpdate(); };
+        heightBox.ValueChanged += (_, _) => SchedulePreviewUpdate();
 
-        // ── Layout ────────────────────────────────────────────────────────
-        // Helper factories — small caption above a control, both stretched.
+        // ── Layout helpers ──────────────────────────────────────────────────
         TextBlock FieldLabel(string text) => new()
         {
-            Text       = text,
-            FontSize   = 12,
-            Opacity    = 0.7,
-            Margin     = new Thickness(0, 0, 0, 4)
+            Text = text, FontSize = 12, Opacity = 0.7, Margin = new Thickness(0, 0, 0, 4)
         };
-
         TextBlock SectionHeader(string text) => new()
         {
-            Text       = text,
-            FontSize   = 13,
-            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-            Opacity    = 0.9,
-            Margin     = new Thickness(0, 4, 0, 6)
+            Text = text, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+            Opacity = 0.9, Margin = new Thickness(0, 4, 0, 6)
         };
-
         Border Divider() => new()
         {
-            Height     = 1,
-            Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
-            Margin     = new Thickness(0, 10, 0, 6)
+            Height = 1, Background = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
+            Margin = new Thickness(0, 10, 0, 6)
         };
 
-        var panel = new StackPanel { Spacing = 0, MinWidth = 440 };
+        // ── Build dialog panel ──────────────────────────────────────────────
+        var panel = new StackPanel { Spacing = 0, MinWidth = 500 };
 
-        // — Section: Dimensions —
+        // — Preview —
+        panel.Children.Add(SectionHeader("Preview (live)"));
+        panel.Children.Add(previewImage);
+
+        // — Time range with trim bar —
+        panel.Children.Add(Divider());
+        panel.Children.Add(SectionHeader("Time range"));
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Drag the handles to select a segment. Full range: 0 – {totalSec} s ({totalSec / 60.0:F1} min)",
+            FontSize = 11, Opacity = 0.5, TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+        panel.Children.Add(trimCanvas);
+        panel.Children.Add(trimLabel);
+
+        // — Dimensions —
+        panel.Children.Add(Divider());
         panel.Children.Add(SectionHeader("Dimensions"));
-
         panel.Children.Add(FieldLabel("Aspect ratio"));
         panel.Children.Add(aspect);
 
-        // Width + Height side-by-side, each in its own grid column
-        var sizeGrid = new Grid
-        {
-            ColumnSpacing = 12,
-            Margin        = new Thickness(0, 10, 0, 0)
-        };
+        var sizeGrid = new Grid { ColumnSpacing = 12, Margin = new Thickness(0, 10, 0, 0) };
         sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         sizeGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var wLab = FieldLabel("Width (px)");   Grid.SetColumn(wLab, 0); Grid.SetRow(wLab, 0);
-        var hLab = FieldLabel("Height (px)");  Grid.SetColumn(hLab, 1); Grid.SetRow(hLab, 0);
-        Grid.SetColumn(widthBox,  0);          Grid.SetRow(widthBox,  1);
-        Grid.SetColumn(heightBox, 1);          Grid.SetRow(heightBox, 1);
-
-        sizeGrid.Children.Add(wLab);
-        sizeGrid.Children.Add(hLab);
-        sizeGrid.Children.Add(widthBox);
-        sizeGrid.Children.Add(heightBox);
-
+        var wLab = FieldLabel("Width (px)");  Grid.SetColumn(wLab, 0); Grid.SetRow(wLab, 0);
+        var hLab = FieldLabel("Height (px)"); Grid.SetColumn(hLab, 1); Grid.SetRow(hLab, 0);
+        Grid.SetColumn(widthBox,  0); Grid.SetRow(widthBox,  1);
+        Grid.SetColumn(heightBox, 1); Grid.SetRow(heightBox, 1);
+        sizeGrid.Children.Add(wLab); sizeGrid.Children.Add(hLab);
+        sizeGrid.Children.Add(widthBox); sizeGrid.Children.Add(heightBox);
         panel.Children.Add(sizeGrid);
 
-        // — Section: Format —
+        // — Format —
         panel.Children.Add(Divider());
         panel.Children.Add(SectionHeader("File format"));
         panel.Children.Add(format);
 
-        panel.Children.Add(new TextBlock
-        {
-            Text = "SVG exports the chart drawing area only (curves and ticks). " +
-                   "For complete figures with axis labels included, choose PNG or JPG.\n\n" +
-                   "Tip: use the trim bar below the V/I chart to select a specific " +
-                   "time segment before exporting.",
-            FontSize     = 11,
-            Opacity      = 0.55,
-            TextWrapping = TextWrapping.Wrap,
-            Margin       = new Thickness(0, 10, 0, 0)
-        });
-
+        // ── Show dialog ─────────────────────────────────────────────────────
         var dialog = new ContentDialog
         {
-            Title             = "Export chart",
-            Content           = panel,
-            PrimaryButtonText = "Save…",
-            CloseButtonText   = "Cancel",
-            DefaultButton     = ContentDialogButton.Primary,
-            XamlRoot          = root
+            Title = "Export chart", Content = panel,
+            PrimaryButtonText = "Save…", CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Primary, XamlRoot = root
         };
 
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return null;
+        var result = await dialog.ShowAsync();
+
+        // Cleanup
+        ViewModel.HistoryUpdated -= OnDataUpdated;
+
+        if (result != ContentDialogResult.Primary) return null;
 
         string fmt = "png";
         if (format.SelectedItem is ComboBoxItem fi && fi.Tag is string ft) fmt = ft;
 
-        return new ExportOptions((int)widthBox.Value, (int)heightBox.Value, fmt);
+        return new ExportOptions(
+            (int)widthBox.Value, (int)heightBox.Value, fmt,
+            StartSec: trimStart > 0 ? (int)trimStart : null,
+            EndSec:   trimEnd < totalSec ? (int)trimEnd : null);
+    }
+
+    /// <summary>
+    /// Renders a small preview thumbnail of the given element.
+    /// </summary>
+    private static async Task<ImageSource?> RenderPreviewAsync(
+        FrameworkElement element, int maxW, int maxH)
+    {
+        try
+        {
+            double srcW = element.ActualWidth;
+            double srcH = element.ActualHeight;
+            if (srcW <= 0 || srcH <= 0) return null;
+
+            double scale = Math.Min(maxW / srcW, maxH / srcH);
+            int w = Math.Max(1, (int)(srcW * scale));
+            int h = Math.Max(1, (int)(srcH * scale));
+
+            var rt = new RenderTargetBitmap();
+            await rt.RenderAsync(element, w, h);
+
+            var pixels = await rt.GetPixelsAsync();
+            var softwareBitmap = new SoftwareBitmap(
+                BitmapPixelFormat.Bgra8, rt.PixelWidth, rt.PixelHeight, BitmapAlphaMode.Premultiplied);
+            softwareBitmap.CopyFromBuffer(pixels);
+
+            var source = new SoftwareBitmapSource();
+            await source.SetBitmapAsync(softwareBitmap);
+            return source;
+        }
+        catch { return null; }
     }
 
     /// <summary>

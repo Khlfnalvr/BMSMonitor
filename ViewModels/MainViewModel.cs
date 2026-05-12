@@ -73,6 +73,7 @@ public partial class MainViewModel : ObservableObject
     private readonly Queue<double>   _socHistory     = new(120);
     private readonly Queue<double>   _voltageHistory = new(120);
     private readonly Queue<double>   _currentHistory = new(120);
+    private readonly Queue<double[]> _tempHistory    = new(120);  // 10 values per sample
     private readonly Queue<DateTime> _timestamps     = new(120);
 
     private void TrimHistoryBuffers()
@@ -82,6 +83,7 @@ public partial class MainViewModel : ObservableObject
         while (_socHistory.Count     > cap) _socHistory.Dequeue();
         while (_voltageHistory.Count > cap) _voltageHistory.Dequeue();
         while (_currentHistory.Count > cap) _currentHistory.Dequeue();
+        while (_tempHistory.Count    > cap) _tempHistory.Dequeue();
         while (_timestamps.Count     > cap) _timestamps.Dequeue();
     }
 
@@ -211,6 +213,7 @@ public partial class MainViewModel : ObservableObject
             _socHistory.Enqueue(data.Soc);
             _voltageHistory.Enqueue(data.PackVoltage);
             _currentHistory.Enqueue(data.Current);
+            _tempHistory.Enqueue((double[])data.Temps.Clone());
             _timestamps.Enqueue(DateTime.Now);
             TrimHistoryBuffers();
         }
@@ -236,6 +239,7 @@ public partial class MainViewModel : ObservableObject
         _socHistory.Clear();
         _voltageHistory.Clear();
         _currentHistory.Clear();
+        _tempHistory.Clear();
         _timestamps.Clear();
 
         if (frames.Length == 0)
@@ -253,6 +257,7 @@ public partial class MainViewModel : ObservableObject
             _socHistory.Enqueue(frames[i].Soc);
             _voltageHistory.Enqueue(frames[i].PackVoltage);
             _currentHistory.Enqueue(frames[i].Current);
+            _tempHistory.Enqueue((double[])frames[i].Temps.Clone());
             _timestamps.Enqueue(baseTime.AddSeconds(i));
         }
 
@@ -266,6 +271,7 @@ public partial class MainViewModel : ObservableObject
         _socHistory.Clear();
         _voltageHistory.Clear();
         _currentHistory.Clear();
+        _tempHistory.Clear();
         _timestamps.Clear();
         HistoryReset?.Invoke();
         HistoryUpdated?.Invoke();
@@ -277,6 +283,22 @@ public partial class MainViewModel : ObservableObject
     // Returns V and I samples in chronological order (oldest → newest).
     public (double[] voltages, double[] currents) GetViHistory() =>
         (_voltageHistory.ToArray(), _currentHistory.ToArray());
+
+    // Returns temperature history as 10 separate series (one per sensor),
+    // each in chronological order (oldest → newest).
+    public double[][] GetTempHistory()
+    {
+        var all = _tempHistory.ToArray();
+        if (all.Length == 0) return [];
+        var result = new double[10][];
+        for (int s = 0; s < 10; s++)
+        {
+            result[s] = new double[all.Length];
+            for (int i = 0; i < all.Length; i++)
+                result[s][i] = all[i][s];
+        }
+        return result;
+    }
 
     // Returns timestamps in chronological order — one per sample,
     // aligned with GetSocHistory()/GetViHistory() by index.
