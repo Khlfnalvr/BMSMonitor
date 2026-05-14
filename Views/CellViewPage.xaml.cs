@@ -285,6 +285,7 @@ public sealed partial class CellViewPage : Page
         presenterStyle.Setters.Add(new Setter(FrameworkElement.WidthProperty, popupWidth + 20));
         presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, popupWidth + 20));
         presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, 320d));
+        presenterStyle.Setters.Add(new Setter(Control.CornerRadiusProperty, new CornerRadius(12)));
 
         var flyout = new Flyout
         {

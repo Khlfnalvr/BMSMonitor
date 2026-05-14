@@ -1,0 +1,54 @@
+; ============================================================
+; BMS Monitor — Inno Setup Script
+; ICO Laboratory
+; ============================================================
+
+#define AppName      "BMS Monitor"
+#define AppVersion   "1.1.0"
+#define AppPublisher "ICO Laboratory"
+#define AppExe       "BMSMonitor.exe"
+
+[Setup]
+AppId={{B5C6D7E8-2222-3333-4444-555566667777}
+AppName={#AppName}
+AppVersion={#AppVersion}
+AppVerName={#AppName} {#AppVersion}
+AppPublisher={#AppPublisher}
+AppPublisherURL=
+AppSupportURL=
+DefaultDirName={autopf}\BMSMonitor
+DefaultGroupName={#AppName}
+AllowNoIcons=yes
+LicenseFile=license.txt
+OutputDir=Publish
+OutputBaseFilename=BMSMonitorSetup-v1.1.0
+SetupIconFile=Assets\logo.ico
+UninstallDisplayIcon={app}\{#AppExe}
+UninstallDisplayName={#AppName}
+Compression=lzma2/ultra64
+SolidCompression=yes
+WizardStyle=modern
+MinVersion=10.0.17763
+PrivilegesRequired=admin
+VersionInfoVersion={#AppVersion}.0
+VersionInfoProductName={#AppName}
+VersionInfoCompany={#AppPublisher}
+VersionInfoDescription=BMS Monitor - Cell voltages, SOC, temperatures and balancing
+VersionInfoCopyright=Copyright (C) 2026 ICO Laboratory
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[Tasks]
+Name: "desktopicon"; Description: "Buat shortcut di &Desktop"; GroupDescription: "Shortcut tambahan:"
+
+[Files]
+Source: "Publish\AppFiles\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
+Name: "{group}\Uninstall {#AppName}"; Filename: "{uninstallexe}"
+Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
+
+[Run]
+Filename: "{app}\{#AppExe}"; Description: "Jalankan {#AppName} sekarang"; Flags: nowait postinstall skipifsilent
