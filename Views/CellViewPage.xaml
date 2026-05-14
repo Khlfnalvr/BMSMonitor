@@ -57,7 +57,9 @@
             </Border>
 
             <TextBlock Text="{x:Bind Lang.Cell_SecCellGrid, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-            <ItemsRepeater ItemsSource="{x:Bind ViewModel.Cells, Mode=OneWay}">
+            <ItemsRepeater x:Name="CellRepeater"
+                           ItemsSource="{x:Bind ViewModel.Cells, Mode=OneWay}"
+                           ElementPrepared="CellRepeater_ElementPrepared">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout
                         Orientation="Horizontal"
@@ -68,22 +70,35 @@
                 </ItemsRepeater.Layout>
                 <ItemsRepeater.ItemTemplate>
                     <DataTemplate x:DataType="vm:CellViewModel">
-                        <Border CornerRadius="6" Padding="10,8"
-                                BorderThickness="1.5"
-                                Background="{x:Bind State, Converter={StaticResource CellStateBgConverter}, Mode=OneWay}"
-                                BorderBrush="{x:Bind State, Converter={StaticResource CellStateBorderConverter}, Mode=OneWay}">
-                            <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock Text="{x:Bind Label}"
-                                           FontSize="10" Opacity="0.55"
-                                           FontWeight="SemiBold" CharacterSpacing="60"/>
-                                <TextBlock Text="{x:Bind VoltageText, Mode=OneWay}"
-                                           FontSize="14" FontWeight="SemiBold"/>
-                                <TextBlock Text="⚡ BAL"
-                                           FontSize="9" FontWeight="SemiBold"
-                                           Foreground="#FFFF8C00"
-                                           Visibility="{x:Bind IsBalancing, Converter={StaticResource BoolToVisConverter}, Mode=OneWay}"/>
-                            </StackPanel>
-                        </Border>
+                        <Button Padding="0"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Stretch"
+                                VerticalContentAlignment="Stretch"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Height="84"
+                                MinHeight="84"
+                                MaxHeight="84"
+                                Tag="{x:Bind Index}"
+                                Click="CellButton_Click">
+                            <Border CornerRadius="6" Padding="10,8"
+                                    VerticalAlignment="Stretch"
+                                    BorderThickness="1.5"
+                                    Background="{x:Bind State, Converter={StaticResource CellStateBgConverter}, Mode=OneWay}"
+                                    BorderBrush="{x:Bind State, Converter={StaticResource CellStateBorderConverter}, Mode=OneWay}">
+                                <StackPanel Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Bind Label}"
+                                               FontSize="10" Opacity="0.55"
+                                               FontWeight="SemiBold" CharacterSpacing="60"/>
+                                    <TextBlock Text="{x:Bind VoltageText, Mode=OneWay}"
+                                               FontSize="14" FontWeight="SemiBold"/>
+                                    <TextBlock Text="⚡ BAL"
+                                               FontSize="9" FontWeight="SemiBold"
+                                               Foreground="#FFFF8C00"
+                                               Visibility="{x:Bind IsBalancing, Converter={StaticResource BoolToVisConverter}, Mode=OneWay}"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
                     </DataTemplate>
                 </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
