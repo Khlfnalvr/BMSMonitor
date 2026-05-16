@@ -72,6 +72,64 @@
                 <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
             </Style>
 
+            <!--
+                CaptionButtonStyle — flat, square-cornered button that matches
+                the OS minimize/maximize/close buttons (46x32, transparent bg,
+                subtle hover). Used for the theme toggle that sits next to the
+                system caption buttons.
+            -->
+            <Style x:Key="CaptionButtonStyle" TargetType="Button">
+                <Setter Property="Background"               Value="Transparent"/>
+                <Setter Property="BorderThickness"          Value="0"/>
+                <Setter Property="CornerRadius"             Value="0"/>
+                <Setter Property="Padding"                  Value="0"/>
+                <Setter Property="Width"                    Value="46"/>
+                <Setter Property="Height"                   Value="32"/>
+                <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                <Setter Property="VerticalContentAlignment"   Value="Center"/>
+                <Setter Property="Foreground"               Value="{ThemeResource TextFillColorPrimaryBrush}"/>
+                <Setter Property="UseSystemFocusVisuals"    Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="RootGrid"
+                                  Background="{TemplateBinding Background}"
+                                  CornerRadius="{TemplateBinding CornerRadius}">
+                                <ContentPresenter x:Name="ContentPresenter"
+                                                  Content="{TemplateBinding Content}"
+                                                  Foreground="{TemplateBinding Foreground}"
+                                                  HorizontalContentAlignment="Center"
+                                                  VerticalContentAlignment="Center"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal"/>
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background"
+                                                        Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background"
+                                                        Value="{ThemeResource SubtleFillColorTertiaryBrush}"/>
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Disabled">
+                                            <VisualState.Setters>
+                                                <Setter Target="ContentPresenter.Opacity" Value="0.4"/>
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>

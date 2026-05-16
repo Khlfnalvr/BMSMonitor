@@ -53,6 +53,10 @@ public sealed partial class MainWindow : Window
         // Shrink the drag region whenever window size or toggle size changes.
         SizeChanged += (_, _) => UpdateTitleBarLayout();
         ThemeToggleArea.SizeChanged += (_, _) => UpdateTitleBarLayout();
+
+        // The theme button's tooltip is set in code, so it doesn't refresh
+        // through {x:Bind ...}. Refresh it whenever the language switches.
+        Lang.PropertyChanged += (_, _) => RefreshThemeButtonTooltip();
     }
 
     // ── Icon ─────────────────────────────────────────────────────────────
@@ -129,11 +133,9 @@ public sealed partial class MainWindow : Window
         var bg   = uiSettings.GetColorValue(UIColorType.Background);
         bool dark = bg.R < 128;
 
-        _initializing    = true;
-        ThemeSwitch.IsOn = dark;
-        _initializing    = false;
-
+        _initializing = true;
         ApplyTheme(dark ? ElementTheme.Dark : ElementTheme.Light);
+        _initializing = false;
     }
 
     private void ApplyTheme(ElementTheme theme)
@@ -141,12 +143,36 @@ public sealed partial class MainWindow : Window
         if (Content is FrameworkElement fe)
             fe.RequestedTheme = theme;
         UpdateTitleBarColors(theme);
+        UpdateThemeButton(theme);
     }
 
-    private void ThemeSwitch_Toggled(object sender, RoutedEventArgs e)
+    // Caption-style theme button: shows the icon for the mode the user would
+    // switch INTO (sun when dark, moon when light) — matches the Visual
+    // Studio Installer pattern.
+    private void UpdateThemeButton(ElementTheme theme)
+    {
+        bool dark = theme == ElementTheme.Dark;
+        // Segoe Fluent Icons:
+        //   E706 = Brightness (sun) — shown when dark mode is active
+        //   E708 = QuietHours (moon) — shown when light mode is active
+        ThemeIcon.Glyph = dark ? "" : "";
+        RefreshThemeButtonTooltip();
+    }
+
+    private void RefreshThemeButtonTooltip()
+    {
+        if (ThemeBtn is null) return;
+        bool dark = Content is FrameworkElement fe && fe.RequestedTheme == ElementTheme.Dark;
+        ToolTipService.SetToolTip(ThemeBtn, dark ? Lang.Ui_SwitchToLight : Lang.Ui_SwitchToDark);
+    }
+
+    private void ThemeBtn_Click(object sender, RoutedEventArgs e)
     {
         if (_initializing) return;
-        ApplyTheme(ThemeSwitch.IsOn ? ElementTheme.Dark : ElementTheme.Light);
+        var current = Content is FrameworkElement fe ? fe.RequestedTheme : ElementTheme.Default;
+        // Default counts as light for the toggle direction
+        bool currentlyDark = current == ElementTheme.Dark;
+        ApplyTheme(currentlyDark ? ElementTheme.Light : ElementTheme.Dark);
     }
 
     // ── Navigation ────────────────────────────────────────────────────────

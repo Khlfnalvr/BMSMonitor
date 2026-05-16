@@ -203,7 +203,7 @@ public sealed partial class DashboardPage : Page
 
     private void UpdateXAxisLabels(string socUnit = "", string viUnit = "", string tempUnit = "")
     {
-        const string rate = "1 sample/s";
+        string rate = GetSampleRateLabel();
 
         SocTimeAgoLabel.Text  = rate;
         SocNowLabel.Text      = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
@@ -211,6 +211,26 @@ public sealed partial class DashboardPage : Page
         VINowLabel.Text       = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
         TempTimeAgoLabel.Text = rate;
         TempNowLabel.Text     = string.IsNullOrEmpty(tempUnit) ? "" : $"time ({tempUnit})";
+    }
+
+    // Real sample rate computed from the actual elapsed time between the
+    // first and last timestamp — not hardcoded. Falls back to a placeholder
+    // until at least two samples have been captured.
+    private string GetSampleRateLabel()
+    {
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest   = ViewModel.LatestTimestamp;
+        int count    = ViewModel.HistorySampleCount;
+
+        if (count < 2 || !earliest.HasValue || !latest.HasValue) return "— sample/s";
+
+        double sec = (latest.Value - earliest.Value).TotalSeconds;
+        if (sec <= 0) return "— sample/s";
+
+        double rate = (count - 1) / sec;
+        if (rate >= 10) return $"{rate:F0} samples/s";
+        if (rate >= 1)  return $"{rate:F1} samples/s";
+        return $"{1.0 / rate:F1} s/sample";
     }
 
     // ── Chart colors ──────────────────────────────────────────────────────
@@ -276,13 +296,17 @@ public sealed partial class DashboardPage : Page
 
     /// <summary>
     /// Returns the indices into the full history that match the active filter
-    /// (or the whole range when no filter is set). Used by both chart redraws.
+    /// (or the whole range when no filter is set), along with the real elapsed
+    /// time of the selected range in minutes. The duration is derived from
+    /// timestamps so the X-axis reflects actual wall-clock time regardless of
+    /// the data sample rate.
     /// </summary>
     private (int start, int end, double timeframeMinutes) GetActiveRange(int fullLength)
     {
+        var ts = ViewModel.GetTimestamps();
+
         if (_filterStart.HasValue || _filterEnd.HasValue)
         {
-            var ts = ViewModel.GetTimestamps();
             int s = 0, eIdx = ts.Length;
 
             if (_filterStart.HasValue)
@@ -311,7 +335,14 @@ public sealed partial class DashboardPage : Page
             return (s, eIdx, minutes);
         }
 
-        return (0, fullLength, ViewModel.HistoryTimeframeMinutes);
+        // No filter: derive the chart duration from the actual time span
+        // between the first and last sample. The old fallback of (n - 1)
+        // assumed exactly 1 Hz — which lies whenever the CAN bus sends data
+        // at a different cadence.
+        double minutesActual = (ts.Length >= 2)
+            ? (ts[^1] - ts[0]).TotalMinutes
+            : 0;
+        return (0, fullLength, minutesActual);
     }
 
     /// <returns>The x-axis unit ("seconds" / "minutes" / "hours") or empty if no data.</returns>
@@ -327,29 +358,8 @@ public sealed partial class DashboardPage : Page
         UpdateGridLine(GridLine75, w, h * 0.25);
 
         double[] fullHistory = ViewModel.GetSocHistory();
-        var (rangeStart, rangeEnd, timeframeMinutes) = GetActiveRange(fullHistory.Length);
-
-        // Slice to the active range (filter or full history)
+        var (rangeStart, rangeEnd, _) = GetActiveRange(fullHistory.Length);
         int n = Math.Max(0, rangeEnd - rangeStart);
-        double cap;
-        double xStep;
-        double xStart;
-
-        if (_filterStart.HasValue || _filterEnd.HasValue)
-        {
-            // Filter mode: data fills the chart from left to right
-            cap    = n;
-            xStep  = n > 1 ? w / (n - 1.0) : w;
-            xStart = 0;
-        }
-        else
-        {
-            // Rolling window mode: align rightmost sample with "now"
-            cap = ViewModel.HistoryCapacity;
-            if (cap <= 0 || cap > n) cap = n;
-            xStep  = cap > 1 ? w / (cap - 1.0) : w;
-            xStart = (cap - n) * xStep;
-        }
 
         if (n < 2)
         {
@@ -359,16 +369,24 @@ public sealed partial class DashboardPage : Page
             return "";
         }
 
+        // Position each sample horizontally by its actual elapsed time, not
+        // by its index. If the BMS sends frames faster than 1 Hz the indices
+        // would lie about how much real time has passed.
+        DateTime[] timestamps = ViewModel.GetTimestamps();
+        DateTime tStart = timestamps[rangeStart];
+        DateTime tEnd   = timestamps[rangeStart + n - 1];
+        double totalSec = Math.Max(1e-9, (tEnd - tStart).TotalSeconds);
+
         var linePoints = new PointCollection();
         var fillPoints = new PointCollection();
 
-        fillPoints.Add(new Point(xStart, h));
+        fillPoints.Add(new Point(0, h));
 
         int stride = StrideFor(n, MaxRenderPoints(w));
         int lastEmitted = -1;
         for (int i = 0; i < n; i += stride)
         {
-            double x = xStart + i * xStep;
+            double x = w * (timestamps[rangeStart + i] - tStart).TotalSeconds / totalSec;
             double y = h * (1.0 - fullHistory[rangeStart + i] / 100.0);
             linePoints.Add(new Point(x, y));
             fillPoints.Add(new Point(x, y));
@@ -378,18 +396,18 @@ public sealed partial class DashboardPage : Page
         if (lastEmitted != n - 1)
         {
             int i = n - 1;
-            double x = xStart + i * xStep;
+            double x = w * (timestamps[rangeStart + i] - tStart).TotalSeconds / totalSec;
             double y = h * (1.0 - fullHistory[rangeStart + i] / 100.0);
             linePoints.Add(new Point(x, y));
             fillPoints.Add(new Point(x, y));
         }
 
-        fillPoints.Add(new Point(xStart + (n - 1) * xStep, h));
+        fillPoints.Add(new Point(w, h));
 
         SocLine.Points = linePoints;
         SocFill.Points = fillPoints;
 
-        return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _socTicks);
+        return UpdateTimeTicks(w, h, totalSec, _socTicks);
     }
 
     private string RedrawVIChart()
@@ -403,7 +421,7 @@ public sealed partial class DashboardPage : Page
         UpdateGridLine(VIGridH3, w, h * 0.75);
 
         var (fullV, fullI) = ViewModel.GetViHistory();
-        var (rangeStart, rangeEnd, timeframeMinutes) = GetActiveRange(fullV.Length);
+        var (rangeStart, rangeEnd, _) = GetActiveRange(fullV.Length);
         int n = Math.Max(0, rangeEnd - rangeStart);
 
         if (n < 2)
@@ -451,23 +469,11 @@ public sealed partial class DashboardPage : Page
         ILabel1.Text = $"{iRawMax - iRange * 0.75:F1}";    Canvas.SetTop(ILabel1, h * 0.75 - fontH / 2);
         ILabel0.Text = $"{iRawMin:F1}";                     Canvas.SetTop(ILabel0, h - fontH);
 
-        double cap;
-        double xStep;
-        double xStart;
-
-        if (_filterStart.HasValue || _filterEnd.HasValue)
-        {
-            cap    = n;
-            xStep  = n > 1 ? w / (n - 1.0) : w;
-            xStart = 0;
-        }
-        else
-        {
-            cap = ViewModel.HistoryCapacity;
-            if (cap <= 0 || cap > n) cap = n;
-            xStep  = cap > 1 ? w / (cap - 1.0) : w;
-            xStart = (cap - n) * xStep;
-        }
+        // Position points by real elapsed time (see RedrawSocChart for rationale)
+        DateTime[] timestamps = ViewModel.GetTimestamps();
+        DateTime tStart = timestamps[rangeStart];
+        DateTime tEnd   = timestamps[rangeStart + n - 1];
+        double totalSec = Math.Max(1e-9, (tEnd - tStart).TotalSeconds);
 
         var vPoints = new PointCollection();
         var iPoints = new PointCollection();
@@ -476,7 +482,7 @@ public sealed partial class DashboardPage : Page
         int lastEmitted = -1;
         for (int j = 0; j < n; j += stride)
         {
-            double x  = xStart + j * xStep;
+            double x  = w * (timestamps[rangeStart + j] - tStart).TotalSeconds / totalSec;
             double vy = h * (1.0 - (voltages[j] - vRawMin) / vRange);
             double iy = h * (1.0 - (currents[j] - iRawMin) / iRange);
             vPoints.Add(new Point(x, vy));
@@ -486,7 +492,7 @@ public sealed partial class DashboardPage : Page
         if (lastEmitted != n - 1)
         {
             int j = n - 1;
-            double x  = xStart + j * xStep;
+            double x  = w * (timestamps[rangeStart + j] - tStart).TotalSeconds / totalSec;
             double vy = h * (1.0 - (voltages[j] - vRawMin) / vRange);
             double iy = h * (1.0 - (currents[j] - iRawMin) / iRange);
             vPoints.Add(new Point(x, vy));
@@ -496,7 +502,7 @@ public sealed partial class DashboardPage : Page
         VoltageLine.Points = vPoints;
         CurrentLine.Points = iPoints;
 
-        return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _viTicks);
+        return UpdateTimeTicks(w, h, totalSec, _viTicks);
     }
 
     /// <returns>The x-axis unit ("seconds" / "minutes" / "hours") or empty if no data.</returns>
@@ -520,7 +526,7 @@ public sealed partial class DashboardPage : Page
         }
 
         int n = allTemps[0].Length;
-        var (rangeStart, rangeEnd, timeframeMinutes) = GetActiveRange(n);
+        var (rangeStart, rangeEnd, _) = GetActiveRange(n);
         n = Math.Max(0, rangeEnd - rangeStart);
 
         if (n < 2)
@@ -563,23 +569,11 @@ public sealed partial class DashboardPage : Page
         FLabel1.Text = $"{fMax - fRange * 0.75:F0}";    Canvas.SetTop(FLabel1, h * 0.75 - fontH / 2);
         FLabel0.Text = $"{fMin:F0}";                     Canvas.SetTop(FLabel0, h - fontH);
 
-        // ── X-axis positioning (same logic as other charts) ──────────────
-        double cap;
-        double xStep;
-        double xStart;
-        if (_filterStart.HasValue || _filterEnd.HasValue)
-        {
-            cap    = n;
-            xStep  = n > 1 ? w / (n - 1.0) : w;
-            xStart = 0;
-        }
-        else
-        {
-            cap = ViewModel.HistoryCapacity;
-            if (cap <= 0 || cap > n) cap = n;
-            xStep  = cap > 1 ? w / (cap - 1.0) : w;
-            xStart = (cap - n) * xStep;
-        }
+        // Position points by real elapsed time (see RedrawSocChart for rationale)
+        DateTime[] timestamps = ViewModel.GetTimestamps();
+        DateTime tStartTs = timestamps[rangeStart];
+        DateTime tEndTs   = timestamps[rangeStart + n - 1];
+        double totalSec  = Math.Max(1e-9, (tEndTs - tStartTs).TotalSeconds);
 
         // ── Build polylines for each sensor ──────────────────────────────
         // Decimate to ~one point per pixel — 10 sensors × thousands of
@@ -593,7 +587,7 @@ public sealed partial class DashboardPage : Page
             var series = allTemps[s];
             for (int j = 0; j < n; j += stride)
             {
-                double x = xStart + j * xStep;
+                double x = w * (timestamps[rangeStart + j] - tStartTs).TotalSeconds / totalSec;
                 double y = h * (1.0 - (series[rangeStart + j] - tMin) / tRange);
                 points.Add(new Point(x, y));
                 lastEmitted = j;
@@ -601,14 +595,14 @@ public sealed partial class DashboardPage : Page
             if (lastEmitted != n - 1)
             {
                 int j = n - 1;
-                double x = xStart + j * xStep;
+                double x = w * (timestamps[rangeStart + j] - tStartTs).TotalSeconds / totalSec;
                 double y = h * (1.0 - (series[rangeStart + j] - tMin) / tRange);
                 points.Add(new Point(x, y));
             }
             _tempLines[s].Points = points;
         }
 
-        return UpdateTimeTicks(w, h, cap, n, timeframeMinutes, _tempTicks);
+        return UpdateTimeTicks(w, h, totalSec, _tempTicks);
     }
 
     // ── Tick rendering ────────────────────────────────────────────────────
@@ -627,26 +621,24 @@ public sealed partial class DashboardPage : Page
             ticks[i].Visibility = Visibility.Collapsed;
     }
 
-    private static string UpdateTimeTicks(double w, double h, double cap, int n,
-        double timeframeMinutes, TextBlock[] ticks)
+    // Renders evenly-spaced X-axis ticks across the chart, with the labels
+    // computed from real elapsed seconds. Tick positions are proportional
+    // along the canvas — they match the timestamp-based point placement.
+    private static string UpdateTimeTicks(double w, double h, double totalSeconds, TextBlock[] ticks)
     {
-        double totalSeconds = timeframeMinutes > 0
-            ? timeframeMinutes * 60.0
-            : Math.Max(1, n - 1);
+        if (totalSeconds <= 0) totalSeconds = 1;
 
         int targetTicks = (int)Math.Clamp(w / 70.0, 6, 18);
         var (unit, divisor, step) = PickAxisScale(totalSeconds, targetTicks);
         string fmt = step >= 1.0 ? "F0" : "F1";
 
         double totalUnits = totalSeconds / divisor;
-        double xStep      = cap > 1 ? w / (cap - 1.0) : w;
-        double xStart     = (cap - n) * xStep;
 
         int used = 0;
         for (double v = 0.0; v <= totalUnits + 1e-9 && used < ticks.Length; v += step)
         {
             double frac = totalUnits > 0 ? v / totalUnits : 0;
-            double xPos = n > 1 ? xStart + frac * (n - 1) * xStep : frac * w;
+            double xPos = frac * w;
             double display = Math.Round(v, fmt == "F1" ? 1 : 0);
 
             var tb = ticks[used];

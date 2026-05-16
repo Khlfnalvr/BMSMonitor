@@ -45,32 +45,24 @@
                 IsHitTestVisible="False"/>
 
         <!--
-            Theme toggle — sits inside the 32 px title-bar zone, immediately
-            left of the caption buttons. No box around it. Code-behind shrinks
-            AppTitleBar's right margin so this area is OUTSIDE the drag region,
-            allowing normal XAML hit-testing without passthrough region tricks.
+            Theme toggle — a single icon button styled like an OS caption
+            button, positioned immediately left of the minimize/maximize/close
+            buttons (mirrors the Visual Studio Installer pattern). The
+            code-behind shrinks AppTitleBar's right margin so this button is
+            outside the drag region.
         -->
         <Border x:Name="ThemeToggleArea"
                 Grid.Row="0"
                 HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Padding="0,0,12,0">
-            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                <TextBlock Text="{x:Bind Lang.Ui_Dark, Mode=OneWay}"
-                           FontSize="10" FontWeight="SemiBold"
-                           CharacterSpacing="100" Opacity="0.5"
-                           VerticalAlignment="Center"/>
-                <ToggleSwitch x:Name="ThemeSwitch"
-                              OnContent="" OffContent=""
-                              ToolTipService.ToolTip="Dark / Light"
-                              Toggled="ThemeSwitch_Toggled"
-                              MinWidth="0"
-                              VerticalAlignment="Center"/>
-                <TextBlock Text="{x:Bind Lang.Ui_Light, Mode=OneWay}"
-                           FontSize="10" FontWeight="SemiBold"
-                           CharacterSpacing="100" Opacity="0.5"
-                           VerticalAlignment="Center"/>
-            </StackPanel>
+                VerticalAlignment="Top">
+            <Button x:Name="ThemeBtn"
+                    Style="{StaticResource CaptionButtonStyle}"
+                    Click="ThemeBtn_Click">
+                <FontIcon x:Name="ThemeIcon"
+                          FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                          FontSize="14"
+                          Glyph="&#xE706;"/>
+            </Button>
         </Border>
 
         <!-- ── Playback bar (Row 1, hidden when no file is loaded) ─────── -->

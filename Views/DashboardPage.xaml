@@ -79,167 +79,282 @@
                 </Border>
             </Grid>
 
-            <!-- ── SOC HISTORY CHART ─────────────────────────────────── -->
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0"
-                           Text="{x:Bind Lang.Dash_SecSocHistory, Mode=OneWay}"
-                           Style="{StaticResource SectionHeaderStyle}"
-                           VerticalAlignment="Center"/>
-                <Button Grid.Column="1" x:Name="SaveSocBtn"
-                        Width="36" Height="28" Padding="0"
-                        Click="SaveSocChart_Click"
-                        ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
-                    <SymbolIcon Symbol="Save"/>
-                </Button>
-            </Grid>
-            <Border x:Name="SocChartCard" Style="{StaticResource CardStyle}">
-                <Grid x:Name="SocChartArea" RowSpacing="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+            <!-- ── CELL VOLTAGE SUMMARY (moved above charts) ──────────── -->
+            <TextBlock Text="{x:Bind Lang.Dash_SecCellSummary, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
-                    <Grid Grid.Row="0" ColumnSpacing="8">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="28"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Y-axis labels -->
-                        <Grid x:Name="SocYAxisGrid" Grid.Column="0" Height="130">
-                            <TextBlock Text="100" FontSize="9" Opacity="0.45"
-                                       VerticalAlignment="Top" HorizontalAlignment="Right"/>
-                            <TextBlock Text="50" FontSize="9" Opacity="0.45"
-                                       VerticalAlignment="Center" HorizontalAlignment="Right"/>
-                            <TextBlock Text="0" FontSize="9" Opacity="0.45"
-                                       VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
-                        </Grid>
-
-                        <!-- Chart canvas -->
-                        <Canvas x:Name="SocChartCanvas" Grid.Column="1" Height="130"
-                                SizeChanged="SocChartCanvas_SizeChanged">
-                            <Line x:Name="GridLine75" StrokeThickness="1" StrokeDashArray="4,3"/>
-                            <Line x:Name="GridLine50" StrokeThickness="1" StrokeDashArray="4,3"/>
-                            <Line x:Name="GridLine25" StrokeThickness="1" StrokeDashArray="4,3"/>
-                            <Polygon  x:Name="SocFill"   Opacity="0.15"/>
-                            <Polyline x:Name="SocLine"   StrokeThickness="2"
-                                      StrokeLineJoin="Round" Fill="Transparent"/>
-                            <!-- X-axis ticks are pre-allocated programmatically (DashboardPage.xaml.cs) -->
-                            <!-- Tick text is dynamic: count, interval and unit auto-scale with the timeframe. -->
-
-                        </Canvas>
-                    </Grid>
-
-                    <!-- X-axis legend: window duration -->
-                    <Grid Grid.Row="1" Margin="36,0,0,0">
-                        <TextBlock x:Name="SocTimeAgoLabel" FontSize="10" Opacity="0.4"
-                                   HorizontalAlignment="Left"/>
-                        <TextBlock x:Name="SocNowLabel" FontSize="10" Opacity="0.4"
-                                   HorizontalAlignment="Right" FontFamily="Consolas"/>
-                    </Grid>
-                </Grid>
-            </Border>
-
-            <!-- ── V/I HISTORY CHART ─────────────────────────────────── -->
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Dash_SecViHistory, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Button Grid.Column="1" x:Name="SaveViBtn"
-                        Width="36" Height="28" Padding="0"
-                        Click="SaveVIChart_Click"
-                        ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
-                    <SymbolIcon Symbol="Save"/>
-                </Button>
-            </Grid>
-            <Border x:Name="VIChartCard" Style="{StaticResource CardStyle}">
-                <Grid x:Name="VIChartArea" RowSpacing="2">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- 3-column layout: V-axis | canvas | I-axis -->
-                    <Grid Grid.Row="0" ColumnSpacing="4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="40"/>
-                        </Grid.ColumnDefinitions>
-
-                        <!-- Voltage Y-axis labels (left, right-aligned) -->
-                        <Canvas x:Name="VAxisCanvas" Grid.Column="0" Height="180">
-                            <TextBlock x:Name="VLabel4" Text="—" FontSize="9" Opacity="0.55"
-                                       Width="36" TextAlignment="Right" Canvas.Top="0"/>
-                            <TextBlock x:Name="VLabel3" Text="—" FontSize="9" Opacity="0.55"
-                                       Width="36" TextAlignment="Right" Canvas.Top="39"/>
-                            <TextBlock x:Name="VLabel2" Text="—" FontSize="9" Opacity="0.55"
-                                       Width="36" TextAlignment="Right" Canvas.Top="84"/>
-                            <TextBlock x:Name="VLabel1" Text="—" FontSize="9" Opacity="0.55"
-                                       Width="36" TextAlignment="Right" Canvas.Top="129"/>
-                            <TextBlock x:Name="VLabel0" Text="—" FontSize="9" Opacity="0.55"
-                                       Width="36" TextAlignment="Right" Canvas.Top="168"/>
-                        </Canvas>
-
-                        <!-- Chart canvas -->
-                        <Canvas x:Name="VIChartCanvas" Grid.Column="1" Height="180"
-                                SizeChanged="VIChartCanvas_SizeChanged">
-                            <Line x:Name="VIGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
-                            <Line x:Name="VIGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
-                            <Line x:Name="VIGridH3" StrokeThickness="1" StrokeDashArray="3,3"/>
-                            <Polyline x:Name="VoltageLine" StrokeThickness="2"
-                                      StrokeLineJoin="Round" Fill="Transparent"/>
-                            <Polyline x:Name="CurrentLine" StrokeThickness="2"
-                                      StrokeLineJoin="Round" Fill="Transparent"
-                                      StrokeDashArray="5,2"/>
-                            <!-- X-axis ticks are pre-allocated programmatically (DashboardPage.xaml.cs) -->
-
-                        </Canvas>
-
-                        <!-- Current Y-axis labels (right, left-aligned) -->
-                        <Canvas x:Name="IAxisCanvas" Grid.Column="2" Height="180">
-                            <TextBlock x:Name="ILabel4" Text="—" FontSize="9" Opacity="0.55"
-                                       Canvas.Left="2" Canvas.Top="0"/>
-                            <TextBlock x:Name="ILabel3" Text="—" FontSize="9" Opacity="0.55"
-                                       Canvas.Left="2" Canvas.Top="39"/>
-                            <TextBlock x:Name="ILabel2" Text="—" FontSize="9" Opacity="0.55"
-                                       Canvas.Left="2" Canvas.Top="84"/>
-                            <TextBlock x:Name="ILabel1" Text="—" FontSize="9" Opacity="0.55"
-                                       Canvas.Left="2" Canvas.Top="129"/>
-                            <TextBlock x:Name="ILabel0" Text="—" FontSize="9" Opacity="0.55"
-                                       Canvas.Left="2" Canvas.Top="168"/>
-                        </Canvas>
-                    </Grid>
-
-                    <!-- Legend -->
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16"
-                                HorizontalAlignment="Center" Margin="0,4,0,0">
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Rectangle x:Name="VLegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Dash_VoltageV, Mode=OneWay}" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="4">
-                            <Rectangle x:Name="ILegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Dash_CurrentA, Mode=OneWay}" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
-                        </StackPanel>
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Com_Min, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.MinCellText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- X-axis labels: window duration -->
-                    <Grid Grid.Row="2" Margin="44,0,44,0">
-                        <TextBlock x:Name="VITimeAgoLabel" FontSize="10" Opacity="0.4"
-                                   HorizontalAlignment="Left"/>
-                        <TextBlock x:Name="VINowLabel" FontSize="10" Opacity="0.4"
-                                   HorizontalAlignment="Right" FontFamily="Consolas"/>
-                    </Grid>
+                    <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Com_Max, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.MaxCellText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="3" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Com_Avg, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.AvgCellText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <Border Grid.Column="5" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                    <StackPanel Grid.Column="6" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Com_Delta, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                    </StackPanel>
                 </Grid>
             </Border>
+
+            <!-- ── BALANCING STATUS (moved above charts) ──────────────── -->
+            <TextBlock Text="{x:Bind Lang.Dash_BalancingStatus, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <Grid ColumnSpacing="10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Dash_ActiveCells, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                        <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
+                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Dash_CellDelta, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Dash_Method, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                        <TextBlock Text="{x:Bind Lang.Dash_ActiveMethod, Mode=OneWay}" FontSize="14" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ── SOC + V/I CHARTS (responsive: side-by-side wide, stacked narrow) -->
+            <Grid x:Name="ChartsGrid" ColumnSpacing="10" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <VisualStateManager.VisualStateGroups>
+                    <VisualStateGroup>
+                        <VisualState x:Name="ChartsStacked">
+                            <VisualState.StateTriggers>
+                                <AdaptiveTrigger MinWindowWidth="0"/>
+                            </VisualState.StateTriggers>
+                            <VisualState.Setters>
+                                <Setter Target="SocChartContainer.(Grid.ColumnSpan)" Value="2"/>
+                                <Setter Target="ViChartContainer.(Grid.Row)" Value="1"/>
+                                <Setter Target="ViChartContainer.(Grid.Column)" Value="0"/>
+                                <Setter Target="ViChartContainer.(Grid.ColumnSpan)" Value="2"/>
+                            </VisualState.Setters>
+                        </VisualState>
+                        <VisualState x:Name="ChartsSideBySide">
+                            <VisualState.StateTriggers>
+                                <AdaptiveTrigger MinWindowWidth="1100"/>
+                            </VisualState.StateTriggers>
+                            <VisualState.Setters>
+                                <Setter Target="SocChartContainer.(Grid.ColumnSpan)" Value="1"/>
+                                <Setter Target="ViChartContainer.(Grid.Row)" Value="0"/>
+                                <Setter Target="ViChartContainer.(Grid.Column)" Value="1"/>
+                                <Setter Target="ViChartContainer.(Grid.ColumnSpan)" Value="1"/>
+                            </VisualState.Setters>
+                        </VisualState>
+                    </VisualStateGroup>
+                </VisualStateManager.VisualStateGroups>
+
+                <!-- ── SOC HISTORY CHART ─────────────────────────────────── -->
+                <StackPanel x:Name="SocChartContainer" Grid.Row="0" Grid.Column="0" Spacing="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0"
+                                   Text="{x:Bind Lang.Dash_SecSocHistory, Mode=OneWay}"
+                                   Style="{StaticResource SectionHeaderStyle}"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" x:Name="SaveSocBtn"
+                                Width="36" Height="28" Padding="0"
+                                Click="SaveSocChart_Click"
+                                ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
+                            <SymbolIcon Symbol="Save"/>
+                        </Button>
+                    </Grid>
+                    <Border x:Name="SocChartCard" Style="{StaticResource CardStyle}">
+                        <Grid x:Name="SocChartArea" RowSpacing="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <Grid Grid.Row="0" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Y-axis labels -->
+                                <Grid x:Name="SocYAxisGrid" Grid.Column="0" Height="160">
+                                    <TextBlock Text="100" FontSize="9" Opacity="0.45"
+                                               VerticalAlignment="Top" HorizontalAlignment="Right"/>
+                                    <TextBlock Text="50" FontSize="9" Opacity="0.45"
+                                               VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                                    <TextBlock Text="0" FontSize="9" Opacity="0.45"
+                                               VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
+                                </Grid>
+
+                                <!-- Chart canvas -->
+                                <Canvas x:Name="SocChartCanvas" Grid.Column="1" Height="160"
+                                        SizeChanged="SocChartCanvas_SizeChanged">
+                                    <Line x:Name="GridLine75" StrokeThickness="1" StrokeDashArray="4,3"/>
+                                    <Line x:Name="GridLine50" StrokeThickness="1" StrokeDashArray="4,3"/>
+                                    <Line x:Name="GridLine25" StrokeThickness="1" StrokeDashArray="4,3"/>
+                                    <Polygon  x:Name="SocFill"   Opacity="0.15"/>
+                                    <Polyline x:Name="SocLine"   StrokeThickness="2"
+                                              StrokeLineJoin="Round" Fill="Transparent"/>
+                                    <!-- X-axis ticks are pre-allocated programmatically (DashboardPage.xaml.cs) -->
+                                </Canvas>
+                            </Grid>
+
+                            <!-- X-axis legend: window duration -->
+                            <Grid Grid.Row="1" Margin="36,0,0,0">
+                                <TextBlock x:Name="SocTimeAgoLabel" FontSize="10" Opacity="0.4"
+                                           HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="SocNowLabel" FontSize="10" Opacity="0.4"
+                                           HorizontalAlignment="Right" FontFamily="Consolas"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- ── V/I HISTORY CHART ─────────────────────────────────── -->
+                <StackPanel x:Name="ViChartContainer" Grid.Row="0" Grid.Column="1" Spacing="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Dash_SecViHistory, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                        <Button Grid.Column="1" x:Name="SaveViBtn"
+                                Width="36" Height="28" Padding="0"
+                                Click="SaveVIChart_Click"
+                                ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
+                            <SymbolIcon Symbol="Save"/>
+                        </Button>
+                    </Grid>
+                    <Border x:Name="VIChartCard" Style="{StaticResource CardStyle}">
+                        <Grid x:Name="VIChartArea" RowSpacing="2">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- 3-column layout: V-axis | canvas | I-axis -->
+                            <Grid Grid.Row="0" ColumnSpacing="4">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Voltage Y-axis labels (left, right-aligned) -->
+                                <Canvas x:Name="VAxisCanvas" Grid.Column="0" Height="160">
+                                    <TextBlock x:Name="VLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                               Width="36" TextAlignment="Right" Canvas.Top="0"/>
+                                    <TextBlock x:Name="VLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                               Width="36" TextAlignment="Right" Canvas.Top="35"/>
+                                    <TextBlock x:Name="VLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                               Width="36" TextAlignment="Right" Canvas.Top="74"/>
+                                    <TextBlock x:Name="VLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                               Width="36" TextAlignment="Right" Canvas.Top="114"/>
+                                    <TextBlock x:Name="VLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                               Width="36" TextAlignment="Right" Canvas.Top="149"/>
+                                </Canvas>
+
+                                <!-- Chart canvas -->
+                                <Canvas x:Name="VIChartCanvas" Grid.Column="1" Height="160"
+                                        SizeChanged="VIChartCanvas_SizeChanged">
+                                    <Line x:Name="VIGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
+                                    <Line x:Name="VIGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
+                                    <Line x:Name="VIGridH3" StrokeThickness="1" StrokeDashArray="3,3"/>
+                                    <Polyline x:Name="VoltageLine" StrokeThickness="2"
+                                              StrokeLineJoin="Round" Fill="Transparent"/>
+                                    <Polyline x:Name="CurrentLine" StrokeThickness="2"
+                                              StrokeLineJoin="Round" Fill="Transparent"
+                                              StrokeDashArray="5,2"/>
+                                    <!-- X-axis ticks are pre-allocated programmatically (DashboardPage.xaml.cs) -->
+                                </Canvas>
+
+                                <!-- Current Y-axis labels (right, left-aligned) -->
+                                <Canvas x:Name="IAxisCanvas" Grid.Column="2" Height="160">
+                                    <TextBlock x:Name="ILabel4" Text="—" FontSize="9" Opacity="0.55"
+                                               Canvas.Left="2" Canvas.Top="0"/>
+                                    <TextBlock x:Name="ILabel3" Text="—" FontSize="9" Opacity="0.55"
+                                               Canvas.Left="2" Canvas.Top="35"/>
+                                    <TextBlock x:Name="ILabel2" Text="—" FontSize="9" Opacity="0.55"
+                                               Canvas.Left="2" Canvas.Top="74"/>
+                                    <TextBlock x:Name="ILabel1" Text="—" FontSize="9" Opacity="0.55"
+                                               Canvas.Left="2" Canvas.Top="114"/>
+                                    <TextBlock x:Name="ILabel0" Text="—" FontSize="9" Opacity="0.55"
+                                               Canvas.Left="2" Canvas.Top="149"/>
+                                </Canvas>
+                            </Grid>
+
+                            <!-- Legend -->
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16"
+                                        HorizontalAlignment="Center" Margin="0,4,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Rectangle x:Name="VLegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{x:Bind Lang.Dash_VoltageV, Mode=OneWay}" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Rectangle x:Name="ILegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{x:Bind Lang.Dash_CurrentA, Mode=OneWay}" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- X-axis labels: window duration -->
+                            <Grid Grid.Row="2" Margin="44,0,44,0">
+                                <TextBlock x:Name="VITimeAgoLabel" FontSize="10" Opacity="0.4"
+                                           HorizontalAlignment="Left"/>
+                                <TextBlock x:Name="VINowLabel" FontSize="10" Opacity="0.4"
+                                           HorizontalAlignment="Right" FontFamily="Consolas"/>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </Grid>
 
             <!-- ── TIME RANGE TRIM ──────────────────────────────────── -->
             <TextBlock Text="Time Range (trim)" Style="{StaticResource SectionHeaderStyle}"/>
@@ -410,81 +525,6 @@
                         <TextBlock x:Name="TempNowLabel" FontSize="10" Opacity="0.4"
                                    HorizontalAlignment="Right" FontFamily="Consolas"/>
                     </Grid>
-                </Grid>
-            </Border>
-
-            <!-- ── VOLTAGE SUMMARY ────────────────────────────────────── -->
-            <TextBlock Text="{x:Bind Lang.Dash_SecCellSummary, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-            <Border Style="{StaticResource CardStyle}">
-                <Grid ColumnSpacing="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Min, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.MinCellText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
-
-                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Max, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.MaxCellText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="3" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
-
-                    <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Avg, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.AvgCellText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="5" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
-
-                    <StackPanel Grid.Column="6" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Delta, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- ── BALANCING STATUS ─────────────────────────────────────── -->
-            <TextBlock Text="{x:Bind Lang.Dash_BalancingStatus, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-            <Border Style="{StaticResource CardStyle}">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_ActiveCells, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                        <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
-                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_CellDelta, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
-                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_Method, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                        <TextBlock Text="{x:Bind Lang.Dash_ActiveMethod, Mode=OneWay}" FontSize="14" HorizontalAlignment="Center"/>
-                    </StackPanel>
                 </Grid>
             </Border>
 

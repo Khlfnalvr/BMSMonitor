@@ -93,8 +93,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Nav_Playback     => T(nameof(Nav_Playback));
 
     // ── Theme toggle ──────────────────────────────────────────────────────
-    public string Ui_Dark  => T(nameof(Ui_Dark));
-    public string Ui_Light => T(nameof(Ui_Light));
+    public string Ui_Dark           => T(nameof(Ui_Dark));
+    public string Ui_Light          => T(nameof(Ui_Light));
+    public string Ui_SwitchToLight  => T(nameof(Ui_SwitchToLight));
+    public string Ui_SwitchToDark   => T(nameof(Ui_SwitchToDark));
 
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
@@ -266,8 +268,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Nav_Logging)]      = "Logging",
             [nameof(Nav_Playback)]     = "Playback",
 
-            [nameof(Ui_Dark)]  = "DARK",
-            [nameof(Ui_Light)] = "LIGHT",
+            [nameof(Ui_Dark)]          = "DARK",
+            [nameof(Ui_Light)]         = "LIGHT",
+            [nameof(Ui_SwitchToLight)] = "Switch to Light mode",
+            [nameof(Ui_SwitchToDark)]  = "Switch to Dark mode",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -428,8 +432,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Nav_Logging)]      = "Logging",
             [nameof(Nav_Playback)]     = "Putar Ulang",
 
-            [nameof(Ui_Dark)]  = "GELAP",
-            [nameof(Ui_Light)] = "TERANG",
+            [nameof(Ui_Dark)]          = "GELAP",
+            [nameof(Ui_Light)]         = "TERANG",
+            [nameof(Ui_SwitchToLight)] = "Beralih ke Mode Terang",
+            [nameof(Ui_SwitchToDark)]  = "Beralih ke Mode Gelap",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -590,8 +596,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Nav_Logging)]      = "Pembalakan",
             [nameof(Nav_Playback)]     = "Main Semula",
 
-            [nameof(Ui_Dark)]  = "GELAP",
-            [nameof(Ui_Light)] = "CERAH",
+            [nameof(Ui_Dark)]          = "GELAP",
+            [nameof(Ui_Light)]         = "CERAH",
+            [nameof(Ui_SwitchToLight)] = "Tukar ke Mod Cerah",
+            [nameof(Ui_SwitchToDark)]  = "Tukar ke Mod Gelap",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -752,8 +760,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Nav_Logging)]      = "Logboek",
             [nameof(Nav_Playback)]     = "Afspelen",
 
-            [nameof(Ui_Dark)]  = "DONKER",
-            [nameof(Ui_Light)] = "LICHT",
+            [nameof(Ui_Dark)]          = "DONKER",
+            [nameof(Ui_Light)]         = "LICHT",
+            [nameof(Ui_SwitchToLight)] = "Overschakelen naar lichte modus",
+            [nameof(Ui_SwitchToDark)]  = "Overschakelen naar donkere modus",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -914,8 +924,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Nav_Logging)]      = "数据记录",
             [nameof(Nav_Playback)]     = "回放",
 
-            [nameof(Ui_Dark)]  = "深色",
-            [nameof(Ui_Light)] = "浅色",
+            [nameof(Ui_Dark)]          = "深色",
+            [nameof(Ui_Light)]         = "浅色",
+            [nameof(Ui_SwitchToLight)] = "切换到浅色模式",
+            [nameof(Ui_SwitchToDark)]  = "切换到深色模式",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",

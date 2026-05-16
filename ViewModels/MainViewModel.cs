@@ -339,6 +339,17 @@ public partial class MainViewModel : ObservableObject
         return result;
     }
 
+    // Returns temperature history for a single NTC sensor (0-indexed, 0-9).
+    public double[] GetTempSensorHistory(int sensorIndex)
+    {
+        var all = _tempHistory.ToArray();
+        if (all.Length == 0 || sensorIndex < 0 || sensorIndex >= 10) return [];
+        var result = new double[all.Length];
+        for (int i = 0; i < all.Length; i++)
+            result[i] = all[i][sensorIndex];
+        return result;
+    }
+
     // Returns timestamps in chronological order — one per sample,
     // aligned with GetSocHistory()/GetViHistory() by index.
     public DateTime[] GetTimestamps() => _timestamps.ToArray();
