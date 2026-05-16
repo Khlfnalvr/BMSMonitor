@@ -31,6 +31,22 @@ public sealed partial class DashboardPage : Page
     private TextBlock[] _viTicks   = [];
     private TextBlock[] _tempTicks = [];
 
+    // Cap polyline points to roughly one per pixel of chart width.
+    // Drawing 18 000 points on an 800 px canvas wastes memory and GPU
+    // cycles — sub-pixel detail is invisible. Stride-decimation keeps
+    // the visual shape while collapsing the per-redraw allocation to
+    // something the compositor can chew through cheaply.
+    private static int MaxRenderPoints(double width) =>
+        Math.Max(64, (int)Math.Ceiling(width));
+
+    // Computes a stride such that ceil(n / stride) <= maxPoints.
+    private static int StrideFor(int n, int maxPoints)
+    {
+        if (n <= maxPoints || maxPoints <= 1) return 1;
+        int stride = (n + maxPoints - 1) / maxPoints;
+        return stride < 1 ? 1 : stride;
+    }
+
     // ── Temperature sensor polylines (10 sensors) ──────────────────────────
     private const int TempSensorCount = 10;
     private readonly Polyline[] _tempLines = new Polyline[TempSensorCount];
@@ -348,8 +364,20 @@ public sealed partial class DashboardPage : Page
 
         fillPoints.Add(new Point(xStart, h));
 
-        for (int i = 0; i < n; i++)
+        int stride = StrideFor(n, MaxRenderPoints(w));
+        int lastEmitted = -1;
+        for (int i = 0; i < n; i += stride)
         {
+            double x = xStart + i * xStep;
+            double y = h * (1.0 - fullHistory[rangeStart + i] / 100.0);
+            linePoints.Add(new Point(x, y));
+            fillPoints.Add(new Point(x, y));
+            lastEmitted = i;
+        }
+        // Always include the final sample so the curve reaches the right edge.
+        if (lastEmitted != n - 1)
+        {
+            int i = n - 1;
             double x = xStart + i * xStep;
             double y = h * (1.0 - fullHistory[rangeStart + i] / 100.0);
             linePoints.Add(new Point(x, y));
@@ -444,8 +472,20 @@ public sealed partial class DashboardPage : Page
         var vPoints = new PointCollection();
         var iPoints = new PointCollection();
 
-        for (int j = 0; j < n; j++)
+        int stride = StrideFor(n, MaxRenderPoints(w));
+        int lastEmitted = -1;
+        for (int j = 0; j < n; j += stride)
         {
+            double x  = xStart + j * xStep;
+            double vy = h * (1.0 - (voltages[j] - vRawMin) / vRange);
+            double iy = h * (1.0 - (currents[j] - iRawMin) / iRange);
+            vPoints.Add(new Point(x, vy));
+            iPoints.Add(new Point(x, iy));
+            lastEmitted = j;
+        }
+        if (lastEmitted != n - 1)
+        {
+            int j = n - 1;
             double x  = xStart + j * xStep;
             double vy = h * (1.0 - (voltages[j] - vRawMin) / vRange);
             double iy = h * (1.0 - (currents[j] - iRawMin) / iRange);
@@ -542,13 +582,27 @@ public sealed partial class DashboardPage : Page
         }
 
         // ── Build polylines for each sensor ──────────────────────────────
+        // Decimate to ~one point per pixel — 10 sensors × thousands of
+        // samples otherwise produces enormous PointCollections every
+        // redraw, which dominates the app's memory cost.
+        int stride = StrideFor(n, MaxRenderPoints(w));
         for (int s = 0; s < TempSensorCount; s++)
         {
             var points = new PointCollection();
-            for (int j = 0; j < n; j++)
+            int lastEmitted = -1;
+            var series = allTemps[s];
+            for (int j = 0; j < n; j += stride)
             {
                 double x = xStart + j * xStep;
-                double y = h * (1.0 - (allTemps[s][rangeStart + j] - tMin) / tRange);
+                double y = h * (1.0 - (series[rangeStart + j] - tMin) / tRange);
+                points.Add(new Point(x, y));
+                lastEmitted = j;
+            }
+            if (lastEmitted != n - 1)
+            {
+                int j = n - 1;
+                double x = xStart + j * xStep;
+                double y = h * (1.0 - (series[rangeStart + j] - tMin) / tRange);
                 points.Add(new Point(x, y));
             }
             _tempLines[s].Points = points;

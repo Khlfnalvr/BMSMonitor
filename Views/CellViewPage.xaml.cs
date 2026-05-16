@@ -266,9 +266,20 @@ public sealed partial class CellViewPage : Page
             }
 
             double xs = n > 1 ? w / (n - 1.0) : w;
+            // Cap polyline at ~one point per pixel so long sessions don't
+            // balloon the popup's PointCollection (~chart width is enough
+            // resolution; extra points are invisible).
+            int maxPoints = Math.Max(64, (int)Math.Ceiling(w));
+            int stride = n > maxPoints ? (n + maxPoints - 1) / maxPoints : 1;
             var pts = new PointCollection();
-            for (int j = 0; j < n; j++)
+            int lastEmitted = -1;
+            for (int j = 0; j < n; j += stride)
+            {
                 pts.Add(new Point(j * xs, h * (1.0 - (hist[j] - vMin) / vR)));
+                lastEmitted = j;
+            }
+            if (lastEmitted != n - 1)
+                pts.Add(new Point((n - 1) * xs, h * (1.0 - (hist[n - 1] - vMin) / vR)));
             polyline.Points = pts;
             rangeLabel.Text = $"{n} samples  ·  {hist.Min():F3}-{hist.Max():F3} V  ·  Delta {hist.Max() - hist.Min():F3} V";
         }

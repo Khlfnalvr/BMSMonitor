@@ -15,8 +15,8 @@
             <StackPanel Spacing="10" MaxWidth="880"
                         HorizontalAlignment="Center">
 
-                <!-- ── SERIAL CONNECTION ──────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecSerial, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                <!-- ── CAN BUS CONNECTION ─────────────────────────────────── -->
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecCan, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="14">
                         <Grid ColumnSpacing="10">
@@ -26,12 +26,12 @@
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ComPort, Mode=OneWay}"
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_CanChannel, Mode=OneWay}"
                                        Style="{StaticResource FormLabelStyle}"/>
-                            <ComboBox Grid.Column="1" x:Name="ComboCOM"
+                            <ComboBox Grid.Column="1" x:Name="ComboCanChannel"
                                       PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"
                                       HorizontalAlignment="Stretch"/>
-                            <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshPorts_Click"/>
+                            <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshChannels_Click"/>
                             <Button Grid.Column="3" x:Name="ConnectBtn"
                                     Content=""
                                     Style="{ThemeResource AccentButtonStyle}"
@@ -42,18 +42,9 @@
                                 <ColumnDefinition Width="180"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_BaudRate, Mode=OneWay}"
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_CanBitrate, Mode=OneWay}"
                                        Style="{StaticResource FormLabelStyle}"/>
-                            <ComboBox Grid.Column="1" x:Name="ComboBaud" HorizontalAlignment="Stretch">
-                                <ComboBoxItem Content="9600"/>
-                                <ComboBoxItem Content="19200"/>
-                                <ComboBoxItem Content="38400"/>
-                                <ComboBoxItem Content="57600"/>
-                                <ComboBoxItem Content="115200" IsSelected="True"/>
-                                <ComboBoxItem Content="230400"/>
-                                <ComboBoxItem Content="460800"/>
-                                <ComboBoxItem Content="921600"/>
-                            </ComboBox>
+                            <ComboBox Grid.Column="1" x:Name="ComboCanBitrate" HorizontalAlignment="Stretch"/>
                         </Grid>
                         <!-- Status -->
                         <Grid ColumnSpacing="10">

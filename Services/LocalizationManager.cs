@@ -151,14 +151,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Cell_CutoffDesc        => T(nameof(Cell_CutoffDesc));
 
     // ── Control Panel ─────────────────────────────────────────────────────
-    public string Ctrl_SecSerial          => T(nameof(Ctrl_SecSerial));
-    public string Ctrl_ComPort            => T(nameof(Ctrl_ComPort));
+    public string Ctrl_SecCan          => T(nameof(Ctrl_SecCan));
+    public string Ctrl_CanChannel            => T(nameof(Ctrl_CanChannel));
     public string Ctrl_PhScanning         => T(nameof(Ctrl_PhScanning));
     public string Ctrl_PhNoPorts          => T(nameof(Ctrl_PhNoPorts));
+    public string Ctrl_PhNoDriver         => T(nameof(Ctrl_PhNoDriver));
     public string Ctrl_Refresh            => T(nameof(Ctrl_Refresh));
     public string Ctrl_Connect            => T(nameof(Ctrl_Connect));
     public string Ctrl_Disconnect         => T(nameof(Ctrl_Disconnect));
-    public string Ctrl_BaudRate           => T(nameof(Ctrl_BaudRate));
+    public string Ctrl_CanBitrate           => T(nameof(Ctrl_CanBitrate));
     public string Ctrl_ConnStatus         => T(nameof(Ctrl_ConnStatus));
     public string Ctrl_NotConnected       => T(nameof(Ctrl_NotConnected));
     public string Ctrl_AutoConnectStatus  => T(nameof(Ctrl_AutoConnectStatus));
@@ -184,9 +185,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ctrl_Language           => T(nameof(Ctrl_Language));
 
     // ── Feedback messages ─────────────────────────────────────────────────
-    public string Fb_SerialError          => T(nameof(Fb_SerialError));
-    public string Fb_SelectPort           => T(nameof(Fb_SelectPort));
-    public string Fb_SelectPortMsg        => T(nameof(Fb_SelectPortMsg));
+    public string Fb_CanError          => T(nameof(Fb_CanError));
+    public string Fb_SelectChannel           => T(nameof(Fb_SelectChannel));
+    public string Fb_SelectChannelMsg        => T(nameof(Fb_SelectChannelMsg));
     public string Fb_SettingsApplied      => T(nameof(Fb_SettingsApplied));
     public string Fb_SettingsAppliedMsg   => T(nameof(Fb_SettingsAppliedMsg));
     public string Fb_DefaultsRestored     => T(nameof(Fb_DefaultsRestored));
@@ -319,17 +320,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_WarnDesc)]          = "Warning (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Cutoff  (above 70°C)",
 
-            [nameof(Ctrl_SecSerial)]         = "SERIAL CONNECTION",
-            [nameof(Ctrl_ComPort)]           = "COM Port",
-            [nameof(Ctrl_PhScanning)]        = "Scanning ports…",
-            [nameof(Ctrl_PhNoPorts)]         = "No COM ports detected",
+            [nameof(Ctrl_SecCan)]            = "CAN BUS CONNECTION",
+            [nameof(Ctrl_CanChannel)]        = "CAN Channel",
+            [nameof(Ctrl_PhScanning)]        = "Scanning channels…",
+            [nameof(Ctrl_PhNoPorts)]         = "No CAN channels detected",
+            [nameof(Ctrl_PhNoDriver)]        = "PCAN-Basic driver not installed",
             [nameof(Ctrl_Refresh)]           = "Refresh",
             [nameof(Ctrl_Connect)]           = "Connect",
             [nameof(Ctrl_Disconnect)]        = "Disconnect",
-            [nameof(Ctrl_BaudRate)]          = "Baud Rate",
+            [nameof(Ctrl_CanBitrate)]        = "Bitrate",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Not connected",
-            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect active — waiting for ESP32 BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect active — waiting for BMS CAN frames…",
             [nameof(Ctrl_SecCapacity)]       = "BATTERY CAPACITY",
             [nameof(Ctrl_NominalCapacity)]   = "Nominal Capacity",
             [nameof(Ctrl_CapacityHint)]      = "Used to calculate remaining capacity (mAh) on dashboard.",
@@ -351,9 +353,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_SecLanguage)]       = "LANGUAGE",
             [nameof(Ctrl_Language)]          = "Language",
 
-            [nameof(Fb_SerialError)]         = "Serial error",
-            [nameof(Fb_SelectPort)]          = "Select a port",
-            [nameof(Fb_SelectPortMsg)]       = "Pick a COM port from the dropdown first.",
+            [nameof(Fb_CanError)]            = "CAN error",
+            [nameof(Fb_SelectChannel)]       = "Select a channel",
+            [nameof(Fb_SelectChannelMsg)]    = "Pick a CAN channel from the dropdown first.",
             [nameof(Fb_SettingsApplied)]     = "Settings applied",
             [nameof(Fb_SettingsAppliedMsg)]  = "New thresholds are active.",
             [nameof(Fb_DefaultsRestored)]    = "Defaults restored",
@@ -480,17 +482,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_WarnDesc)]          = "Peringatan (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
 
-            [nameof(Ctrl_SecSerial)]         = "KONEKSI SERIAL",
-            [nameof(Ctrl_ComPort)]           = "COM Port",
-            [nameof(Ctrl_PhScanning)]        = "Memindai port…",
-            [nameof(Ctrl_PhNoPorts)]         = "Tidak ada COM port terdeteksi",
+            [nameof(Ctrl_SecCan)]            = "KONEKSI CAN BUS",
+            [nameof(Ctrl_CanChannel)]        = "Channel CAN",
+            [nameof(Ctrl_PhScanning)]        = "Memindai channel…",
+            [nameof(Ctrl_PhNoPorts)]         = "Tidak ada channel CAN terdeteksi",
+            [nameof(Ctrl_PhNoDriver)]        = "Driver PCAN-Basic belum terinstal",
             [nameof(Ctrl_Refresh)]           = "Perbarui",
             [nameof(Ctrl_Connect)]           = "Hubungkan",
             [nameof(Ctrl_Disconnect)]        = "Putuskan",
-            [nameof(Ctrl_BaudRate)]          = "Baud Rate",
+            [nameof(Ctrl_CanBitrate)]        = "Bitrate",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Tidak terhubung",
-            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect aktif — menunggu ESP32 BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect aktif — menunggu frame CAN BMS…",
             [nameof(Ctrl_SecCapacity)]       = "KAPASITAS BATERAI",
             [nameof(Ctrl_NominalCapacity)]   = "Kapasitas Nominal",
             [nameof(Ctrl_CapacityHint)]      = "Digunakan untuk menghitung kapasitas sisa (mAh) di dashboard.",
@@ -512,9 +515,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_SecLanguage)]       = "BAHASA",
             [nameof(Ctrl_Language)]          = "Bahasa",
 
-            [nameof(Fb_SerialError)]         = "Kesalahan Serial",
-            [nameof(Fb_SelectPort)]          = "Pilih port",
-            [nameof(Fb_SelectPortMsg)]       = "Pilih COM port dari dropdown terlebih dahulu.",
+            [nameof(Fb_CanError)]            = "Kesalahan CAN",
+            [nameof(Fb_SelectChannel)]       = "Pilih channel",
+            [nameof(Fb_SelectChannelMsg)]    = "Pilih channel CAN dari dropdown terlebih dahulu.",
             [nameof(Fb_SettingsApplied)]     = "Pengaturan diterapkan",
             [nameof(Fb_SettingsAppliedMsg)]  = "Ambang batas baru aktif.",
             [nameof(Fb_DefaultsRestored)]    = "Default dipulihkan",
@@ -641,17 +644,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_WarnDesc)]          = "Amaran (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
 
-            [nameof(Ctrl_SecSerial)]         = "SAMBUNGAN BERSIRI",
-            [nameof(Ctrl_ComPort)]           = "COM Port",
-            [nameof(Ctrl_PhScanning)]        = "Mengimbas port…",
-            [nameof(Ctrl_PhNoPorts)]         = "Tiada port COM dikesan",
+            [nameof(Ctrl_SecCan)]            = "SAMBUNGAN CAN BUS",
+            [nameof(Ctrl_CanChannel)]        = "Saluran CAN",
+            [nameof(Ctrl_PhScanning)]        = "Mengimbas saluran…",
+            [nameof(Ctrl_PhNoPorts)]         = "Tiada saluran CAN dikesan",
+            [nameof(Ctrl_PhNoDriver)]        = "Pemacu PCAN-Basic belum dipasang",
             [nameof(Ctrl_Refresh)]           = "Muat Semula",
             [nameof(Ctrl_Connect)]           = "Sambungkan",
             [nameof(Ctrl_Disconnect)]        = "Putuskan",
-            [nameof(Ctrl_BaudRate)]          = "Kadar Baud",
+            [nameof(Ctrl_CanBitrate)]        = "Kadar Bit",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Tidak disambungkan",
-            [nameof(Ctrl_AutoConnectStatus)] = "Auto-sambung aktif — menunggu ESP32 BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Auto-sambung aktif — menunggu bingkai CAN BMS…",
             [nameof(Ctrl_SecCapacity)]       = "KAPASITI BATERI",
             [nameof(Ctrl_NominalCapacity)]   = "Kapasiti Nominal",
             [nameof(Ctrl_CapacityHint)]      = "Digunakan untuk mengira kapasiti sisa (mAh) di papan pemuka.",
@@ -673,9 +677,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_SecLanguage)]       = "BAHASA",
             [nameof(Ctrl_Language)]          = "Bahasa",
 
-            [nameof(Fb_SerialError)]         = "Ralat Bersiri",
-            [nameof(Fb_SelectPort)]          = "Pilih port",
-            [nameof(Fb_SelectPortMsg)]       = "Pilih port COM dari senarai juntai bawah terlebih dahulu.",
+            [nameof(Fb_CanError)]            = "Ralat CAN",
+            [nameof(Fb_SelectChannel)]       = "Pilih saluran",
+            [nameof(Fb_SelectChannelMsg)]    = "Pilih saluran CAN dari senarai juntai bawah terlebih dahulu.",
             [nameof(Fb_SettingsApplied)]     = "Tetapan digunakan",
             [nameof(Fb_SettingsAppliedMsg)]  = "Ambang baru adalah aktif.",
             [nameof(Fb_DefaultsRestored)]    = "Tetapan asal dipulihkan",
@@ -802,17 +806,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_WarnDesc)]          = "Waarschuwing (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Beveiliging  (boven 70°C)",
 
-            [nameof(Ctrl_SecSerial)]         = "SERIËLE VERBINDING",
-            [nameof(Ctrl_ComPort)]           = "COM-poort",
-            [nameof(Ctrl_PhScanning)]        = "Poorten scannen…",
-            [nameof(Ctrl_PhNoPorts)]         = "Geen COM-poorten gevonden",
+            [nameof(Ctrl_SecCan)]            = "CAN-BUS VERBINDING",
+            [nameof(Ctrl_CanChannel)]        = "CAN-kanaal",
+            [nameof(Ctrl_PhScanning)]        = "Kanalen scannen…",
+            [nameof(Ctrl_PhNoPorts)]         = "Geen CAN-kanalen gevonden",
+            [nameof(Ctrl_PhNoDriver)]        = "PCAN-Basic-stuurprogramma niet geïnstalleerd",
             [nameof(Ctrl_Refresh)]           = "Vernieuwen",
             [nameof(Ctrl_Connect)]           = "Verbinden",
             [nameof(Ctrl_Disconnect)]        = "Verbreken",
-            [nameof(Ctrl_BaudRate)]          = "Baudsnelheid",
+            [nameof(Ctrl_CanBitrate)]        = "Bitrate",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Niet verbonden",
-            [nameof(Ctrl_AutoConnectStatus)] = "Automatisch verbinden actief — wacht op ESP32 BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Automatisch verbinden actief — wacht op BMS CAN-frames…",
             [nameof(Ctrl_SecCapacity)]       = "BATTERIJCAPACITEIT",
             [nameof(Ctrl_NominalCapacity)]   = "Nominale Capaciteit",
             [nameof(Ctrl_CapacityHint)]      = "Gebruikt om de resterende capaciteit (mAh) op het dashboard te berekenen.",
@@ -834,9 +839,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_SecLanguage)]       = "TAAL",
             [nameof(Ctrl_Language)]          = "Taal",
 
-            [nameof(Fb_SerialError)]         = "Seriële fout",
-            [nameof(Fb_SelectPort)]          = "Selecteer een poort",
-            [nameof(Fb_SelectPortMsg)]       = "Selecteer eerst een COM-poort uit de vervolgkeuzelijst.",
+            [nameof(Fb_CanError)]            = "CAN-fout",
+            [nameof(Fb_SelectChannel)]       = "Selecteer een kanaal",
+            [nameof(Fb_SelectChannelMsg)]    = "Selecteer eerst een CAN-kanaal uit de vervolgkeuzelijst.",
             [nameof(Fb_SettingsApplied)]     = "Instellingen toegepast",
             [nameof(Fb_SettingsAppliedMsg)]  = "Nieuwe drempelwaarden zijn actief.",
             [nameof(Fb_DefaultsRestored)]    = "Standaard hersteld",
@@ -963,17 +968,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_WarnDesc)]          = "警告 (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "断路 (高于 70°C)",
 
-            [nameof(Ctrl_SecSerial)]         = "串口连接",
-            [nameof(Ctrl_ComPort)]           = "串口",
-            [nameof(Ctrl_PhScanning)]        = "正在扫描端口…",
-            [nameof(Ctrl_PhNoPorts)]         = "未检测到 COM 端口",
+            [nameof(Ctrl_SecCan)]            = "CAN 总线连接",
+            [nameof(Ctrl_CanChannel)]        = "CAN 通道",
+            [nameof(Ctrl_PhScanning)]        = "正在扫描通道…",
+            [nameof(Ctrl_PhNoPorts)]         = "未检测到 CAN 通道",
+            [nameof(Ctrl_PhNoDriver)]        = "未安装 PCAN-Basic 驱动",
             [nameof(Ctrl_Refresh)]           = "刷新",
             [nameof(Ctrl_Connect)]           = "连接",
             [nameof(Ctrl_Disconnect)]        = "断开",
-            [nameof(Ctrl_BaudRate)]          = "波特率",
+            [nameof(Ctrl_CanBitrate)]        = "比特率",
             [nameof(Ctrl_ConnStatus)]        = "状态",
             [nameof(Ctrl_NotConnected)]      = "未连接",
-            [nameof(Ctrl_AutoConnectStatus)] = "自动连接已启动 — 等待 ESP32 BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "自动连接已启动 — 等待 BMS CAN 帧…",
             [nameof(Ctrl_SecCapacity)]       = "电池容量",
             [nameof(Ctrl_NominalCapacity)]   = "额定容量",
             [nameof(Ctrl_CapacityHint)]      = "用于计算仪表盘上的剩余容量 (mAh)。",
@@ -995,9 +1001,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_SecLanguage)]       = "语言",
             [nameof(Ctrl_Language)]          = "语言",
 
-            [nameof(Fb_SerialError)]         = "串口错误",
-            [nameof(Fb_SelectPort)]          = "选择端口",
-            [nameof(Fb_SelectPortMsg)]       = "请先从下拉列表中选择一个 COM 端口。",
+            [nameof(Fb_CanError)]            = "CAN 错误",
+            [nameof(Fb_SelectChannel)]       = "选择通道",
+            [nameof(Fb_SelectChannelMsg)]    = "请先从下拉列表中选择一个 CAN 通道。",
             [nameof(Fb_SettingsApplied)]     = "设置已应用",
             [nameof(Fb_SettingsAppliedMsg)]  = "新阈值已生效。",
             [nameof(Fb_DefaultsRestored)]    = "已恢复默认",

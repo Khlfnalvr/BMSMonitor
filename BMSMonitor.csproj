@@ -18,10 +18,10 @@
     <AssemblyTitle>Software BMS ICO</AssemblyTitle>
     <Product>Software BMS ICO</Product>
     <Description>BMS Monitor — Cell voltages, SOC, temperatures &amp; balancing</Description>
-    <Version>1.1.0</Version>
-    <AssemblyVersion>1.1.0.0</AssemblyVersion>
-    <FileVersion>1.1.0.0</FileVersion>
-    <InformationalVersion>1.1.0</InformationalVersion>
+    <Version>1.2.0</Version>
+    <AssemblyVersion>1.2.0.0</AssemblyVersion>
+    <FileVersion>1.2.0.0</FileVersion>
+    <InformationalVersion>1.2.0</InformationalVersion>
   </PropertyGroup>
 
   <!-- Publish / release optimizations -->
@@ -44,8 +44,6 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
-    <!-- Upgraded from 8.0.0 to align with net10 runtime -->
-    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -12,7 +12,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly DispatcherQueue _dispatcherQueue;
 
-    public SerialPortService  Serial      { get; } = new();
+    public CanBusService      CanBus      { get; } = new();
     public LoggingService     Logging     { get; } = new();
     public AutoConnectService AutoConnect { get; }
 
@@ -32,7 +32,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty][NotifyPropertyChangedFor(nameof(BalancingText))] private int _balancingCount;
 
     // --- Connection ---
-    [ObservableProperty] private string _connectionStatus = "Not connected — open Control Panel to connect ESP32";
+    [ObservableProperty] private string _connectionStatus = "Not connected — open Control Panel to connect CAN bus";
     [ObservableProperty] private bool   _isConnected;
     [ObservableProperty] private string _dataSourceText = "SOURCE: NOT CONNECTED";
 
@@ -77,16 +77,28 @@ public partial class MainViewModel : ObservableObject
     private readonly Queue<double[]> _cellHistory    = new(120);  // 20 cell voltages per sample
     private readonly Queue<DateTime> _timestamps     = new(120);
 
+    // Cached endpoints — avoid _timestamps.ToArray()[^1] on every redraw.
+    private DateTime? _cachedEarliest;
+    private DateTime? _cachedLatest;
+
+    // Hard ceiling on retained samples. Beyond this, oldest drop off
+    // (rolling). At 1 Hz this is ~10 hours of history — well past any
+    // sensible monitoring window, but keeps memory bounded so the
+    // charts and trim bar can't grow forever.
+    private const int MaxRetainedSamples = 36000;
+
     private void TrimHistoryBuffers()
     {
         int cap = HistoryCapacity;
-        if (cap <= 0) return;
+        if (cap <= 0) cap = MaxRetainedSamples;
         while (_socHistory.Count     > cap) _socHistory.Dequeue();
         while (_voltageHistory.Count > cap) _voltageHistory.Dequeue();
         while (_currentHistory.Count > cap) _currentHistory.Dequeue();
         while (_tempHistory.Count    > cap) _tempHistory.Dequeue();
         while (_cellHistory.Count    > cap) _cellHistory.Dequeue();
         while (_timestamps.Count     > cap) _timestamps.Dequeue();
+        _cachedEarliest = _timestamps.Count > 0 ? _timestamps.Peek() : (DateTime?)null;
+        if (_timestamps.Count == 0) _cachedLatest = null;
     }
 
     public event Action? HistoryUpdated;
@@ -122,16 +134,16 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
-        AutoConnect      = new AutoConnectService(Serial);
-        AutoConnect.Start();                               // always-on, begins scanning immediately
+        AutoConnect      = new AutoConnectService(CanBus);
+        AutoConnect.Start(CanBusService.DefaultBitrateCode, CanBusService.DefaultBitrate);
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
 
-        // Live serial — skip if a playback file is loaded (don't overwrite review data).
-        Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
-        Serial.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnSerialStatus(msg));
-        Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
+        // Live CAN — skip if a playback file is loaded (don't overwrite review data).
+        CanBus.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
+        CanBus.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnCanStatus(msg));
+        CanBus.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
 
         // Playback frames feed through the same pipeline as live data
         // (the chart history is pre-populated by FileLoaded, so ApplyData
@@ -161,14 +173,14 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(RemainingCapacityText));
     }
 
-    private void OnSerialStatus(string msg)
+    private void OnCanStatus(string msg)
     {
         ConnectionStatus = msg;
-        IsConnected      = Serial.IsConnected;
+        IsConnected      = CanBus.IsConnected;
 
-        if (Serial.IsConnected)
+        if (CanBus.IsConnected)
         {
-            DataSourceText = $"SOURCE: {Serial.PortName} @ {Serial.BaudRate}";
+            DataSourceText = $"SOURCE: {CanBus.ChannelName} @ {CanBus.Bitrate} kbit/s";
         }
         else
         {
@@ -212,12 +224,15 @@ public partial class MainViewModel : ObservableObject
             Logging.Log(data);
             App.Notifications.CheckAndNotify(data, Config);
 
+            var now = DateTime.Now;
             _socHistory.Enqueue(data.Soc);
             _voltageHistory.Enqueue(data.PackVoltage);
             _currentHistory.Enqueue(data.Current);
             _tempHistory.Enqueue((double[])data.Temps.Clone());
             _cellHistory.Enqueue((double[])data.Cells.Clone());
-            _timestamps.Enqueue(DateTime.Now);
+            _timestamps.Enqueue(now);
+            _cachedLatest = now;
+            if (_cachedEarliest is null) _cachedEarliest = now;
             TrimHistoryBuffers();
         }
 
@@ -248,6 +263,8 @@ public partial class MainViewModel : ObservableObject
 
         if (frames.Length == 0)
         {
+            _cachedEarliest = null;
+            _cachedLatest   = null;
             HistoryUpdated?.Invoke();
             return;
         }
@@ -265,6 +282,9 @@ public partial class MainViewModel : ObservableObject
             _cellHistory.Enqueue((double[])frames[i].Cells.Clone());
             _timestamps.Enqueue(baseTime.AddSeconds(i));
         }
+        _cachedEarliest = baseTime;
+        _cachedLatest   = baseTime.AddSeconds(frames.Length - 1);
+        TrimHistoryBuffers();
 
         HistoryReset?.Invoke();
         HistoryUpdated?.Invoke();
@@ -279,6 +299,8 @@ public partial class MainViewModel : ObservableObject
         _tempHistory.Clear();
         _cellHistory.Clear();
         _timestamps.Clear();
+        _cachedEarliest = null;
+        _cachedLatest   = null;
         HistoryReset?.Invoke();
         HistoryUpdated?.Invoke();
     }
@@ -321,9 +343,11 @@ public partial class MainViewModel : ObservableObject
     // aligned with GetSocHistory()/GetViHistory() by index.
     public DateTime[] GetTimestamps() => _timestamps.ToArray();
 
-    public DateTime? EarliestTimestamp => _timestamps.Count > 0 ? _timestamps.Peek() : null;
-    public DateTime? LatestTimestamp   =>
-        _timestamps.Count > 0 ? _timestamps.ToArray()[^1] : null;
+    // Cached — updated on enqueue/dequeue. Reading these no longer
+    // allocates a copy of the entire timestamps queue.
+    public DateTime? EarliestTimestamp => _cachedEarliest;
+    public DateTime? LatestTimestamp   => _cachedLatest;
+    public int HistorySampleCount      => _timestamps.Count;
 
     private CellState GetCellState(double voltage)
     {

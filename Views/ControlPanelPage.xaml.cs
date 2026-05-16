@@ -16,8 +16,9 @@ public sealed partial class ControlPanelPage : Page
     {
         InitializeComponent();
         LoadConfig();
-        RefreshPorts();
-        HookSerial();
+        PopulateBitrates();
+        RefreshChannels();
+        HookCanBus();
         SyncConnectButton();
         InitLangCombo();
     }
@@ -37,24 +38,23 @@ public sealed partial class ControlPanelPage : Page
         if (LangCombo.SelectedItem is ComboBoxItem item && item.Tag is string tag)
         {
             Lang.CurrentLanguage = tag;
-            // Re-sync button text that is set in code-behind
             SyncConnectButton();
         }
     }
 
-    // ── Serial controls ───────────────────────────────────────────────────
-    private void HookSerial()
+    // ── CAN bus controls ──────────────────────────────────────────────────
+    private void HookCanBus()
     {
-        ViewModel.Serial.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
+        ViewModel.CanBus.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
         {
             ConnStatusText.Text = msg;
             SyncConnectButton();
         });
-        ViewModel.Serial.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
+        ViewModel.CanBus.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
         {
-            // Suppress errors while auto-connect is scanning — expected when probing ports.
+            // Suppress errors while auto-connect is scanning — expected when probing channels.
             if (!ViewModel.AutoConnect.IsSuspended) return;
-            FeedbackBar.Title    = Lang.Fb_SerialError;
+            FeedbackBar.Title    = Lang.Fb_CanError;
             FeedbackBar.Message  = msg;
             FeedbackBar.Severity = InfoBarSeverity.Error;
             FeedbackBar.IsOpen   = true;
@@ -65,65 +65,107 @@ public sealed partial class ControlPanelPage : Page
 
     private void SyncConnectButton()
     {
-        bool connected = ViewModel.Serial.IsConnected;
-        ConnectBtn.Content  = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
-        ComboCOM.IsEnabled  = !connected;
-        ComboBaud.IsEnabled = !connected;
+        bool connected = ViewModel.CanBus.IsConnected;
+        ConnectBtn.Content        = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
+        ComboCanChannel.IsEnabled = !connected;
+        ComboCanBitrate.IsEnabled = !connected;
         if (!connected) ConnStatusText.Text = Lang.Ctrl_NotConnected;
     }
 
-    private void RefreshPorts()
+    private void PopulateBitrates()
     {
-        var current = ComboCOM.SelectedItem as string;
-        ComboCOM.Items.Clear();
+        ComboCanBitrate.Items.Clear();
+        foreach (var b in CanBusService.Bitrates)
+            ComboCanBitrate.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
 
-        var ports = SerialPortService.GetAvailablePorts();
-        foreach (var p in ports) ComboCOM.Items.Add(p);
-
-        if (ports.Length == 0)
+        // Default to 500 kbit/s — typical BMS rate
+        for (int i = 0; i < ComboCanBitrate.Items.Count; i++)
         {
-            ComboCOM.PlaceholderText = Lang.Ctrl_PhNoPorts;
+            if (ComboCanBitrate.Items[i] is ComboBoxItem item &&
+                item.Tag is CanBusService.CanBitrate br &&
+                br.Kbps == CanBusService.DefaultBitrate)
+            {
+                ComboCanBitrate.SelectedIndex = i;
+                break;
+            }
+        }
+        if (ComboCanBitrate.SelectedIndex < 0 && ComboCanBitrate.Items.Count > 0)
+            ComboCanBitrate.SelectedIndex = 0;
+    }
+
+    private void RefreshChannels()
+    {
+        var current = (ComboCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanBusService.CanChannel;
+        ComboCanChannel.Items.Clear();
+
+        if (!CanBusService.IsDriverAvailable())
+        {
+            ComboCanChannel.PlaceholderText = Lang.Ctrl_PhNoDriver;
             return;
         }
 
-        ComboCOM.PlaceholderText = Lang.Ctrl_PhScanning;
-        if (current != null && ports.Contains(current))
-            ComboCOM.SelectedItem = current;
-        else
-            ComboCOM.SelectedIndex = 0;
+        foreach (var ch in CanBusService.Channels)
+            ComboCanChannel.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
+
+        ComboCanChannel.PlaceholderText = Lang.Ctrl_PhScanning;
+
+        if (current is not null)
+        {
+            for (int i = 0; i < ComboCanChannel.Items.Count; i++)
+            {
+                if (ComboCanChannel.Items[i] is ComboBoxItem it &&
+                    it.Tag is CanBusService.CanChannel c && c.Handle == current.Handle)
+                {
+                    ComboCanChannel.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+        ComboCanChannel.SelectedIndex = 0;
     }
 
-    private void RefreshPorts_Click(object sender, RoutedEventArgs e) => RefreshPorts();
+    private void RefreshChannels_Click(object sender, RoutedEventArgs e) => RefreshChannels();
 
-    private int GetSelectedBaud()
+    private (ushort btr, int kbps) GetSelectedBitrate()
     {
-        if (ComboBaud.SelectedItem is ComboBoxItem item &&
-            item.Content is string s && int.TryParse(s, out var b))
-            return b;
-        return 115200;
+        if (ComboCanBitrate.SelectedItem is ComboBoxItem item &&
+            item.Tag is CanBusService.CanBitrate br)
+            return (br.Btr, br.Kbps);
+        return (CanBusService.DefaultBitrateCode, CanBusService.DefaultBitrate);
+    }
+
+    private CanBusService.CanChannel? GetSelectedChannel()
+    {
+        if (ComboCanChannel.SelectedItem is ComboBoxItem item &&
+            item.Tag is CanBusService.CanChannel ch)
+            return ch;
+        return null;
     }
 
     private void ConnectBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.Serial.IsConnected)
+        if (ViewModel.CanBus.IsConnected)
         {
             ViewModel.AutoConnect.SuspendReconnect();
-            ViewModel.Serial.Disconnect();
+            ViewModel.CanBus.Disconnect();
             return;
         }
 
-        if (ComboCOM.SelectedItem is not string port)
+        var channel = GetSelectedChannel();
+        if (channel is null)
         {
-            FeedbackBar.Title    = Lang.Fb_SelectPort;
-            FeedbackBar.Message  = Lang.Fb_SelectPortMsg;
+            FeedbackBar.Title    = Lang.Fb_SelectChannel;
+            FeedbackBar.Message  = Lang.Fb_SelectChannelMsg;
             FeedbackBar.Severity = InfoBarSeverity.Warning;
             FeedbackBar.IsOpen   = true;
             return;
         }
 
-        ViewModel.AutoConnect.BaudRate = GetSelectedBaud();
+        var (btr, kbps) = GetSelectedBitrate();
+        ViewModel.AutoConnect.BitrateCode = btr;
+        ViewModel.AutoConnect.BitrateKbps = kbps;
         ViewModel.AutoConnect.ResumeReconnect();
-        ViewModel.Serial.Connect(port, GetSelectedBaud());
+        ViewModel.CanBus.Connect(channel.Handle, btr, kbps, channel.DisplayName);
     }
 
     // ── Settings ──────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define AppName      "BMS Monitor"
-#define AppVersion   "1.1.0"
+#define AppVersion   "1.2.0"
 #define AppPublisher "ICO Laboratory"
 #define AppExe       "BMSMonitor.exe"
 
@@ -21,7 +21,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=license.txt
 OutputDir=Publish
-OutputBaseFilename=BMSMonitorSetup-v1.1.0
+OutputBaseFilename=BMSMonitorSetup-v1.2.0
 SetupIconFile=Assets\logo.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
