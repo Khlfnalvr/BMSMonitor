@@ -131,11 +131,32 @@ public partial class MainViewModel : ObservableObject
     // --- Playback ---
     public PlaybackService Playback { get; } = new();
 
+    // --- Per-cell session statistics ---
+    private readonly double[] _cellStatMin   = Enumerable.Repeat(double.MaxValue, 20).ToArray();
+    private readonly double[] _cellStatMax   = new double[20];
+    private readonly double[] _cellStatSum   = new double[20];
+    private int               _cellStatCount = 0;
+
+    public void ResetCellStats()
+    {
+        Array.Fill(_cellStatMin, double.MaxValue);
+        Array.Fill(_cellStatMax, 0.0);
+        Array.Fill(_cellStatSum, 0.0);
+        _cellStatCount = 0;
+        foreach (var c in Cells) c.ResetStats();
+    }
+
     public MainViewModel(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
         AutoConnect      = new AutoConnectService(CanBus);
-        AutoConnect.Start(CanBusService.DefaultBitrateCode, CanBusService.DefaultBitrate);
+
+        var savedSettings = AppSettingsService.Load();
+        ApplySettings(savedSettings);
+        var savedBtr = CanBusService.Bitrates.FirstOrDefault(b => b.Kbps == savedSettings.CanBitrateKbps);
+        AutoConnect.Start(
+            savedBtr?.Btr ?? CanBusService.DefaultBitrateCode,
+            savedBtr?.Kbps ?? CanBusService.DefaultBitrate);
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
@@ -210,6 +231,18 @@ public partial class MainViewModel : ObservableObject
             if (data.Balancing[i]) balCount++;
         }
         BalancingCount = balCount;
+
+        // Accumulate per-cell session statistics (skip invalid zero readings).
+        _cellStatCount++;
+        for (int i = 0; i < 20; i++)
+        {
+            double v = data.Cells[i];
+            if (v <= 0) continue;
+            if (v < _cellStatMin[i]) { _cellStatMin[i] = v; Cells[i].StatMin = v; }
+            if (v > _cellStatMax[i]) { _cellStatMax[i] = v; Cells[i].StatMax = v; }
+            _cellStatSum[i] += v;
+            Cells[i].StatAvg = _cellStatSum[i] / _cellStatCount;
+        }
 
         for (int i = 0; i < 10; i++)
             Temperatures[i].Temperature = data.Temps[i];
@@ -301,6 +334,7 @@ public partial class MainViewModel : ObservableObject
         _timestamps.Clear();
         _cachedEarliest = null;
         _cachedLatest   = null;
+        ResetCellStats();
         HistoryReset?.Invoke();
         HistoryUpdated?.Invoke();
     }
@@ -359,6 +393,47 @@ public partial class MainViewModel : ObservableObject
     public DateTime? EarliestTimestamp => _cachedEarliest;
     public DateTime? LatestTimestamp   => _cachedLatest;
     public int HistorySampleCount      => _timestamps.Count;
+
+    private void ApplySettings(AppSettings s)
+    {
+        Config.NominalCapacityAh     = s.NominalCapacityAh;
+        Config.MaxDod                = s.MaxDod;
+        Config.MaxChargeCurrent      = s.MaxChargeCurrent;
+        Config.MaxDischargeCurrent   = s.MaxDischargeCurrent;
+        Config.OvervoltageThreshold  = s.OvervoltageThreshold;
+        Config.UndervoltageThreshold = s.UndervoltageThreshold;
+        Config.LowVoltageWarning     = s.LowVoltageWarning;
+        Config.OverTempWarning       = s.OverTempWarning;
+        Config.OverTempCutoff        = s.OverTempCutoff;
+        Config.BalancingStartDelta   = s.BalancingStartDeltaMv / 1000.0;
+        Config.BalancingStopDelta    = s.BalancingStopDeltaMv  / 1000.0;
+
+        AutoConnect.ReconnectIntervalSec = s.ReconnectIntervalSec;
+        AutoConnect.ProbeTimeoutMs       = s.ProbeTimeoutMs;
+        if (!s.AutoConnectEnabled) AutoConnect.SuspendReconnect();
+    }
+
+    public void SaveSettings()
+    {
+        AppSettingsService.Save(new AppSettings
+        {
+            NominalCapacityAh     = Config.NominalCapacityAh,
+            MaxDod                = Config.MaxDod,
+            MaxChargeCurrent      = Config.MaxChargeCurrent,
+            MaxDischargeCurrent   = Config.MaxDischargeCurrent,
+            OvervoltageThreshold  = Config.OvervoltageThreshold,
+            UndervoltageThreshold = Config.UndervoltageThreshold,
+            LowVoltageWarning     = Config.LowVoltageWarning,
+            OverTempWarning       = Config.OverTempWarning,
+            OverTempCutoff        = Config.OverTempCutoff,
+            BalancingStartDeltaMv = Config.BalancingStartDelta * 1000.0,
+            BalancingStopDeltaMv  = Config.BalancingStopDelta  * 1000.0,
+            CanBitrateKbps        = AutoConnect.BitrateKbps,
+            ReconnectIntervalSec  = AutoConnect.ReconnectIntervalSec,
+            ProbeTimeoutMs        = AutoConnect.ProbeTimeoutMs,
+            AutoConnectEnabled    = !AutoConnect.IsSuspended,
+        });
+    }
 
     private CellState GetCellState(double voltage)
     {

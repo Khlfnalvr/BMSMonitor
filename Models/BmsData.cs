@@ -2,6 +2,21 @@ namespace BMSMonitor.Models;
 
 public enum LogFormat { Csv, Tsv, Excel, Json }
 
+public class AlertRecord
+{
+    public DateTime Timestamp { get; }
+    public string   Title     { get; }
+    public string   Body      { get; }
+    public string   TimeText  => Timestamp.ToString("HH:mm:ss  dd/MM");
+
+    public AlertRecord(DateTime ts, string title, string body)
+    {
+        Timestamp = ts;
+        Title     = title;
+        Body      = body;
+    }
+}
+
 
 public enum CellState { Normal, Low, Undervoltage, Overvoltage }
 

@@ -99,6 +99,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ui_SwitchToDark   => T(nameof(Ui_SwitchToDark));
     public string Ui_ChangeLanguage => T(nameof(Ui_ChangeLanguage));
 
+    // ── Caption-bar CAN picker ────────────────────────────────────────────
+    public string Ui_CanConnection  => T(nameof(Ui_CanConnection));
+    public string Ui_CanQuickAccess => T(nameof(Ui_CanQuickAccess));
+
+    // ── Alert history ─────────────────────────────────────────────────────
+    public string Ui_AlertHistory   => T(nameof(Ui_AlertHistory));
+    public string Ui_NoAlerts       => T(nameof(Ui_NoAlerts));
+    public string Ui_ClearAlerts    => T(nameof(Ui_ClearAlerts));
+
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
     public string Com_Max    => T(nameof(Com_Max));
@@ -134,6 +143,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Dash_CellDelta        => T(nameof(Dash_CellDelta));
     public string Dash_Method           => T(nameof(Dash_Method));
     public string Dash_ActiveMethod     => T(nameof(Dash_ActiveMethod));
+
+    // ── Cell statistics ───────────────────────────────────────────────────
+    public string Cell_ResetStats        => T(nameof(Cell_ResetStats));
 
     // ── Cell View ─────────────────────────────────────────────────────────
     public string Cell_SecVoltageSummary => T(nameof(Cell_SecVoltageSummary));
@@ -184,8 +196,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ctrl_StopDelta          => T(nameof(Ctrl_StopDelta));
     public string Ctrl_ResetDefaults      => T(nameof(Ctrl_ResetDefaults));
     public string Ctrl_ApplySettings      => T(nameof(Ctrl_ApplySettings));
-    public string Ctrl_SecLanguage        => T(nameof(Ctrl_SecLanguage));
-    public string Ctrl_Language           => T(nameof(Ctrl_Language));
+
+    // ── Control Panel — advanced CAN parameters ───────────────────────────
+    public string Ctrl_SecCanAdvanced     => T(nameof(Ctrl_SecCanAdvanced));
+    public string Ctrl_AutoConnect        => T(nameof(Ctrl_AutoConnect));
+    public string Ctrl_AutoConnectHint    => T(nameof(Ctrl_AutoConnectHint));
+    public string Ctrl_ReconnectInterval  => T(nameof(Ctrl_ReconnectInterval));
+    public string Ctrl_ProbeTimeout       => T(nameof(Ctrl_ProbeTimeout));
+    public string Ctrl_FramesReceived     => T(nameof(Ctrl_FramesReceived));
+    public string Ctrl_ParseErrors        => T(nameof(Ctrl_ParseErrors));
 
     // ── Feedback messages ─────────────────────────────────────────────────
     public string Fb_CanError          => T(nameof(Fb_CanError));
@@ -274,6 +293,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Switch to Light mode",
             [nameof(Ui_SwitchToDark)]  = "Switch to Dark mode",
             [nameof(Ui_ChangeLanguage)] = "Change language",
+            [nameof(Ui_CanConnection)]  = "CAN Connection",
+            [nameof(Ui_CanQuickAccess)] = "Quick CAN bus access",
+            [nameof(Ui_AlertHistory)]   = "Alert History",
+            [nameof(Ui_NoAlerts)]       = "No alerts yet",
+            [nameof(Ui_ClearAlerts)]    = "Clear",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -325,6 +349,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normal  (below 60°C)",
             [nameof(Cell_WarnDesc)]          = "Warning (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Cutoff  (above 70°C)",
+            [nameof(Cell_ResetStats)]        = "Reset Statistics",
 
             [nameof(Ctrl_SecCan)]            = "CAN BUS CONNECTION",
             [nameof(Ctrl_CanChannel)]        = "CAN Channel",
@@ -356,8 +381,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_StopDelta)]         = "Stop Delta",
             [nameof(Ctrl_ResetDefaults)]     = "Reset to Defaults",
             [nameof(Ctrl_ApplySettings)]     = "Apply Settings",
-            [nameof(Ctrl_SecLanguage)]       = "LANGUAGE",
-            [nameof(Ctrl_Language)]          = "Language",
+
+            [nameof(Ctrl_SecCanAdvanced)]    = "CAN BUS PARAMETERS",
+            [nameof(Ctrl_AutoConnect)]       = "Auto-Connect",
+            [nameof(Ctrl_AutoConnectHint)]   = "Automatically scan PCAN-USB channels and lock onto the first one that broadcasts BMS heartbeat frames.",
+            [nameof(Ctrl_ReconnectInterval)] = "Reconnect Interval",
+            [nameof(Ctrl_ProbeTimeout)]      = "Probe Timeout",
+            [nameof(Ctrl_FramesReceived)]    = "Frames received",
+            [nameof(Ctrl_ParseErrors)]       = "Parse errors",
 
             [nameof(Fb_CanError)]            = "CAN error",
             [nameof(Fb_SelectChannel)]       = "Select a channel",
@@ -439,6 +470,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Beralih ke Mode Terang",
             [nameof(Ui_SwitchToDark)]  = "Beralih ke Mode Gelap",
             [nameof(Ui_ChangeLanguage)] = "Ubah bahasa",
+            [nameof(Ui_CanConnection)]  = "Koneksi CAN",
+            [nameof(Ui_CanQuickAccess)] = "Akses cepat CAN bus",
+            [nameof(Ui_AlertHistory)]   = "Riwayat Alert",
+            [nameof(Ui_NoAlerts)]       = "Belum ada alert",
+            [nameof(Ui_ClearAlerts)]    = "Hapus",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -490,6 +526,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normal  (di bawah 60°C)",
             [nameof(Cell_WarnDesc)]          = "Peringatan (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
+            [nameof(Cell_ResetStats)]        = "Reset Statistik",
 
             [nameof(Ctrl_SecCan)]            = "KONEKSI CAN BUS",
             [nameof(Ctrl_CanChannel)]        = "Channel CAN",
@@ -521,8 +558,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_StopDelta)]         = "Delta Berhenti",
             [nameof(Ctrl_ResetDefaults)]     = "Reset ke Default",
             [nameof(Ctrl_ApplySettings)]     = "Terapkan Pengaturan",
-            [nameof(Ctrl_SecLanguage)]       = "BAHASA",
-            [nameof(Ctrl_Language)]          = "Bahasa",
+
+            [nameof(Ctrl_SecCanAdvanced)]    = "PARAMETER CAN BUS",
+            [nameof(Ctrl_AutoConnect)]       = "Auto-Hubungkan",
+            [nameof(Ctrl_AutoConnectHint)]   = "Memindai channel PCAN-USB secara otomatis dan terhubung ke yang mengirim frame heartbeat BMS.",
+            [nameof(Ctrl_ReconnectInterval)] = "Interval Pindai",
+            [nameof(Ctrl_ProbeTimeout)]      = "Timeout Verifikasi",
+            [nameof(Ctrl_FramesReceived)]    = "Frame diterima",
+            [nameof(Ctrl_ParseErrors)]       = "Kesalahan parsing",
 
             [nameof(Fb_CanError)]            = "Kesalahan CAN",
             [nameof(Fb_SelectChannel)]       = "Pilih channel",
@@ -604,6 +647,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Tukar ke Mod Cerah",
             [nameof(Ui_SwitchToDark)]  = "Tukar ke Mod Gelap",
             [nameof(Ui_ChangeLanguage)] = "Tukar bahasa",
+            [nameof(Ui_CanConnection)]  = "Sambungan CAN",
+            [nameof(Ui_CanQuickAccess)] = "Akses pantas CAN bus",
+            [nameof(Ui_AlertHistory)]   = "Sejarah Amaran",
+            [nameof(Ui_NoAlerts)]       = "Tiada amaran lagi",
+            [nameof(Ui_ClearAlerts)]    = "Hapus",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -655,6 +703,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normal  (di bawah 60°C)",
             [nameof(Cell_WarnDesc)]          = "Amaran (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
+            [nameof(Cell_ResetStats)]        = "Tetapkan Semula Statistik",
 
             [nameof(Ctrl_SecCan)]            = "SAMBUNGAN CAN BUS",
             [nameof(Ctrl_CanChannel)]        = "Saluran CAN",
@@ -686,8 +735,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_StopDelta)]         = "Delta Berhenti",
             [nameof(Ctrl_ResetDefaults)]     = "Tetapkan Semula",
             [nameof(Ctrl_ApplySettings)]     = "Guna Tetapan",
-            [nameof(Ctrl_SecLanguage)]       = "BAHASA",
-            [nameof(Ctrl_Language)]          = "Bahasa",
+
+            [nameof(Ctrl_SecCanAdvanced)]    = "PARAMETER CAN BUS",
+            [nameof(Ctrl_AutoConnect)]       = "Auto-Sambung",
+            [nameof(Ctrl_AutoConnectHint)]   = "Mengimbas saluran PCAN-USB secara automatik dan menyambung ke saluran yang menghantar bingkai heartbeat BMS.",
+            [nameof(Ctrl_ReconnectInterval)] = "Selang Imbasan",
+            [nameof(Ctrl_ProbeTimeout)]      = "Tamat Masa Pemeriksaan",
+            [nameof(Ctrl_FramesReceived)]    = "Bingkai diterima",
+            [nameof(Ctrl_ParseErrors)]       = "Ralat penghuraian",
 
             [nameof(Fb_CanError)]            = "Ralat CAN",
             [nameof(Fb_SelectChannel)]       = "Pilih saluran",
@@ -769,6 +824,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Overschakelen naar lichte modus",
             [nameof(Ui_SwitchToDark)]  = "Overschakelen naar donkere modus",
             [nameof(Ui_ChangeLanguage)] = "Taal wijzigen",
+            [nameof(Ui_CanConnection)]  = "CAN-verbinding",
+            [nameof(Ui_CanQuickAccess)] = "Snelle toegang tot CAN-bus",
+            [nameof(Ui_AlertHistory)]   = "Waarschuwingslog",
+            [nameof(Ui_NoAlerts)]       = "Geen waarschuwingen",
+            [nameof(Ui_ClearAlerts)]    = "Wissen",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -820,6 +880,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normaal  (onder 60°C)",
             [nameof(Cell_WarnDesc)]          = "Waarschuwing (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Beveiliging  (boven 70°C)",
+            [nameof(Cell_ResetStats)]        = "Statistieken resetten",
 
             [nameof(Ctrl_SecCan)]            = "CAN-BUS VERBINDING",
             [nameof(Ctrl_CanChannel)]        = "CAN-kanaal",
@@ -851,8 +912,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_StopDelta)]         = "Stop Delta",
             [nameof(Ctrl_ResetDefaults)]     = "Standaard herstellen",
             [nameof(Ctrl_ApplySettings)]     = "Instellingen toepassen",
-            [nameof(Ctrl_SecLanguage)]       = "TAAL",
-            [nameof(Ctrl_Language)]          = "Taal",
+
+            [nameof(Ctrl_SecCanAdvanced)]    = "CAN-BUS PARAMETERS",
+            [nameof(Ctrl_AutoConnect)]       = "Automatisch verbinden",
+            [nameof(Ctrl_AutoConnectHint)]   = "Scan automatisch PCAN-USB-kanalen en maak verbinding met het kanaal dat BMS-heartbeat-frames uitzendt.",
+            [nameof(Ctrl_ReconnectInterval)] = "Scan-interval",
+            [nameof(Ctrl_ProbeTimeout)]      = "Detectie-timeout",
+            [nameof(Ctrl_FramesReceived)]    = "Frames ontvangen",
+            [nameof(Ctrl_ParseErrors)]       = "Parse-fouten",
 
             [nameof(Fb_CanError)]            = "CAN-fout",
             [nameof(Fb_SelectChannel)]       = "Selecteer een kanaal",
@@ -934,6 +1001,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "切换到浅色模式",
             [nameof(Ui_SwitchToDark)]  = "切换到深色模式",
             [nameof(Ui_ChangeLanguage)] = "更改语言",
+            [nameof(Ui_CanConnection)]  = "CAN 连接",
+            [nameof(Ui_CanQuickAccess)] = "CAN 总线快速访问",
+            [nameof(Ui_AlertHistory)]   = "警报历史",
+            [nameof(Ui_NoAlerts)]       = "暂无警报",
+            [nameof(Ui_ClearAlerts)]    = "清除",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",
@@ -985,6 +1057,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "正常  (低于 60°C)",
             [nameof(Cell_WarnDesc)]          = "警告 (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "断路 (高于 70°C)",
+            [nameof(Cell_ResetStats)]        = "重置统计",
 
             [nameof(Ctrl_SecCan)]            = "CAN 总线连接",
             [nameof(Ctrl_CanChannel)]        = "CAN 通道",
@@ -1016,8 +1089,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_StopDelta)]         = "停止差值",
             [nameof(Ctrl_ResetDefaults)]     = "恢复默认",
             [nameof(Ctrl_ApplySettings)]     = "应用设置",
-            [nameof(Ctrl_SecLanguage)]       = "语言",
-            [nameof(Ctrl_Language)]          = "语言",
+
+            [nameof(Ctrl_SecCanAdvanced)]    = "CAN 总线参数",
+            [nameof(Ctrl_AutoConnect)]       = "自动连接",
+            [nameof(Ctrl_AutoConnectHint)]   = "自动扫描 PCAN-USB 通道并连接到广播 BMS 心跳帧的通道。",
+            [nameof(Ctrl_ReconnectInterval)] = "扫描间隔",
+            [nameof(Ctrl_ProbeTimeout)]      = "探测超时",
+            [nameof(Ctrl_FramesReceived)]    = "已接收帧数",
+            [nameof(Ctrl_ParseErrors)]       = "解析错误",
 
             [nameof(Fb_CanError)]            = "CAN 错误",
             [nameof(Fb_SelectChannel)]       = "选择通道",

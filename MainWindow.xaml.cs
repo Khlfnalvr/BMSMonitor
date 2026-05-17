@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
@@ -5,6 +6,8 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using BMSMonitor.Models;
+using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 using BMSMonitor.Views;
 using Windows.UI;
@@ -16,6 +19,9 @@ public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
     private Services.LocalizationManager Lang => App.Lang;
+
+    public ObservableCollection<AlertRecord> AlertHistory { get; } = new();
+    private int _unreadAlerts = 0;
 
     private readonly Dictionary<string, Type> _pages = new()
     {
@@ -61,8 +67,13 @@ public sealed partial class MainWindow : Window
         {
             RefreshThemeButtonTooltip();
             UpdateLangMenuState();
+            RefreshCanButtonTooltip();
+            SyncCapConnectButton();
         };
         UpdateLangMenuState();
+
+        InitCanFlyout();
+        InitAlertFlyout();
     }
 
     // ── Icon ─────────────────────────────────────────────────────────────
@@ -258,5 +269,188 @@ public sealed partial class MainWindow : Window
     {
         if (_pbSeeking) return;
         ViewModel.Playback.SeekTo((int)Math.Round(e.NewValue));
+    }
+
+    // ── Alert history ────────────────────────────────────────────────────
+    private void InitAlertFlyout()
+    {
+        App.Notifications.AlertFired += OnAlertFired;
+        NoAlertsText.Visibility = Visibility.Visible;
+    }
+
+    private void OnAlertFired(AlertRecord rec)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            AlertHistory.Add(rec);
+            _unreadAlerts++;
+            UpdateAlertBadge();
+            NoAlertsText.Visibility = Visibility.Collapsed;
+        });
+    }
+
+    private void UpdateAlertBadge()
+    {
+        if (_unreadAlerts > 0)
+        {
+            AlertBadge.Visibility = Visibility.Visible;
+            AlertBadgeText.Text   = _unreadAlerts > 99 ? "99+" : _unreadAlerts.ToString();
+        }
+        else
+        {
+            AlertBadge.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void AlertFlyout_Opening(object sender, object e)
+    {
+        _unreadAlerts = 0;
+        UpdateAlertBadge();
+    }
+
+    private void ClearAlerts_Click(object sender, RoutedEventArgs e)
+    {
+        AlertHistory.Clear();
+        App.Notifications.ClearHistory();
+        _unreadAlerts = 0;
+        UpdateAlertBadge();
+        NoAlertsText.Visibility = Visibility.Visible;
+    }
+
+    // ── Caption-bar CAN picker ───────────────────────────────────────────
+    private void InitCanFlyout()
+    {
+        PopulateCapBitrates();
+        RefreshCapChannels();
+        RefreshCanButtonTooltip();
+        UpdateCanStatusDot();
+
+        // Mirror connection status into the flyout text + the status dot.
+        ViewModel.CanBus.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
+        {
+            CapConnStatus.Text = msg;
+            SyncCapConnectButton();
+            UpdateCanStatusDot();
+        });
+
+        // Re-sync channel preselection whenever the flyout opens, so the
+        // dropdown reflects the live channel even if the user connected
+        // from the Control Panel instead.
+        CanFlyout.Opening += (_, _) =>
+        {
+            RefreshCapChannels();
+            SyncCapConnectButton();
+        };
+    }
+
+    private void RefreshCanButtonTooltip()
+    {
+        if (CanBtn is null) return;
+        ToolTipService.SetToolTip(CanBtn, Lang.Ui_CanQuickAccess);
+    }
+
+    private void UpdateCanStatusDot()
+    {
+        if (CanStatusDot is null) return;
+        // Green when connected, dimmed when idle. Tinted from theme
+        // resources so it adapts to dark/light mode automatically.
+        CanStatusDot.Fill = ViewModel.CanBus.IsConnected
+            ? new SolidColorBrush(Color.FromArgb(0xFF, 0x25, 0xC6, 0x85))
+            : new SolidColorBrush(Color.FromArgb(0xCC, 0x9E, 0x9E, 0x9E));
+    }
+
+    private void PopulateCapBitrates()
+    {
+        CapCanBitrate.Items.Clear();
+        foreach (var b in CanBusService.Bitrates)
+            CapCanBitrate.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
+
+        for (int i = 0; i < CapCanBitrate.Items.Count; i++)
+        {
+            if (CapCanBitrate.Items[i] is ComboBoxItem item &&
+                item.Tag is CanBusService.CanBitrate br &&
+                br.Kbps == CanBusService.DefaultBitrate)
+            {
+                CapCanBitrate.SelectedIndex = i;
+                return;
+            }
+        }
+        if (CapCanBitrate.SelectedIndex < 0 && CapCanBitrate.Items.Count > 0)
+            CapCanBitrate.SelectedIndex = 0;
+    }
+
+    private void RefreshCapChannels()
+    {
+        var previous = (CapCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanBusService.CanChannel;
+        CapCanChannel.Items.Clear();
+
+        if (!CanBusService.IsDriverAvailable())
+        {
+            CapCanChannel.PlaceholderText = Lang.Ctrl_PhNoDriver;
+            return;
+        }
+
+        foreach (var ch in CanBusService.Channels)
+            CapCanChannel.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
+
+        CapCanChannel.PlaceholderText = Lang.Ctrl_PhScanning;
+
+        // Prefer the live channel — fall back to whatever the user picked last,
+        // then default to the first entry.
+        ushort live = ViewModel.CanBus.Channel;
+        for (int i = 0; i < CapCanChannel.Items.Count; i++)
+        {
+            if (CapCanChannel.Items[i] is ComboBoxItem it &&
+                it.Tag is CanBusService.CanChannel c &&
+                (c.Handle == live || (live == CanBusService.PCAN_NONEBUS && previous != null && c.Handle == previous.Handle)))
+            {
+                CapCanChannel.SelectedIndex = i;
+                return;
+            }
+        }
+        CapCanChannel.SelectedIndex = 0;
+    }
+
+    private void SyncCapConnectButton()
+    {
+        if (CapConnectBtn is null) return;
+        bool connected = ViewModel.CanBus.IsConnected;
+        CapConnectBtn.Content   = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
+        CapCanChannel.IsEnabled = !connected;
+        CapCanBitrate.IsEnabled = !connected;
+        if (!connected) CapConnStatus.Text = Lang.Ctrl_NotConnected;
+    }
+
+    private void CapRefresh_Click(object sender, RoutedEventArgs e) => RefreshCapChannels();
+
+    private void CapConnectBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.CanBus.IsConnected)
+        {
+            ViewModel.AutoConnect.SuspendReconnect();
+            ViewModel.CanBus.Disconnect();
+            return;
+        }
+
+        if (CapCanChannel.SelectedItem is not ComboBoxItem chItem ||
+            chItem.Tag is not CanBusService.CanChannel channel)
+        {
+            CapConnStatus.Text = Lang.Fb_SelectChannelMsg;
+            return;
+        }
+
+        ushort btr  = CanBusService.DefaultBitrateCode;
+        int    kbps = CanBusService.DefaultBitrate;
+        if (CapCanBitrate.SelectedItem is ComboBoxItem brItem &&
+            brItem.Tag is CanBusService.CanBitrate br)
+        {
+            btr  = br.Btr;
+            kbps = br.Kbps;
+        }
+
+        ViewModel.AutoConnect.BitrateCode = btr;
+        ViewModel.AutoConnect.BitrateKbps = kbps;
+        ViewModel.AutoConnect.ResumeReconnect();
+        ViewModel.CanBus.Connect(channel.Handle, btr, kbps, channel.DisplayName);
     }
 }
