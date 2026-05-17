@@ -333,6 +333,15 @@ public sealed partial class MainWindow : Window
             UpdateCanStatusDot();
         });
 
+        // Repopulate the dropdowns when the user changes transport mode
+        // from the Control Panel — channels & bitrates are mode-specific.
+        ViewModel.CanBus.ModeChanged += _ => DispatcherQueue.TryEnqueue(() =>
+        {
+            PopulateCapBitrates();
+            RefreshCapChannels();
+            SyncCapConnectButton();
+        });
+
         // Re-sync channel preselection whenever the flyout opens, so the
         // dropdown reflects the live channel even if the user connected
         // from the Control Panel instead.
@@ -362,14 +371,15 @@ public sealed partial class MainWindow : Window
     private void PopulateCapBitrates()
     {
         CapCanBitrate.Items.Clear();
-        foreach (var b in CanBusService.Bitrates)
+        foreach (var b in ViewModel.CanBus.Bitrates)
             CapCanBitrate.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
 
+        int defKbps = ViewModel.CanBus.DefaultBitrate;
         for (int i = 0; i < CapCanBitrate.Items.Count; i++)
         {
             if (CapCanBitrate.Items[i] is ComboBoxItem item &&
-                item.Tag is CanBusService.CanBitrate br &&
-                br.Kbps == CanBusService.DefaultBitrate)
+                item.Tag is CanBitrate br &&
+                br.Kbps == defKbps)
             {
                 CapCanBitrate.SelectedIndex = i;
                 return;
@@ -381,34 +391,37 @@ public sealed partial class MainWindow : Window
 
     private void RefreshCapChannels()
     {
-        var previous = (CapCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanBusService.CanChannel;
+        var previous = (CapCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanChannel;
         CapCanChannel.Items.Clear();
 
-        if (!CanBusService.IsDriverAvailable())
+        if (!ViewModel.CanBus.IsDriverAvailable)
         {
             CapCanChannel.PlaceholderText = Lang.Ctrl_PhNoDriver;
             return;
         }
 
-        foreach (var ch in CanBusService.Channels)
+        foreach (var ch in ViewModel.CanBus.Channels)
             CapCanChannel.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
 
         CapCanChannel.PlaceholderText = Lang.Ctrl_PhScanning;
 
         // Prefer the live channel — fall back to whatever the user picked last,
         // then default to the first entry.
-        ushort live = ViewModel.CanBus.Channel;
+        string live = ViewModel.CanBus.Channel;     // "" when not connected
         for (int i = 0; i < CapCanChannel.Items.Count; i++)
         {
             if (CapCanChannel.Items[i] is ComboBoxItem it &&
-                it.Tag is CanBusService.CanChannel c &&
-                (c.Handle == live || (live == CanBusService.PCAN_NONEBUS && previous != null && c.Handle == previous.Handle)))
+                it.Tag is CanChannel c &&
+                (string.Equals(c.PortName, live, StringComparison.OrdinalIgnoreCase)
+                 || (string.IsNullOrEmpty(live) && previous != null
+                     && string.Equals(c.PortName, previous.PortName, StringComparison.OrdinalIgnoreCase))))
             {
                 CapCanChannel.SelectedIndex = i;
                 return;
             }
         }
-        CapCanChannel.SelectedIndex = 0;
+        if (CapCanChannel.Items.Count > 0)
+            CapCanChannel.SelectedIndex = 0;
     }
 
     private void SyncCapConnectButton()
@@ -433,24 +446,21 @@ public sealed partial class MainWindow : Window
         }
 
         if (CapCanChannel.SelectedItem is not ComboBoxItem chItem ||
-            chItem.Tag is not CanBusService.CanChannel channel)
+            chItem.Tag is not CanChannel channel)
         {
             CapConnStatus.Text = Lang.Fb_SelectChannelMsg;
             return;
         }
 
-        ushort btr  = CanBusService.DefaultBitrateCode;
-        int    kbps = CanBusService.DefaultBitrate;
-        if (CapCanBitrate.SelectedItem is ComboBoxItem brItem &&
-            brItem.Tag is CanBusService.CanBitrate br)
+        if (CapCanBitrate.SelectedItem is not ComboBoxItem brItem ||
+            brItem.Tag is not CanBitrate bitrate)
         {
-            btr  = br.Btr;
-            kbps = br.Kbps;
+            CapConnStatus.Text = Lang.Fb_SelectChannelMsg;
+            return;
         }
 
-        ViewModel.AutoConnect.BitrateCode = btr;
-        ViewModel.AutoConnect.BitrateKbps = kbps;
+        ViewModel.AutoConnect.BitrateKbps = bitrate.Kbps;
         ViewModel.AutoConnect.ResumeReconnect();
-        ViewModel.CanBus.Connect(channel.Handle, btr, kbps, channel.DisplayName);
+        ViewModel.CanBus.Connect(channel, bitrate);
     }
 }

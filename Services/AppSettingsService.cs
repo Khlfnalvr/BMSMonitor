@@ -18,8 +18,15 @@ public class AppSettings
     public double BalancingStartDeltaMv  { get; set; } = 20;
     public double BalancingStopDeltaMv   { get; set; } = 5;
 
-    // CAN parameters
-    public int    CanBitrateKbps         { get; set; } = 500;
+    // Transport selection. 0 = EspSerial, 1 = Slcan, 2 = Pcan — kept as int
+    // so settings.json stays human-editable. Falls through to EspSerial on
+    // missing / unknown values.
+    public int    TransportMode          { get; set; } = 0;
+
+    // Bitrate key in Kbps. Means UART baud / 1000 for ESP, CAN bus speed for
+    // SLCAN & PCAN. Resolved against the active backend's bitrate list at
+    // startup; unrecognised values fall through to that backend's default.
+    public int    CanBitrateKbps         { get; set; } = 115;
     public int    ReconnectIntervalSec   { get; set; } = 2;
     public int    ProbeTimeoutMs         { get; set; } = 3000;
     public bool   AutoConnectEnabled     { get; set; } = true;

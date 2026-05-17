@@ -5,35 +5,34 @@ using System.Threading;
 namespace BMSMonitor.Services;
 
 /// <summary>
-/// Always-on auto-connect for the CAN bus. Cycles through the PCAN-USB
-/// channels and tries the user-selected bitrate first, then falls back
-/// to the other standard rates. Confirms via <see cref="CanBusService.Probe"/>
-/// that a BMS heartbeat (CAN ID 0x100) is present before holding the channel.
+/// Always-on auto-connect for whichever transport the user has selected.
+/// Enumerates candidate channels via the live backend
+/// (<see cref="CanBusService.Channels"/>), probes each at the user-chosen
+/// bitrate, and holds the first one that returns a valid BMS sample.
 ///
 ///   • <b>Suspended</b> — set when the user clicks Disconnect; scanning halts
-///     until <see cref="ResumeReconnect"/> is called. Prevents the auto-loop
-///     from immediately undoing a manual disconnect.
-///   • <b>Unexpected drop</b> — driver reports the channel is gone; scanning
-///     resumes automatically (no suspension).
+///     until <see cref="ResumeReconnect"/> is called.
+///   • <b>Unexpected drop</b> — backend reports disconnect; scanning resumes
+///     automatically (no suspension).
+///   • <b>Mode change</b> — failed-channel list is cleared so the new backend
+///     starts with a fresh scan.
 /// </summary>
 public sealed class AutoConnectService : IDisposable
 {
     private readonly CanBusService _can;
-    private readonly object        _lock        = new();
+    private readonly object        _lock          = new();
     private Timer?                 _timer;
-    private HashSet<ushort>        _failedChans = [];
+    private HashSet<string>        _failedPorts   = new(StringComparer.OrdinalIgnoreCase);
     private DateTime               _lastFailClear = DateTime.MinValue;
-    private bool                   _suspended   = false;
-    private int                    _polling     = 0;   // concurrent-call guard
+    private bool                   _suspended     = false;
+    private int                    _polling       = 0;   // concurrent-call guard
 
-    public ushort BitrateCode    { get; set; } = CanBusService.DefaultBitrateCode;
-    public int    BitrateKbps    { get; set; } = CanBusService.DefaultBitrate;
-    public bool   IsSuspended    { get { lock (_lock) return _suspended; } }
-    public bool   IsEnabled      => !IsSuspended;
+    /// <summary>The user-chosen bitrate, in Kbps. Used as the lookup key
+    /// into <see cref="CanBusService.Bitrates"/> for the active backend.</summary>
+    public int  BitrateKbps    { get; set; }
+    public bool IsSuspended    { get { lock (_lock) return _suspended; } }
+    public bool IsEnabled      => !IsSuspended;
 
-    // User-tunable scan/probe timing. Changing ReconnectIntervalSec
-    // recreates the underlying timer so the next tick honours the new
-    // interval immediately.
     private int _reconnectIntervalSec = 2;
     public int ReconnectIntervalSec
     {
@@ -52,27 +51,38 @@ public sealed class AutoConnectService : IDisposable
     }
     public int ProbeTimeoutMs { get; set; } = 3000;
 
-    /// <summary>Status messages for UI — always DispatcherQueue.TryEnqueue before touching controls.</summary>
     public event Action<string>? Notification;
 
-    public AutoConnectService(CanBusService can) => _can = can;
+    public AutoConnectService(CanBusService can)
+    {
+        _can = can;
+        BitrateKbps = can.DefaultBitrate;
 
-    // ── Lifecycle ─────────────────────────────────────────────────────────
+        // Reset scan state when the user changes transport so the new
+        // backend starts with a clean slate.
+        _can.ModeChanged += _ =>
+        {
+            lock (_lock)
+            {
+                _failedPorts.Clear();
+                _lastFailClear = DateTime.Now;
+                BitrateKbps    = _can.DefaultBitrate;
+            }
+        };
+    }
 
-    /// <summary>Call once at startup. Begins scanning immediately.</summary>
-    public void Start(ushort btr0btr1, int bitrateKbps)
+    public void Start(int bitrateKbps)
     {
         lock (_lock)
         {
-            BitrateCode    = btr0btr1;
             BitrateKbps    = bitrateKbps;
-            _failedChans   = [];
+            _failedPorts.Clear();
             _suspended     = false;
             _lastFailClear = DateTime.Now;
 
             _timer?.Dispose();
             _timer = new Timer(Poll, null,
-                TimeSpan.FromMilliseconds(500),   // first tick in 0.5 s
+                TimeSpan.FromMilliseconds(500),
                 TimeSpan.FromSeconds(_reconnectIntervalSec));
         }
     }
@@ -87,8 +97,8 @@ public sealed class AutoConnectService : IDisposable
     {
         lock (_lock)
         {
-            _suspended   = false;
-            _failedChans = [];
+            _suspended = false;
+            _failedPorts.Clear();
         }
     }
 
@@ -97,8 +107,6 @@ public sealed class AutoConnectService : IDisposable
         var t = Interlocked.Exchange(ref _timer, null);
         t?.Dispose();
     }
-
-    // ── Timer callback ────────────────────────────────────────────────────
 
     private void Poll(object? _)
     {
@@ -109,41 +117,45 @@ public sealed class AutoConnectService : IDisposable
 
     private void DoPoll()
     {
-        ushort  candidate    = CanBusService.PCAN_NONEBUS;
-        string  candidateNm  = "";
-        ushort  btr;
-        int     kbps;
+        CanChannel? candidate = null;
+        CanBitrate? bitrate   = null;
+        int kbps;
 
         lock (_lock)
         {
-            btr  = BitrateCode;
             kbps = BitrateKbps;
 
-            // Already connected — nothing to scan.
             if (_can.IsConnected) return;
             if (_suspended)        return;
 
-            // Periodically retry channels that failed earlier.
+            // Periodically retry ports that failed earlier (USB re-enumeration,
+            // device replugged, etc.).
             if ((DateTime.Now - _lastFailClear).TotalSeconds > 30)
             {
-                _failedChans   = [];
+                _failedPorts.Clear();
                 _lastFailClear = DateTime.Now;
             }
 
-            foreach (var ch in CanBusService.Channels)
+            // Resolve the bitrate against the *current* backend — switching
+            // mode swaps the available bitrate set.
+            bitrate = _can.Bitrates.FirstOrDefault(b => b.Kbps == kbps)
+                   ?? _can.Bitrates.FirstOrDefault(b => b.Kbps == _can.DefaultBitrate)
+                   ?? _can.Bitrates.FirstOrDefault();
+            if (bitrate is null) return;
+
+            foreach (var ch in _can.Channels)
             {
-                if (_failedChans.Contains(ch.Handle)) continue;
-                candidate    = ch.Handle;
-                candidateNm  = ch.DisplayName;
+                if (_failedPorts.Contains(ch.PortName)) continue;
+                candidate = ch;
                 break;
             }
         }
 
-        if (candidate == CanBusService.PCAN_NONEBUS || _can.IsConnected) return;
+        if (candidate is null || _can.IsConnected) return;
 
-        Notification?.Invoke($"Mendeteksi {candidateNm} @ {kbps} kbit/s — menunggu frame BMS…");
+        Notification?.Invoke($"Mendeteksi {candidate.DisplayName} @ {bitrate.DisplayName} — menunggu data BMS…");
         bool verified;
-        try { verified = CanBusService.Probe(candidate, btr, timeoutMs: ProbeTimeoutMs); }
+        try { verified = _can.Probe(candidate, bitrate, timeoutMs: ProbeTimeoutMs); }
         catch { verified = false; }
 
         lock (_lock)
@@ -151,19 +163,19 @@ public sealed class AutoConnectService : IDisposable
             if (_suspended) return;
             if (!verified)
             {
-                _failedChans.Add(candidate);
-                Notification?.Invoke($"{candidateNm} — tidak ada frame BMS, dilewati.");
+                _failedPorts.Add(candidate.PortName);
+                Notification?.Invoke($"{candidate.DisplayName} — tidak ada data BMS, dilewati.");
                 return;
             }
         }
 
-        Notification?.Invoke($"{candidateNm} terverifikasi sebagai BMS — menghubungkan…");
-        bool ok = _can.Connect(candidate, btr, kbps, candidateNm);
+        Notification?.Invoke($"{candidate.DisplayName} terverifikasi — menghubungkan…");
+        bool ok = _can.Connect(candidate, bitrate);
 
         if (!ok)
         {
-            lock (_lock) { _failedChans.Add(candidate); }
-            Notification?.Invoke($"{candidateNm} — gagal terhubung setelah verifikasi.");
+            lock (_lock) { _failedPorts.Add(candidate.PortName); }
+            Notification?.Invoke($"{candidate.DisplayName} — gagal terhubung setelah verifikasi.");
         }
     }
 }

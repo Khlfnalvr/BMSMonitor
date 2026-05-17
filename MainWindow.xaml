@@ -22,6 +22,15 @@
             SelectionChanged="NavView_SelectionChanged"
             Loaded="NavView_Loaded">
 
+            <NavigationView.PaneHeader>
+                <Image Source="logo.png"
+                       Height="28"
+                       Margin="12,0,8,0"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Left"
+                       Stretch="Uniform"/>
+            </NavigationView.PaneHeader>
+
             <NavigationView.MenuItems>
                 <NavigationViewItem Content="{x:Bind Lang.Nav_Dashboard,    Mode=OneWay}" Tag="Dashboard"/>
                 <NavigationViewItem Content="{x:Bind Lang.Nav_CellView,     Mode=OneWay}" Tag="CellView"/>

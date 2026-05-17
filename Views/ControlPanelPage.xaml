@@ -19,6 +19,18 @@
                 <TextBlock Text="{x:Bind Lang.Ctrl_SecCan, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel Spacing="14">
+                        <!-- Transport mode picker (drives the channel + bitrate combos) -->
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_TransportMode, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <ComboBox Grid.Column="1" x:Name="ComboTransport"
+                                      HorizontalAlignment="Stretch"
+                                      SelectionChanged="ComboTransport_SelectionChanged"/>
+                        </Grid>
                         <Grid ColumnSpacing="10">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="180"/>

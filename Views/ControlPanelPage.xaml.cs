@@ -17,6 +17,7 @@ public sealed partial class ControlPanelPage : Page
     {
         InitializeComponent();
         LoadConfig();
+        PopulateTransports();
         PopulateBitrates();
         RefreshChannels();
         HookCanBus();
@@ -68,18 +69,65 @@ public sealed partial class ControlPanelPage : Page
         _initializingParams = false;
     }
 
+    private void PopulateTransports()
+    {
+        _initializingParams = true;
+        ComboTransport.Items.Clear();
+        AddTransport(TransportMode.EspSerial, Lang.Ctrl_TransportEsp);
+        AddTransport(TransportMode.Slcan,     Lang.Ctrl_TransportSlcan);
+        AddTransport(TransportMode.Pcan,      Lang.Ctrl_TransportPcan);
+
+        // Preselect the live mode
+        for (int i = 0; i < ComboTransport.Items.Count; i++)
+        {
+            if (ComboTransport.Items[i] is ComboBoxItem item &&
+                item.Tag is TransportMode tm && tm == ViewModel.CanBus.Mode)
+            {
+                ComboTransport.SelectedIndex = i;
+                break;
+            }
+        }
+        if (ComboTransport.SelectedIndex < 0) ComboTransport.SelectedIndex = 0;
+        _initializingParams = false;
+
+        void AddTransport(TransportMode mode, string label) =>
+            ComboTransport.Items.Add(new ComboBoxItem { Content = label, Tag = mode });
+    }
+
+    private void ComboTransport_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_initializingParams) return;
+        if (ComboTransport.SelectedItem is not ComboBoxItem item ||
+            item.Tag is not TransportMode mode) return;
+        if (mode == ViewModel.CanBus.Mode) return;
+
+        // Switching mode disconnects the current backend (the service does
+        // this internally). Suspend auto-connect so the user has to click
+        // Connect deliberately after picking the new mode.
+        ViewModel.AutoConnect.SuspendReconnect();
+        ViewModel.CanBus.Mode = mode;
+
+        // The new backend exposes different channels & bitrates — repopulate.
+        PopulateBitrates();
+        RefreshChannels();
+        SyncConnectButton();
+
+        ViewModel.SaveSettings();
+    }
+
     private void PopulateBitrates()
     {
         ComboCanBitrate.Items.Clear();
-        foreach (var b in CanBusService.Bitrates)
+        foreach (var b in ViewModel.CanBus.Bitrates)
             ComboCanBitrate.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
 
-        // Default to 500 kbit/s — typical BMS rate
+        // Prefer the backend's default; fall back to the first entry.
+        int defKbps = ViewModel.CanBus.DefaultBitrate;
         for (int i = 0; i < ComboCanBitrate.Items.Count; i++)
         {
             if (ComboCanBitrate.Items[i] is ComboBoxItem item &&
-                item.Tag is CanBusService.CanBitrate br &&
-                br.Kbps == CanBusService.DefaultBitrate)
+                item.Tag is CanBitrate br &&
+                br.Kbps == defKbps)
             {
                 ComboCanBitrate.SelectedIndex = i;
                 break;
@@ -91,16 +139,16 @@ public sealed partial class ControlPanelPage : Page
 
     private void RefreshChannels()
     {
-        var current = (ComboCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanBusService.CanChannel;
+        var current = (ComboCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanChannel;
         ComboCanChannel.Items.Clear();
 
-        if (!CanBusService.IsDriverAvailable())
+        if (!ViewModel.CanBus.IsDriverAvailable)
         {
             ComboCanChannel.PlaceholderText = Lang.Ctrl_PhNoDriver;
             return;
         }
 
-        foreach (var ch in CanBusService.Channels)
+        foreach (var ch in ViewModel.CanBus.Channels)
             ComboCanChannel.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
 
         ComboCanChannel.PlaceholderText = Lang.Ctrl_PhScanning;
@@ -110,33 +158,25 @@ public sealed partial class ControlPanelPage : Page
             for (int i = 0; i < ComboCanChannel.Items.Count; i++)
             {
                 if (ComboCanChannel.Items[i] is ComboBoxItem it &&
-                    it.Tag is CanBusService.CanChannel c && c.Handle == current.Handle)
+                    it.Tag is CanChannel c &&
+                    string.Equals(c.PortName, current.PortName, StringComparison.OrdinalIgnoreCase))
                 {
                     ComboCanChannel.SelectedIndex = i;
                     return;
                 }
             }
         }
-        ComboCanChannel.SelectedIndex = 0;
+        if (ComboCanChannel.Items.Count > 0)
+            ComboCanChannel.SelectedIndex = 0;
     }
 
     private void RefreshChannels_Click(object sender, RoutedEventArgs e) => RefreshChannels();
 
-    private (ushort btr, int kbps) GetSelectedBitrate()
-    {
-        if (ComboCanBitrate.SelectedItem is ComboBoxItem item &&
-            item.Tag is CanBusService.CanBitrate br)
-            return (br.Btr, br.Kbps);
-        return (CanBusService.DefaultBitrateCode, CanBusService.DefaultBitrate);
-    }
+    private CanBitrate? GetSelectedBitrate() =>
+        (ComboCanBitrate.SelectedItem as ComboBoxItem)?.Tag as CanBitrate;
 
-    private CanBusService.CanChannel? GetSelectedChannel()
-    {
-        if (ComboCanChannel.SelectedItem is ComboBoxItem item &&
-            item.Tag is CanBusService.CanChannel ch)
-            return ch;
-        return null;
-    }
+    private CanChannel? GetSelectedChannel() =>
+        (ComboCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanChannel;
 
     private void ConnectBtn_Click(object sender, RoutedEventArgs e)
     {
@@ -148,7 +188,8 @@ public sealed partial class ControlPanelPage : Page
         }
 
         var channel = GetSelectedChannel();
-        if (channel is null)
+        var bitrate = GetSelectedBitrate();
+        if (channel is null || bitrate is null)
         {
             FeedbackBar.Title    = Lang.Fb_SelectChannel;
             FeedbackBar.Message  = Lang.Fb_SelectChannelMsg;
@@ -157,11 +198,9 @@ public sealed partial class ControlPanelPage : Page
             return;
         }
 
-        var (btr, kbps) = GetSelectedBitrate();
-        ViewModel.AutoConnect.BitrateCode = btr;
-        ViewModel.AutoConnect.BitrateKbps = kbps;
+        ViewModel.AutoConnect.BitrateKbps = bitrate.Kbps;
         ViewModel.AutoConnect.ResumeReconnect();
-        ViewModel.CanBus.Connect(channel.Handle, btr, kbps, channel.DisplayName);
+        ViewModel.CanBus.Connect(channel, bitrate);
     }
 
     // ── CAN bus parameters ────────────────────────────────────────────────

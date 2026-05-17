@@ -167,6 +167,10 @@ public sealed class LocalizationManager : INotifyPropertyChanged
 
     // ── Control Panel ─────────────────────────────────────────────────────
     public string Ctrl_SecCan          => T(nameof(Ctrl_SecCan));
+    public string Ctrl_TransportMode       => T(nameof(Ctrl_TransportMode));
+    public string Ctrl_TransportEsp        => T(nameof(Ctrl_TransportEsp));
+    public string Ctrl_TransportSlcan      => T(nameof(Ctrl_TransportSlcan));
+    public string Ctrl_TransportPcan       => T(nameof(Ctrl_TransportPcan));
     public string Ctrl_CanChannel            => T(nameof(Ctrl_CanChannel));
     public string Ctrl_PhScanning         => T(nameof(Ctrl_PhScanning));
     public string Ctrl_PhNoPorts          => T(nameof(Ctrl_PhNoPorts));
@@ -352,7 +356,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_ResetStats)]        = "Reset Statistics",
 
             [nameof(Ctrl_SecCan)]            = "CAN BUS CONNECTION",
-            [nameof(Ctrl_CanChannel)]        = "CAN Channel",
+            [nameof(Ctrl_TransportMode)]     = "Transport",
+            [nameof(Ctrl_TransportEsp)]      = "ESP Serial (USB)",
+            [nameof(Ctrl_TransportSlcan)]    = "SLCAN adapter (CANable)",
+            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
+            [nameof(Ctrl_CanChannel)]        = "Channel",
             [nameof(Ctrl_PhScanning)]        = "Scanning channels…",
             [nameof(Ctrl_PhNoPorts)]         = "No CAN channels detected",
             [nameof(Ctrl_PhNoDriver)]        = "PCAN-Basic driver not installed",
@@ -529,7 +537,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_ResetStats)]        = "Reset Statistik",
 
             [nameof(Ctrl_SecCan)]            = "KONEKSI CAN BUS",
-            [nameof(Ctrl_CanChannel)]        = "Channel CAN",
+            [nameof(Ctrl_TransportMode)]     = "Transport",
+            [nameof(Ctrl_TransportEsp)]      = "ESP Serial (USB)",
+            [nameof(Ctrl_TransportSlcan)]    = "Adapter SLCAN (CANable)",
+            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
+            [nameof(Ctrl_CanChannel)]        = "Channel",
             [nameof(Ctrl_PhScanning)]        = "Memindai channel…",
             [nameof(Ctrl_PhNoPorts)]         = "Tidak ada channel CAN terdeteksi",
             [nameof(Ctrl_PhNoDriver)]        = "Driver PCAN-Basic belum terinstal",
@@ -706,7 +718,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_ResetStats)]        = "Tetapkan Semula Statistik",
 
             [nameof(Ctrl_SecCan)]            = "SAMBUNGAN CAN BUS",
-            [nameof(Ctrl_CanChannel)]        = "Saluran CAN",
+            [nameof(Ctrl_TransportMode)]     = "Pengangkutan",
+            [nameof(Ctrl_TransportEsp)]      = "ESP Serial (USB)",
+            [nameof(Ctrl_TransportSlcan)]    = "Penyesuai SLCAN (CANable)",
+            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
+            [nameof(Ctrl_CanChannel)]        = "Saluran",
             [nameof(Ctrl_PhScanning)]        = "Mengimbas saluran…",
             [nameof(Ctrl_PhNoPorts)]         = "Tiada saluran CAN dikesan",
             [nameof(Ctrl_PhNoDriver)]        = "Pemacu PCAN-Basic belum dipasang",
@@ -883,7 +899,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_ResetStats)]        = "Statistieken resetten",
 
             [nameof(Ctrl_SecCan)]            = "CAN-BUS VERBINDING",
-            [nameof(Ctrl_CanChannel)]        = "CAN-kanaal",
+            [nameof(Ctrl_TransportMode)]     = "Transport",
+            [nameof(Ctrl_TransportEsp)]      = "ESP Seriële (USB)",
+            [nameof(Ctrl_TransportSlcan)]    = "SLCAN-adapter (CANable)",
+            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
+            [nameof(Ctrl_CanChannel)]        = "Kanaal",
             [nameof(Ctrl_PhScanning)]        = "Kanalen scannen…",
             [nameof(Ctrl_PhNoPorts)]         = "Geen CAN-kanalen gevonden",
             [nameof(Ctrl_PhNoDriver)]        = "PCAN-Basic-stuurprogramma niet geïnstalleerd",
@@ -1060,7 +1080,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_ResetStats)]        = "重置统计",
 
             [nameof(Ctrl_SecCan)]            = "CAN 总线连接",
-            [nameof(Ctrl_CanChannel)]        = "CAN 通道",
+            [nameof(Ctrl_TransportMode)]     = "传输方式",
+            [nameof(Ctrl_TransportEsp)]      = "ESP 串口 (USB)",
+            [nameof(Ctrl_TransportSlcan)]    = "SLCAN 适配器 (CANable)",
+            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
+            [nameof(Ctrl_CanChannel)]        = "通道",
             [nameof(Ctrl_PhScanning)]        = "正在扫描通道…",
             [nameof(Ctrl_PhNoPorts)]         = "未检测到 CAN 通道",
             [nameof(Ctrl_PhNoDriver)]        = "未安装 PCAN-Basic 驱动",

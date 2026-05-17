@@ -12,7 +12,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly DispatcherQueue _dispatcherQueue;
 
-    public CanBusService      CanBus      { get; } = new();
+    public CanBusService      CanBus      { get; }
     public LoggingService     Logging     { get; } = new();
     public AutoConnectService AutoConnect { get; }
 
@@ -149,14 +149,16 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel(DispatcherQueue dispatcherQueue)
     {
         _dispatcherQueue = dispatcherQueue;
-        AutoConnect      = new AutoConnectService(CanBus);
 
         var savedSettings = AppSettingsService.Load();
+        // Construct the CAN service with the *saved* transport so the rest
+        // of startup sees the right backend / pickers / defaults.
+        CanBus      = new CanBusService(IntToMode(savedSettings.TransportMode));
+        AutoConnect = new AutoConnectService(CanBus);
+
         ApplySettings(savedSettings);
-        var savedBtr = CanBusService.Bitrates.FirstOrDefault(b => b.Kbps == savedSettings.CanBitrateKbps);
-        AutoConnect.Start(
-            savedBtr?.Btr ?? CanBusService.DefaultBitrateCode,
-            savedBtr?.Kbps ?? CanBusService.DefaultBitrate);
+        var savedBtr = CanBus.Bitrates.FirstOrDefault(b => b.Kbps == savedSettings.CanBitrateKbps);
+        AutoConnect.Start(savedBtr?.Kbps ?? CanBus.DefaultBitrate);
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
@@ -201,7 +203,7 @@ public partial class MainViewModel : ObservableObject
 
         if (CanBus.IsConnected)
         {
-            DataSourceText = $"SOURCE: {CanBus.ChannelName} @ {CanBus.Bitrate} kbit/s";
+            DataSourceText = $"SOURCE: {CanBus.ChannelName} @ {CanBus.BitrateText} ({CanBus.Mode})";
         }
         else
         {
@@ -428,12 +430,20 @@ public partial class MainViewModel : ObservableObject
             OverTempCutoff        = Config.OverTempCutoff,
             BalancingStartDeltaMv = Config.BalancingStartDelta * 1000.0,
             BalancingStopDeltaMv  = Config.BalancingStopDelta  * 1000.0,
+            TransportMode         = (int)CanBus.Mode,
             CanBitrateKbps        = AutoConnect.BitrateKbps,
             ReconnectIntervalSec  = AutoConnect.ReconnectIntervalSec,
             ProbeTimeoutMs        = AutoConnect.ProbeTimeoutMs,
             AutoConnectEnabled    = !AutoConnect.IsSuspended,
         });
     }
+
+    private static TransportMode IntToMode(int i) => i switch
+    {
+        1 => TransportMode.Slcan,
+        2 => TransportMode.Pcan,
+        _ => TransportMode.EspSerial,
+    };
 
     private CellState GetCellState(double voltage)
     {
