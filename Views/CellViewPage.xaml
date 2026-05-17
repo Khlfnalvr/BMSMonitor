@@ -56,14 +56,24 @@
                 </Grid>
             </Border>
 
-            <TextBlock Text="{x:Bind Lang.Cell_SecCellGrid, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+            <Grid>
+                <TextBlock Text="{x:Bind Lang.Cell_SecCellGrid, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <Button x:Name="ResetStatsBtn"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Center"
+                        Content="{x:Bind Lang.Cell_ResetStats, Mode=OneWay}"
+                        Click="ResetStats_Click"
+                        Padding="10,5"/>
+            </Grid>
             <ItemsRepeater x:Name="CellRepeater"
                            ItemsSource="{x:Bind ViewModel.Cells, Mode=OneWay}"
                            ElementPrepared="CellRepeater_ElementPrepared">
                 <ItemsRepeater.Layout>
                     <UniformGridLayout
                         Orientation="Horizontal"
-                        MinItemWidth="110" MinItemHeight="84"
+                        MinItemWidth="110" MinItemHeight="110"
                         MinColumnSpacing="8" MinRowSpacing="8"
                         MaximumRowsOrColumns="10"
                         ItemsStretch="Fill"/>
@@ -76,9 +86,9 @@
                                 VerticalContentAlignment="Stretch"
                                 Background="Transparent"
                                 BorderThickness="0"
-                                Height="84"
-                                MinHeight="84"
-                                MaxHeight="84"
+                                Height="110"
+                                MinHeight="110"
+                                MaxHeight="110"
                                 Tag="{x:Bind Index}"
                                 Click="CellButton_Click">
                             <Border CornerRadius="6" Padding="10,8"
@@ -96,6 +106,33 @@
                                                FontSize="9" FontWeight="SemiBold"
                                                Foreground="#FFFF8C00"
                                                Visibility="{x:Bind IsBalancing, Converter={StaticResource BoolToVisConverter}, Mode=OneWay}"/>
+                                    <!-- Session statistics (min / avg / max) -->
+                                    <Border Margin="0,3,0,0" Padding="0,3,0,0"
+                                            BorderThickness="0,1,0,0"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                        <Grid ColumnSpacing="4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0" Spacing="1">
+                                                <TextBlock Text="MIN" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
+                                                <TextBlock Text="{x:Bind StatMinText, Mode=OneWay}"
+                                                           FontSize="9" FontFamily="Consolas"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="1">
+                                                <TextBlock Text="AVG" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
+                                                <TextBlock Text="{x:Bind StatAvgText, Mode=OneWay}"
+                                                           FontSize="9" FontFamily="Consolas"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Spacing="1">
+                                                <TextBlock Text="MAX" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
+                                                <TextBlock Text="{x:Bind StatMaxText, Mode=OneWay}"
+                                                           FontSize="9" FontFamily="Consolas"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
                                 </StackPanel>
                             </Border>
                         </Button>

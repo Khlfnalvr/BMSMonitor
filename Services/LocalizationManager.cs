@@ -103,6 +103,11 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ui_CanConnection  => T(nameof(Ui_CanConnection));
     public string Ui_CanQuickAccess => T(nameof(Ui_CanQuickAccess));
 
+    // ── Alert history ─────────────────────────────────────────────────────
+    public string Ui_AlertHistory   => T(nameof(Ui_AlertHistory));
+    public string Ui_NoAlerts       => T(nameof(Ui_NoAlerts));
+    public string Ui_ClearAlerts    => T(nameof(Ui_ClearAlerts));
+
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
     public string Com_Max    => T(nameof(Com_Max));
@@ -138,6 +143,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Dash_CellDelta        => T(nameof(Dash_CellDelta));
     public string Dash_Method           => T(nameof(Dash_Method));
     public string Dash_ActiveMethod     => T(nameof(Dash_ActiveMethod));
+
+    // ── Cell statistics ───────────────────────────────────────────────────
+    public string Cell_ResetStats        => T(nameof(Cell_ResetStats));
 
     // ── Cell View ─────────────────────────────────────────────────────────
     public string Cell_SecVoltageSummary => T(nameof(Cell_SecVoltageSummary));
@@ -287,6 +295,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Change language",
             [nameof(Ui_CanConnection)]  = "CAN Connection",
             [nameof(Ui_CanQuickAccess)] = "Quick CAN bus access",
+            [nameof(Ui_AlertHistory)]   = "Alert History",
+            [nameof(Ui_NoAlerts)]       = "No alerts yet",
+            [nameof(Ui_ClearAlerts)]    = "Clear",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -338,6 +349,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normal  (below 60°C)",
             [nameof(Cell_WarnDesc)]          = "Warning (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Cutoff  (above 70°C)",
+            [nameof(Cell_ResetStats)]        = "Reset Statistics",
 
             [nameof(Ctrl_SecCan)]            = "CAN BUS CONNECTION",
             [nameof(Ctrl_CanChannel)]        = "CAN Channel",
@@ -460,6 +472,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Ubah bahasa",
             [nameof(Ui_CanConnection)]  = "Koneksi CAN",
             [nameof(Ui_CanQuickAccess)] = "Akses cepat CAN bus",
+            [nameof(Ui_AlertHistory)]   = "Riwayat Alert",
+            [nameof(Ui_NoAlerts)]       = "Belum ada alert",
+            [nameof(Ui_ClearAlerts)]    = "Hapus",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -511,6 +526,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normal  (di bawah 60°C)",
             [nameof(Cell_WarnDesc)]          = "Peringatan (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
+            [nameof(Cell_ResetStats)]        = "Reset Statistik",
 
             [nameof(Ctrl_SecCan)]            = "KONEKSI CAN BUS",
             [nameof(Ctrl_CanChannel)]        = "Channel CAN",
@@ -633,6 +649,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Tukar bahasa",
             [nameof(Ui_CanConnection)]  = "Sambungan CAN",
             [nameof(Ui_CanQuickAccess)] = "Akses pantas CAN bus",
+            [nameof(Ui_AlertHistory)]   = "Sejarah Amaran",
+            [nameof(Ui_NoAlerts)]       = "Tiada amaran lagi",
+            [nameof(Ui_ClearAlerts)]    = "Hapus",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -684,6 +703,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normal  (di bawah 60°C)",
             [nameof(Cell_WarnDesc)]          = "Amaran (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
+            [nameof(Cell_ResetStats)]        = "Tetapkan Semula Statistik",
 
             [nameof(Ctrl_SecCan)]            = "SAMBUNGAN CAN BUS",
             [nameof(Ctrl_CanChannel)]        = "Saluran CAN",
@@ -806,6 +826,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Taal wijzigen",
             [nameof(Ui_CanConnection)]  = "CAN-verbinding",
             [nameof(Ui_CanQuickAccess)] = "Snelle toegang tot CAN-bus",
+            [nameof(Ui_AlertHistory)]   = "Waarschuwingslog",
+            [nameof(Ui_NoAlerts)]       = "Geen waarschuwingen",
+            [nameof(Ui_ClearAlerts)]    = "Wissen",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -857,6 +880,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "Normaal  (onder 60°C)",
             [nameof(Cell_WarnDesc)]          = "Waarschuwing (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "Beveiliging  (boven 70°C)",
+            [nameof(Cell_ResetStats)]        = "Statistieken resetten",
 
             [nameof(Ctrl_SecCan)]            = "CAN-BUS VERBINDING",
             [nameof(Ctrl_CanChannel)]        = "CAN-kanaal",
@@ -979,6 +1003,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "更改语言",
             [nameof(Ui_CanConnection)]  = "CAN 连接",
             [nameof(Ui_CanQuickAccess)] = "CAN 总线快速访问",
+            [nameof(Ui_AlertHistory)]   = "警报历史",
+            [nameof(Ui_NoAlerts)]       = "暂无警报",
+            [nameof(Ui_ClearAlerts)]    = "清除",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",
@@ -1030,6 +1057,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_NormalDesc)]        = "正常  (低于 60°C)",
             [nameof(Cell_WarnDesc)]          = "警告 (60 – 70°C)",
             [nameof(Cell_CutoffDesc)]        = "断路 (高于 70°C)",
+            [nameof(Cell_ResetStats)]        = "重置统计",
 
             [nameof(Ctrl_SecCan)]            = "CAN 总线连接",
             [nameof(Ctrl_CanChannel)]        = "CAN 通道",

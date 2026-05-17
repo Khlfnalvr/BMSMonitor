@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.Windows.AppNotifications;
 using BMSMonitor.Models;
 
@@ -8,6 +9,22 @@ public class NotificationService
     private readonly Dictionary<string, DateTime> _lastNotified = new();
     private readonly TimeSpan _cooldown = TimeSpan.FromSeconds(30);
     private bool _registered;
+
+    private readonly List<AlertRecord> _history  = new();
+    private readonly object            _histLock = new();
+    private const int MaxHistory = 200;
+
+    public event Action<AlertRecord>? AlertFired;
+
+    public IReadOnlyList<AlertRecord> GetHistory()
+    {
+        lock (_histLock) return _history.ToList();
+    }
+
+    public void ClearHistory()
+    {
+        lock (_histLock) _history.Clear();
+    }
 
     public void Register()
     {
@@ -30,6 +47,14 @@ public class NotificationService
         foreach (var (key, title, body) in alerts)
         {
             if (!CanNotify(key)) continue;
+            var rec = new AlertRecord(DateTime.Now, title, body);
+            lock (_histLock)
+            {
+                if (_history.Count >= MaxHistory) _history.RemoveAt(0);
+                _history.Add(rec);
+            }
+            AlertFired?.Invoke(rec);
+
             try
             {
                 string xml = $@"<toast><visual><binding template='ToastGeneric'>

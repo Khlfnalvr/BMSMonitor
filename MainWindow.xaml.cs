@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.IO;
 using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
@@ -5,6 +6,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using BMSMonitor.Models;
 using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 using BMSMonitor.Views;
@@ -17,6 +19,9 @@ public sealed partial class MainWindow : Window
 {
     public MainViewModel ViewModel { get; }
     private Services.LocalizationManager Lang => App.Lang;
+
+    public ObservableCollection<AlertRecord> AlertHistory { get; } = new();
+    private int _unreadAlerts = 0;
 
     private readonly Dictionary<string, Type> _pages = new()
     {
@@ -68,6 +73,7 @@ public sealed partial class MainWindow : Window
         UpdateLangMenuState();
 
         InitCanFlyout();
+        InitAlertFlyout();
     }
 
     // ── Icon ─────────────────────────────────────────────────────────────
@@ -263,6 +269,52 @@ public sealed partial class MainWindow : Window
     {
         if (_pbSeeking) return;
         ViewModel.Playback.SeekTo((int)Math.Round(e.NewValue));
+    }
+
+    // ── Alert history ────────────────────────────────────────────────────
+    private void InitAlertFlyout()
+    {
+        App.Notifications.AlertFired += OnAlertFired;
+        NoAlertsText.Visibility = Visibility.Visible;
+    }
+
+    private void OnAlertFired(AlertRecord rec)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            AlertHistory.Add(rec);
+            _unreadAlerts++;
+            UpdateAlertBadge();
+            NoAlertsText.Visibility = Visibility.Collapsed;
+        });
+    }
+
+    private void UpdateAlertBadge()
+    {
+        if (_unreadAlerts > 0)
+        {
+            AlertBadge.Visibility = Visibility.Visible;
+            AlertBadgeText.Text   = _unreadAlerts > 99 ? "99+" : _unreadAlerts.ToString();
+        }
+        else
+        {
+            AlertBadge.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private void AlertFlyout_Opening(object sender, object e)
+    {
+        _unreadAlerts = 0;
+        UpdateAlertBadge();
+    }
+
+    private void ClearAlerts_Click(object sender, RoutedEventArgs e)
+    {
+        AlertHistory.Clear();
+        App.Notifications.ClearHistory();
+        _unreadAlerts = 0;
+        UpdateAlertBadge();
+        NoAlertsText.Visibility = Visibility.Visible;
     }
 
     // ── Caption-bar CAN picker ───────────────────────────────────────────

@@ -25,6 +25,8 @@ public sealed partial class CellViewPage : Page
         InitializeComponent();
     }
 
+    private void ResetStats_Click(object sender, RoutedEventArgs e) => ViewModel.ResetCellStats();
+
     private void CellRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
     {
         if (args.Element is not Button button)

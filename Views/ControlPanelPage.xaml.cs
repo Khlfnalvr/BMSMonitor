@@ -179,20 +179,27 @@ public sealed partial class ControlPanelPage : Page
         if (_initializingParams) return;
         if (ToggleAutoConnect.IsOn) ViewModel.AutoConnect.ResumeReconnect();
         else                        ViewModel.AutoConnect.SuspendReconnect();
+        ViewModel.SaveSettings();
     }
 
     private void NbxReconnectInterval_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_initializingParams) return;
         if (!double.IsNaN(args.NewValue))
+        {
             ViewModel.AutoConnect.ReconnectIntervalSec = (int)args.NewValue;
+            ViewModel.SaveSettings();
+        }
     }
 
     private void NbxProbeTimeout_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
     {
         if (_initializingParams) return;
         if (!double.IsNaN(args.NewValue))
+        {
             ViewModel.AutoConnect.ProbeTimeoutMs = (int)args.NewValue;
+            ViewModel.SaveSettings();
+        }
     }
 
     private void UpdateCounters()
@@ -232,6 +239,8 @@ public sealed partial class ControlPanelPage : Page
         cfg.MaxDod                = NbxMaxDod.Value;
         cfg.BalancingStartDelta   = NbxBalStart.Value / 1000.0;
         cfg.BalancingStopDelta    = NbxBalStop.Value  / 1000.0;
+
+        ViewModel.SaveSettings();
 
         FeedbackBar.Title    = Lang.Fb_SettingsApplied;
         FeedbackBar.Message  = Lang.Fb_SettingsAppliedMsg;
