@@ -56,6 +56,71 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top">
             <StackPanel Orientation="Horizontal">
+                <!--
+                    CAN channel picker — sits to the left of the language /
+                    theme buttons. Opens a flyout where the user can pick the
+                    PCAN-USB channel + bitrate and connect without leaving
+                    the current page. The small dot at the bottom-right
+                    indicates live connection state.
+                -->
+                <Button x:Name="CanBtn"
+                        Style="{StaticResource CaptionButtonStyle}">
+                    <Grid>
+                        <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                  FontSize="14"
+                                  Glyph="&#xE839;"/>
+                        <Ellipse x:Name="CanStatusDot"
+                                 Width="6" Height="6"
+                                 HorizontalAlignment="Right"
+                                 VerticalAlignment="Bottom"
+                                 Margin="0,0,10,6"/>
+                    </Grid>
+                    <Button.Flyout>
+                        <Flyout x:Name="CanFlyout" Placement="Bottom">
+                            <StackPanel Width="300" Spacing="10">
+                                <TextBlock Text="{x:Bind Lang.Ui_CanConnection, Mode=OneWay}"
+                                           FontWeight="SemiBold" FontSize="14"/>
+
+                                <!-- Channel row + refresh -->
+                                <Grid ColumnSpacing="6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox Grid.Column="0"
+                                              x:Name="CapCanChannel"
+                                              HorizontalAlignment="Stretch"
+                                              PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"/>
+                                    <Button Grid.Column="1"
+                                            x:Name="CapRefreshBtn"
+                                            Padding="8,6"
+                                            ToolTipService.ToolTip="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}"
+                                            Click="CapRefresh_Click">
+                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="12"/>
+                                    </Button>
+                                </Grid>
+
+                                <!-- Bitrate row -->
+                                <ComboBox x:Name="CapCanBitrate"
+                                          HorizontalAlignment="Stretch"/>
+
+                                <!-- Connect / Disconnect -->
+                                <Button x:Name="CapConnectBtn"
+                                        HorizontalAlignment="Stretch"
+                                        Style="{ThemeResource AccentButtonStyle}"
+                                        Click="CapConnectBtn_Click"
+                                        Content="{x:Bind Lang.Ctrl_Connect, Mode=OneWay}"/>
+
+                                <!-- Status -->
+                                <TextBlock x:Name="CapConnStatus"
+                                           FontSize="11" Opacity="0.7"
+                                           TextWrapping="Wrap"
+                                           Text="{x:Bind Lang.Ctrl_NotConnected, Mode=OneWay}"/>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+
                 <Button x:Name="LangBtn"
                         Style="{StaticResource CaptionButtonStyle}">
                     <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"

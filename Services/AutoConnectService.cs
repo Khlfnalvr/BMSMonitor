@@ -29,6 +29,28 @@ public sealed class AutoConnectService : IDisposable
     public ushort BitrateCode    { get; set; } = CanBusService.DefaultBitrateCode;
     public int    BitrateKbps    { get; set; } = CanBusService.DefaultBitrate;
     public bool   IsSuspended    { get { lock (_lock) return _suspended; } }
+    public bool   IsEnabled      => !IsSuspended;
+
+    // User-tunable scan/probe timing. Changing ReconnectIntervalSec
+    // recreates the underlying timer so the next tick honours the new
+    // interval immediately.
+    private int _reconnectIntervalSec = 2;
+    public int ReconnectIntervalSec
+    {
+        get { lock (_lock) return _reconnectIntervalSec; }
+        set
+        {
+            int v = Math.Clamp(value, 1, 60);
+            lock (_lock)
+            {
+                if (_reconnectIntervalSec == v) return;
+                _reconnectIntervalSec = v;
+                _timer?.Change(TimeSpan.FromMilliseconds(500),
+                               TimeSpan.FromSeconds(v));
+            }
+        }
+    }
+    public int ProbeTimeoutMs { get; set; } = 3000;
 
     /// <summary>Status messages for UI — always DispatcherQueue.TryEnqueue before touching controls.</summary>
     public event Action<string>? Notification;
@@ -51,7 +73,7 @@ public sealed class AutoConnectService : IDisposable
             _timer?.Dispose();
             _timer = new Timer(Poll, null,
                 TimeSpan.FromMilliseconds(500),   // first tick in 0.5 s
-                TimeSpan.FromSeconds(2));
+                TimeSpan.FromSeconds(_reconnectIntervalSec));
         }
     }
 
@@ -121,7 +143,7 @@ public sealed class AutoConnectService : IDisposable
 
         Notification?.Invoke($"Mendeteksi {candidateNm} @ {kbps} kbit/s — menunggu frame BMS…");
         bool verified;
-        try { verified = CanBusService.Probe(candidate, btr, timeoutMs: 3000); }
+        try { verified = CanBusService.Probe(candidate, btr, timeoutMs: ProbeTimeoutMs); }
         catch { verified = false; }
 
         lock (_lock)

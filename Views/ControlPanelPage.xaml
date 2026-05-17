@@ -64,6 +64,94 @@
                     </StackPanel>
                 </Border>
 
+                <!-- ── CAN BUS PARAMETERS ─────────────────────────────────── -->
+                <TextBlock Text="{x:Bind Lang.Ctrl_SecCanAdvanced, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel Spacing="14">
+
+                        <!-- Auto-connect toggle -->
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_AutoConnect, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <ToggleSwitch x:Name="ToggleAutoConnect"
+                                              Toggled="ToggleAutoConnect_Toggled"
+                                              OnContent="" OffContent=""/>
+                                <TextBlock Text="{x:Bind Lang.Ctrl_AutoConnectHint, Mode=OneWay}"
+                                           FontSize="11" Opacity="0.5" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Reconnect interval -->
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ReconnectInterval, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <NumberBox  Grid.Column="1" x:Name="NbxReconnectInterval"
+                                       Value="2" Minimum="1" Maximum="30"
+                                       SmallChange="1" LargeChange="5"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="NbxReconnectInterval_ValueChanged"
+                                       HorizontalAlignment="Stretch"/>
+                            <TextBlock Grid.Column="2" Text="s" VerticalAlignment="Center"
+                                       Opacity="0.65" FontSize="13"/>
+                        </Grid>
+
+                        <!-- Probe timeout -->
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ProbeTimeout, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <NumberBox  Grid.Column="1" x:Name="NbxProbeTimeout"
+                                       Value="3000" Minimum="500" Maximum="10000"
+                                       SmallChange="100" LargeChange="500"
+                                       SpinButtonPlacementMode="Compact"
+                                       ValueChanged="NbxProbeTimeout_ValueChanged"
+                                       HorizontalAlignment="Stretch"/>
+                            <TextBlock Grid.Column="2" Text="ms" VerticalAlignment="Center"
+                                       Opacity="0.65" FontSize="13"/>
+                        </Grid>
+
+                        <!-- Live counters -->
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_FramesReceived, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="1" x:Name="FramesReceivedText"
+                                       VerticalAlignment="Center"
+                                       FontFamily="Consolas" FontSize="13" Text="0"/>
+                        </Grid>
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ParseErrors, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <TextBlock Grid.Column="1" x:Name="ParseErrorsText"
+                                       VerticalAlignment="Center"
+                                       FontFamily="Consolas" FontSize="13" Text="0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
                 <!-- ── BATTERY CAPACITY ─────────────────────────────────── -->
                 <TextBlock Text="{x:Bind Lang.Ctrl_SecCapacity, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                 <Border Style="{StaticResource CardStyle}">
@@ -282,28 +370,6 @@
                                        Opacity="0.65" FontSize="13"/>
                         </Grid>
                     </StackPanel>
-                </Border>
-
-                <!-- ── LANGUAGE ──────────────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecLanguage, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <Grid ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_Language, Mode=OneWay}"
-                                   Style="{StaticResource FormLabelStyle}"/>
-                        <ComboBox Grid.Column="1" x:Name="LangCombo"
-                                  HorizontalAlignment="Left" MinWidth="220"
-                                  SelectionChanged="LangCombo_SelectionChanged">
-                            <ComboBoxItem Content="Indonesia" Tag="id"/>
-                            <ComboBoxItem Content="Malay"     Tag="ms"/>
-                            <ComboBoxItem Content="English"   Tag="en"/>
-                            <ComboBoxItem Content="Nederlands" Tag="nl"/>
-                            <ComboBoxItem Content="中文"      Tag="zh"/>
-                        </ComboBox>
-                    </Grid>
                 </Border>
 
                 <!-- ── ACTION BUTTONS ─────────────────────────────────────── -->

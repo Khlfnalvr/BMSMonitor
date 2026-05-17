@@ -215,6 +215,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <Grid Grid.Row="0" ColumnSpacing="8">
@@ -246,8 +247,20 @@
                                 </Canvas>
                             </Grid>
 
+                            <!--
+                                Legend row — mirrors the V/I chart's legend row so both
+                                cards have the same overall height when sat side-by-side.
+                            -->
+                            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="16"
+                                        HorizontalAlignment="Center" Margin="0,4,0,0">
+                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                    <Rectangle x:Name="SocLegendRect" Width="18" Height="3" VerticalAlignment="Center"/>
+                                    <TextBlock Text="SOC (%)" FontSize="10" Opacity="0.65" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
                             <!-- X-axis legend: window duration -->
-                            <Grid Grid.Row="1" Margin="36,0,0,0">
+                            <Grid Grid.Row="2" Margin="36,0,0,0">
                                 <TextBlock x:Name="SocTimeAgoLabel" FontSize="10" Opacity="0.4"
                                            HorizontalAlignment="Left"/>
                                 <TextBlock x:Name="SocNowLabel" FontSize="10" Opacity="0.4"

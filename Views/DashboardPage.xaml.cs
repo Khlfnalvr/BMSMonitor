@@ -238,8 +238,9 @@ public sealed partial class DashboardPage : Page
     {
         var ui     = new UISettings();
         var accent = ui.GetColorValue(UIColorType.Accent);
-        SocLine.Stroke = new SolidColorBrush(accent);
-        SocFill.Fill   = new SolidColorBrush(accent);
+        SocLine.Stroke   = new SolidColorBrush(accent);
+        SocFill.Fill     = new SolidColorBrush(accent);
+        SocLegendRect.Fill = new SolidColorBrush(accent);
 
         var gridBrush = new SolidColorBrush(Color.FromArgb(35, 128, 128, 128));
         GridLine25.Stroke = gridBrush;

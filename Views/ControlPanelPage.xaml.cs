@@ -10,7 +10,8 @@ public sealed partial class ControlPanelPage : Page
     private MainViewModel ViewModel => App.ViewModel;
     private LocalizationManager Lang => App.Lang;
 
-    private bool _langComboInitializing;
+    private bool _initializingParams;
+    private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _counterTimer;
 
     public ControlPanelPage()
     {
@@ -20,34 +21,16 @@ public sealed partial class ControlPanelPage : Page
         RefreshChannels();
         HookCanBus();
         SyncConnectButton();
-        InitLangCombo();
+        LoadCanParams();
 
-        // Keep the combo in sync when the language is changed elsewhere
-        // (e.g. from the caption-bar language button in MainWindow).
-        Lang.PropertyChanged += OnLangChanged;
-        Unloaded += (_, _) => Lang.PropertyChanged -= OnLangChanged;
-    }
+        // Poll frame counters at 2 Hz — cheap and avoids wiring an event
+        // for every received frame. Started/stopped with page lifecycle.
+        _counterTimer = DispatcherQueue.CreateTimer();
+        _counterTimer.Interval = TimeSpan.FromMilliseconds(500);
+        _counterTimer.Tick += (_, _) => UpdateCounters();
 
-    private void OnLangChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-        => DispatcherQueue.TryEnqueue(InitLangCombo);
-
-    // ── Language selector ─────────────────────────────────────────────────
-    private void InitLangCombo()
-    {
-        _langComboInitializing = true;
-        int idx = Array.IndexOf(LocalizationManager.SupportedLanguages, Lang.CurrentLanguage);
-        LangCombo.SelectedIndex = idx >= 0 ? idx : 2; // default English
-        _langComboInitializing = false;
-    }
-
-    private void LangCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_langComboInitializing) return;
-        if (LangCombo.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-        {
-            Lang.CurrentLanguage = tag;
-            SyncConnectButton();
-        }
+        Loaded   += (_, _) => _counterTimer.Start();
+        Unloaded += (_, _) => _counterTimer.Stop();
     }
 
     // ── CAN bus controls ──────────────────────────────────────────────────
@@ -78,6 +61,11 @@ public sealed partial class ControlPanelPage : Page
         ComboCanChannel.IsEnabled = !connected;
         ComboCanBitrate.IsEnabled = !connected;
         if (!connected) ConnStatusText.Text = Lang.Ctrl_NotConnected;
+
+        // Auto-connect toggle reflects the service's suspended flag.
+        _initializingParams = true;
+        ToggleAutoConnect.IsOn = !ViewModel.AutoConnect.IsSuspended;
+        _initializingParams = false;
     }
 
     private void PopulateBitrates()
@@ -174,6 +162,43 @@ public sealed partial class ControlPanelPage : Page
         ViewModel.AutoConnect.BitrateKbps = kbps;
         ViewModel.AutoConnect.ResumeReconnect();
         ViewModel.CanBus.Connect(channel.Handle, btr, kbps, channel.DisplayName);
+    }
+
+    // ── CAN bus parameters ────────────────────────────────────────────────
+    private void LoadCanParams()
+    {
+        _initializingParams = true;
+        ToggleAutoConnect.IsOn    = !ViewModel.AutoConnect.IsSuspended;
+        NbxReconnectInterval.Value = ViewModel.AutoConnect.ReconnectIntervalSec;
+        NbxProbeTimeout.Value      = ViewModel.AutoConnect.ProbeTimeoutMs;
+        _initializingParams = false;
+    }
+
+    private void ToggleAutoConnect_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_initializingParams) return;
+        if (ToggleAutoConnect.IsOn) ViewModel.AutoConnect.ResumeReconnect();
+        else                        ViewModel.AutoConnect.SuspendReconnect();
+    }
+
+    private void NbxReconnectInterval_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_initializingParams) return;
+        if (!double.IsNaN(args.NewValue))
+            ViewModel.AutoConnect.ReconnectIntervalSec = (int)args.NewValue;
+    }
+
+    private void NbxProbeTimeout_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_initializingParams) return;
+        if (!double.IsNaN(args.NewValue))
+            ViewModel.AutoConnect.ProbeTimeoutMs = (int)args.NewValue;
+    }
+
+    private void UpdateCounters()
+    {
+        FramesReceivedText.Text = ViewModel.CanBus.FramesReceived.ToString("N0");
+        ParseErrorsText.Text    = ViewModel.CanBus.ParseErrors.ToString("N0");
     }
 
     // ── Settings ──────────────────────────────────────────────────────────
