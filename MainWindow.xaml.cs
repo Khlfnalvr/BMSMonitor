@@ -56,7 +56,13 @@ public sealed partial class MainWindow : Window
 
         // The theme button's tooltip is set in code, so it doesn't refresh
         // through {x:Bind ...}. Refresh it whenever the language switches.
-        Lang.PropertyChanged += (_, _) => RefreshThemeButtonTooltip();
+        // Same for the language button's tooltip and checked-state.
+        Lang.PropertyChanged += (_, _) =>
+        {
+            RefreshThemeButtonTooltip();
+            UpdateLangMenuState();
+        };
+        UpdateLangMenuState();
     }
 
     // ── Icon ─────────────────────────────────────────────────────────────
@@ -173,6 +179,25 @@ public sealed partial class MainWindow : Window
         // Default counts as light for the toggle direction
         bool currentlyDark = current == ElementTheme.Dark;
         ApplyTheme(currentlyDark ? ElementTheme.Light : ElementTheme.Dark);
+    }
+
+    // ── Language picker ───────────────────────────────────────────────────
+    private void UpdateLangMenuState()
+    {
+        if (LangBtn is null) return;
+        string cur = Lang.CurrentLanguage;
+        LangItemId.IsChecked = (cur == "id");
+        LangItemMs.IsChecked = (cur == "ms");
+        LangItemEn.IsChecked = (cur == "en");
+        LangItemNl.IsChecked = (cur == "nl");
+        LangItemZh.IsChecked = (cur == "zh");
+        ToolTipService.SetToolTip(LangBtn, Lang.Ui_ChangeLanguage);
+    }
+
+    private void LangItem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioMenuFlyoutItem item && item.Tag is string tag)
+            Lang.CurrentLanguage = tag;
     }
 
     // ── Navigation ────────────────────────────────────────────────────────

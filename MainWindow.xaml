@@ -45,24 +45,41 @@
                 IsHitTestVisible="False"/>
 
         <!--
-            Theme toggle — a single icon button styled like an OS caption
-            button, positioned immediately left of the minimize/maximize/close
-            buttons (mirrors the Visual Studio Installer pattern). The
-            code-behind shrinks AppTitleBar's right margin so this button is
-            outside the drag region.
+            Caption-style icon buttons — language picker + theme toggle, sitting
+            immediately left of the minimize/maximize/close buttons (mirrors the
+            Visual Studio Installer pattern). The code-behind shrinks
+            AppTitleBar's right margin so this whole area sits outside the drag
+            region.
         -->
         <Border x:Name="ThemeToggleArea"
                 Grid.Row="0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top">
-            <Button x:Name="ThemeBtn"
-                    Style="{StaticResource CaptionButtonStyle}"
-                    Click="ThemeBtn_Click">
-                <FontIcon x:Name="ThemeIcon"
-                          FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
-                          FontSize="14"
-                          Glyph="&#xE706;"/>
-            </Button>
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="LangBtn"
+                        Style="{StaticResource CaptionButtonStyle}">
+                    <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                              FontSize="14"
+                              Glyph="&#xE12B;"/>
+                    <Button.Flyout>
+                        <MenuFlyout Placement="Bottom">
+                            <RadioMenuFlyoutItem x:Name="LangItemId" Text="Indonesia"  Tag="id" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemMs" Text="Malay"      Tag="ms" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemEn" Text="English"    Tag="en" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemNl" Text="Nederlands" Tag="nl" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemZh" Text="中文"        Tag="zh" GroupName="LangGroup" Click="LangItem_Click"/>
+                        </MenuFlyout>
+                    </Button.Flyout>
+                </Button>
+                <Button x:Name="ThemeBtn"
+                        Style="{StaticResource CaptionButtonStyle}"
+                        Click="ThemeBtn_Click">
+                    <FontIcon x:Name="ThemeIcon"
+                              FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                              FontSize="14"
+                              Glyph="&#xE706;"/>
+                </Button>
+            </StackPanel>
         </Border>
 
         <!-- ── Playback bar (Row 1, hidden when no file is loaded) ─────── -->

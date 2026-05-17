@@ -97,6 +97,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ui_Light          => T(nameof(Ui_Light));
     public string Ui_SwitchToLight  => T(nameof(Ui_SwitchToLight));
     public string Ui_SwitchToDark   => T(nameof(Ui_SwitchToDark));
+    public string Ui_ChangeLanguage => T(nameof(Ui_ChangeLanguage));
 
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
@@ -272,6 +273,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Light)]         = "LIGHT",
             [nameof(Ui_SwitchToLight)] = "Switch to Light mode",
             [nameof(Ui_SwitchToDark)]  = "Switch to Dark mode",
+            [nameof(Ui_ChangeLanguage)] = "Change language",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -436,6 +438,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Light)]         = "TERANG",
             [nameof(Ui_SwitchToLight)] = "Beralih ke Mode Terang",
             [nameof(Ui_SwitchToDark)]  = "Beralih ke Mode Gelap",
+            [nameof(Ui_ChangeLanguage)] = "Ubah bahasa",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -600,6 +603,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Light)]         = "CERAH",
             [nameof(Ui_SwitchToLight)] = "Tukar ke Mod Cerah",
             [nameof(Ui_SwitchToDark)]  = "Tukar ke Mod Gelap",
+            [nameof(Ui_ChangeLanguage)] = "Tukar bahasa",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -764,6 +768,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Light)]         = "LICHT",
             [nameof(Ui_SwitchToLight)] = "Overschakelen naar lichte modus",
             [nameof(Ui_SwitchToDark)]  = "Overschakelen naar donkere modus",
+            [nameof(Ui_ChangeLanguage)] = "Taal wijzigen",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -928,6 +933,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Light)]         = "浅色",
             [nameof(Ui_SwitchToLight)] = "切换到浅色模式",
             [nameof(Ui_SwitchToDark)]  = "切换到深色模式",
+            [nameof(Ui_ChangeLanguage)] = "更改语言",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",

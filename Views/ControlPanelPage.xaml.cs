@@ -21,7 +21,15 @@ public sealed partial class ControlPanelPage : Page
         HookCanBus();
         SyncConnectButton();
         InitLangCombo();
+
+        // Keep the combo in sync when the language is changed elsewhere
+        // (e.g. from the caption-bar language button in MainWindow).
+        Lang.PropertyChanged += OnLangChanged;
+        Unloaded += (_, _) => Lang.PropertyChanged -= OnLangChanged;
     }
+
+    private void OnLangChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        => DispatcherQueue.TryEnqueue(InitLangCombo);
 
     // ── Language selector ─────────────────────────────────────────────────
     private void InitLangCombo()
