@@ -219,35 +219,52 @@ public partial class MainViewModel : ObservableObject
         Current     = data.Current;
         PackStatus  = data.Status;
 
-        MinCellVoltage = data.Cells.Min();
-        MaxCellVoltage = data.Cells.Max();
-        AvgCellVoltage = data.Cells.Average();
-        DeltaVoltage   = MaxCellVoltage - MinCellVoltage;
+        // Single-pass min / max / sum — replaces three LINQ extension calls
+        // (each iterates and allocates an enumerator). Hot path: this runs
+        // once per CAN snapshot.
+        var cells = data.Cells;
+        double minV = cells[0], maxV = cells[0], sumV = 0;
+        for (int i = 0; i < 20; i++)
+        {
+            double v = cells[i];
+            if (v < minV) minV = v;
+            if (v > maxV) maxV = v;
+            sumV += v;
+        }
+        MinCellVoltage = minV;
+        MaxCellVoltage = maxV;
+        AvgCellVoltage = sumV / 20.0;
+        DeltaVoltage   = maxV - minV;
 
+        var bal = data.Balancing;
         int balCount = 0;
         for (int i = 0; i < 20; i++)
         {
-            Cells[i].Voltage     = data.Cells[i];
-            Cells[i].IsBalancing = data.Balancing[i];
-            Cells[i].State       = GetCellState(data.Cells[i]);
-            if (data.Balancing[i]) balCount++;
+            var cellVm = Cells[i];
+            double v   = cells[i];
+            bool   b   = bal[i];
+            cellVm.Voltage     = v;
+            cellVm.IsBalancing = b;
+            cellVm.State       = GetCellState(v);
+            if (b) balCount++;
+
+            // Per-cell session statistics (skip invalid zero readings).
+            if (v > 0)
+            {
+                if (v < _cellStatMin[i]) { _cellStatMin[i] = v; cellVm.StatMin = v; }
+                if (v > _cellStatMax[i]) { _cellStatMax[i] = v; cellVm.StatMax = v; }
+                _cellStatSum[i] += v;
+            }
         }
         BalancingCount = balCount;
-
-        // Accumulate per-cell session statistics (skip invalid zero readings).
         _cellStatCount++;
+        double invCount = 1.0 / _cellStatCount;
         for (int i = 0; i < 20; i++)
-        {
-            double v = data.Cells[i];
-            if (v <= 0) continue;
-            if (v < _cellStatMin[i]) { _cellStatMin[i] = v; Cells[i].StatMin = v; }
-            if (v > _cellStatMax[i]) { _cellStatMax[i] = v; Cells[i].StatMax = v; }
-            _cellStatSum[i] += v;
-            Cells[i].StatAvg = _cellStatSum[i] / _cellStatCount;
-        }
+            if (cells[i] > 0) Cells[i].StatAvg = _cellStatSum[i] * invCount;
 
+        var temps = data.Temps;
         for (int i = 0; i < 10; i++)
-            Temperatures[i].Temperature = data.Temps[i];
+            Temperatures[i].Temperature = temps[i];
 
         HasData = true;
 
@@ -263,18 +280,25 @@ public partial class MainViewModel : ObservableObject
             _socHistory.Enqueue(data.Soc);
             _voltageHistory.Enqueue(data.PackVoltage);
             _currentHistory.Enqueue(data.Current);
-            _tempHistory.Enqueue((double[])data.Temps.Clone());
-            _cellHistory.Enqueue((double[])data.Cells.Clone());
+            _tempHistory.Enqueue((double[])temps.Clone());
+            _cellHistory.Enqueue((double[])cells.Clone());
             _timestamps.Enqueue(now);
             _cachedLatest = now;
-            if (_cachedEarliest is null) _cachedEarliest = now;
+            _cachedEarliest ??= now;
             TrimHistoryBuffers();
         }
 
         // ── Live data stream (newest at top) — always shown ──────────
-        var row = new LogRow();
-        foreach (var col in LogColumns.Where(c => c.IsEnabled))
-            row.Values.Add(col.GetString(DateTime.Now, data));
+        // Use a foreach over the underlying collection — avoids the LINQ
+        // Where iterator allocation that previously ran every frame.
+        var row     = new LogRow();
+        var nowTs   = DateTime.Now;
+        var columns = LogColumns;
+        for (int i = 0; i < columns.Count; i++)
+        {
+            var col = columns[i];
+            if (col.IsEnabled) row.Values.Add(col.GetString(nowTs, data));
+        }
         DataStream.Insert(0, row);
         if (DataStream.Count > StreamCapacity)
             DataStream.RemoveAt(StreamCapacity);
