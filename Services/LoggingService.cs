@@ -75,7 +75,13 @@ public class LoggingService
         {
             _writer = new StreamWriter(filePath, append: false, Encoding.UTF8);
             char sep = format == LogFormat.Tsv ? '\t' : ',';
-            _writer.WriteLine(string.Join(sep, _activeColumns.Select(c => c.Key)));
+            _lineBuilder.Clear();
+            for (int i = 0; i < _activeColumns.Length; i++)
+            {
+                if (i > 0) _lineBuilder.Append(sep);
+                _lineBuilder.Append(_activeColumns[i].Key);
+            }
+            _writer.WriteLine(_lineBuilder);
         }
         else
         {
@@ -115,6 +121,10 @@ public class LoggingService
         StateChanged?.Invoke();
     }
 
+    // Reused per-line StringBuilder — avoids the per-frame LINQ Select +
+    // string.Join allocation that ran for every CSV/TSV row logged.
+    private readonly StringBuilder _lineBuilder = new(512);
+
     public void Log(BmsData data)
     {
         if (!IsLogging) return;
@@ -123,7 +133,14 @@ public class LoggingService
         {
             char sep = _format == LogFormat.Tsv ? '\t' : ',';
             var  ts  = DateTime.Now;
-            _writer!.WriteLine(string.Join(sep, _activeColumns.Select(c => c.GetString(ts, data))));
+            _lineBuilder.Clear();
+            var cols = _activeColumns;
+            for (int i = 0; i < cols.Length; i++)
+            {
+                if (i > 0) _lineBuilder.Append(sep);
+                _lineBuilder.Append(cols[i].GetString(ts, data));
+            }
+            _writer!.WriteLine(_lineBuilder);
         }
         else
         {

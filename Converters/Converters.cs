@@ -115,18 +115,15 @@ public class TempToForegroundConverter : IValueConverter
 
 public class StatusToForegroundConverter : IValueConverter
 {
+    // Case-insensitive Equals avoids the ToLowerInvariant() allocation that
+    // ran on every property-change cycle when status text refreshed.
     public object Convert(object value, Type targetType, object parameter, string language)
     {
-        if (value is string status)
+        if (value is string s)
         {
-            return status.ToLowerInvariant() switch
-            {
-                "charging"    => CachedBrushes.StatusCharging,
-                "discharging" => CachedBrushes.StatusDischarging,
-                "idle"        => CachedBrushes.StatusNeutral,
-                "fault"       => CachedBrushes.StatusFault,
-                _             => CachedBrushes.StatusNeutral
-            };
+            if (s.Equals("charging",    StringComparison.OrdinalIgnoreCase)) return CachedBrushes.StatusCharging;
+            if (s.Equals("discharging", StringComparison.OrdinalIgnoreCase)) return CachedBrushes.StatusDischarging;
+            if (s.Equals("fault",       StringComparison.OrdinalIgnoreCase)) return CachedBrushes.StatusFault;
         }
         return CachedBrushes.StatusNeutral;
     }

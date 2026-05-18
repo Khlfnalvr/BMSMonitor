@@ -258,14 +258,23 @@ public sealed partial class DashboardPage : Page
     }
 
     // ── Chart drawing ─────────────────────────────────────────────────────
+    // Cached once per redraw cycle so the three Redraw* methods don't each
+    // re-snapshot the Queue<DateTime>. Significantly cuts allocations during
+    // the high-frequency HistoryUpdated path.
+    private DateTime[]? _tsCache;
+
     private void OnHistoryUpdated()
     {
+        _tsCache = ViewModel.GetTimestamps();
         string socUnit  = RedrawSocChart();
         string viUnit   = RedrawVIChart();
         string tempUnit = RedrawTempChart();
         UpdateXAxisLabels(socUnit, viUnit, tempUnit);
         UpdateTrimBar();
+        _tsCache = null;
     }
+
+    private DateTime[] GetCachedTimestamps() => _tsCache ?? ViewModel.GetTimestamps();
 
     /// <summary>Clear any active trim filter when history is replaced.</summary>
     private void OnHistoryReset()
@@ -304,7 +313,7 @@ public sealed partial class DashboardPage : Page
     /// </summary>
     private (int start, int end, double timeframeMinutes) GetActiveRange(int fullLength)
     {
-        var ts = ViewModel.GetTimestamps();
+        var ts = GetCachedTimestamps();
 
         if (_filterStart.HasValue || _filterEnd.HasValue)
         {
@@ -373,7 +382,7 @@ public sealed partial class DashboardPage : Page
         // Position each sample horizontally by its actual elapsed time, not
         // by its index. If the BMS sends frames faster than 1 Hz the indices
         // would lie about how much real time has passed.
-        DateTime[] timestamps = ViewModel.GetTimestamps();
+        DateTime[] timestamps = GetCachedTimestamps();
         DateTime tStart = timestamps[rangeStart];
         DateTime tEnd   = timestamps[rangeStart + n - 1];
         double totalSec = Math.Max(1e-9, (tEnd - tStart).TotalSeconds);
@@ -433,24 +442,20 @@ public sealed partial class DashboardPage : Page
             return "";
         }
 
-        // Slice both series to the active range
-        var voltages = new double[n];
-        var currents = new double[n];
-        for (int i = 0; i < n; i++)
+        // Compute min/max in a single pass over the active range — no slice
+        // arrays, no LINQ enumerator allocations.
+        double vMin = double.MaxValue, vMax = double.MinValue;
+        double iMin = double.MaxValue, iMax = double.MinValue;
+        for (int i = rangeStart; i < rangeEnd; i++)
         {
-            voltages[i] = fullV[rangeStart + i];
-            currents[i] = fullI[rangeStart + i];
+            double v = fullV[i]; if (v < vMin) vMin = v; if (v > vMax) vMax = v;
+            double c = fullI[i]; if (c < iMin) iMin = c; if (c > iMax) iMax = c;
         }
-
-        double vMin    = voltages.Min();
-        double vMax    = voltages.Max();
         double vRawMin = Math.Floor(vMin   / 5.0) * 5.0;
         double vRawMax = Math.Ceiling(vMax / 5.0) * 5.0;
         if (vRawMax <= vRawMin) vRawMax = vRawMin + 5.0;
         double vRange  = vRawMax - vRawMin;
 
-        double iMin    = currents.Min();
-        double iMax    = currents.Max();
         double iRawMin = Math.Floor(iMin   / 5.0) * 5.0;
         double iRawMax = Math.Ceiling(iMax / 5.0) * 5.0;
         if (iRawMax <= iRawMin) iRawMax = iRawMin + 5.0;
@@ -471,7 +476,7 @@ public sealed partial class DashboardPage : Page
         ILabel0.Text = $"{iRawMin:F1}";                     Canvas.SetTop(ILabel0, h - fontH);
 
         // Position points by real elapsed time (see RedrawSocChart for rationale)
-        DateTime[] timestamps = ViewModel.GetTimestamps();
+        DateTime[] timestamps = GetCachedTimestamps();
         DateTime tStart = timestamps[rangeStart];
         DateTime tEnd   = timestamps[rangeStart + n - 1];
         double totalSec = Math.Max(1e-9, (tEnd - tStart).TotalSeconds);
@@ -483,19 +488,20 @@ public sealed partial class DashboardPage : Page
         int lastEmitted = -1;
         for (int j = 0; j < n; j += stride)
         {
-            double x  = w * (timestamps[rangeStart + j] - tStart).TotalSeconds / totalSec;
-            double vy = h * (1.0 - (voltages[j] - vRawMin) / vRange);
-            double iy = h * (1.0 - (currents[j] - iRawMin) / iRange);
+            int idx = rangeStart + j;
+            double x  = w * (timestamps[idx] - tStart).TotalSeconds / totalSec;
+            double vy = h * (1.0 - (fullV[idx] - vRawMin) / vRange);
+            double iy = h * (1.0 - (fullI[idx] - iRawMin) / iRange);
             vPoints.Add(new Point(x, vy));
             iPoints.Add(new Point(x, iy));
             lastEmitted = j;
         }
         if (lastEmitted != n - 1)
         {
-            int j = n - 1;
-            double x  = w * (timestamps[rangeStart + j] - tStart).TotalSeconds / totalSec;
-            double vy = h * (1.0 - (voltages[j] - vRawMin) / vRange);
-            double iy = h * (1.0 - (currents[j] - iRawMin) / iRange);
+            int idx = rangeStart + n - 1;
+            double x  = w * (timestamps[idx] - tStart).TotalSeconds / totalSec;
+            double vy = h * (1.0 - (fullV[idx] - vRawMin) / vRange);
+            double iy = h * (1.0 - (fullI[idx] - iRawMin) / iRange);
             vPoints.Add(new Point(x, vy));
             iPoints.Add(new Point(x, iy));
         }
@@ -571,7 +577,7 @@ public sealed partial class DashboardPage : Page
         FLabel0.Text = $"{fMin:F0}";                     Canvas.SetTop(FLabel0, h - fontH);
 
         // Position points by real elapsed time (see RedrawSocChart for rationale)
-        DateTime[] timestamps = ViewModel.GetTimestamps();
+        DateTime[] timestamps = GetCachedTimestamps();
         DateTime tStartTs = timestamps[rangeStart];
         DateTime tEndTs   = timestamps[rangeStart + n - 1];
         double totalSec  = Math.Max(1e-9, (tEndTs - tStartTs).TotalSeconds);

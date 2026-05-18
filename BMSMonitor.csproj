@@ -32,11 +32,33 @@
     -->
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>partial</TrimMode>
+
     <!--
       ReadyToRun pre-JIT speeds first-launch load time at the cost of larger
       binaries. Disable for smaller output; enable if startup latency matters.
     -->
     <PublishReadyToRun>false</PublishReadyToRun>
+
+    <!--
+      Runtime feature flags — disabling features the app does not use lets
+      the trimmer drop the supporting code paths from the BCL, producing a
+      smaller, lighter managed runtime in the published folder.
+    -->
+    <DebuggerSupport>false</DebuggerSupport>
+    <EventSourceSupport>false</EventSourceSupport>
+    <HttpActivityPropagationSupport>false</HttpActivityPropagationSupport>
+    <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
+    <UseSystemResourceKeys>true</UseSystemResourceKeys>
+    <XmlResolverIsNetworkingEnabledByDefault>false</XmlResolverIsNetworkingEnabledByDefault>
+    <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+    <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+
+    <!-- Strip debug symbols out of the released binaries. -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+
+    <!-- We bundle our own translation table — skip framework satellite DLLs. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
