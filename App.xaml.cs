@@ -25,6 +25,7 @@ public partial class App : Application
             CurrentWindow = new MainWindow();
             ViewModel = CurrentWindow.ViewModel;
             CurrentWindow.Activate();
+            CurrentWindow.MaximizeOnLaunch();
 
             // Register for Windows toast notifications (creates Start menu shortcut)
             Notifications.Register();

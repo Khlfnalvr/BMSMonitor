@@ -2,12 +2,20 @@ using System.IO.Ports;
 using System.Text;
 using System.Text.Json;
 using BMSMonitor.Models;
+using BMSMonitor.Services.Transports;
 
-namespace BMSMonitor.Services.Transports;
+namespace BMSMonitor.Services;
+
+/// <summary>One pickable COM port (USB-CDC from the ESP32).</summary>
+public record SerialPortInfo(string PortName, string DisplayName);
+
+/// <summary>One pickable UART baud rate.</summary>
+public record SerialBaud(int Baud, string DisplayName);
 
 /// <summary>
-/// ESP32 acts as the BMS master and forwards each snapshot as one NDJSON
-/// line over its USB-CDC port. No CAN hardware is required on the PC side.
+/// USB-serial link to the ESP32 master of the BMS. The firmware emits one
+/// JSON snapshot per line over its USB-CDC port; this service opens the COM
+/// port, runs a read loop, parses each line, and raises <see cref="DataReceived"/>.
 ///
 /// Wire format (one JSON object per line, terminated by \n):
 ///
@@ -16,16 +24,18 @@ namespace BMSMonitor.Services.Transports;
 ///    "temps":[28,   …10 values…],
 ///    "bal":[0,5,12]}
 ///
-/// Fields missing from a line keep their previous value (the backend merges
-/// into the last known snapshot). Bad JSON increments ParseErrors and is
-/// dropped silently.
+/// Fields missing from a line keep their previous value (the service merges
+/// into the last known snapshot). Bad JSON increments <see cref="ParseErrors"/>
+/// and is dropped silently after a 5 s cooldown to avoid log spam.
 /// </summary>
-internal sealed class EspSerialTransport : IBmsTransport
+public class SerialService : IDisposable
 {
+    // ── Public events ─────────────────────────────────────────────────────
     public event Action<BmsData>? DataReceived;
     public event Action<string>?  StatusChanged;
     public event Action<string>?  ErrorOccurred;
 
+    // ── Live state ────────────────────────────────────────────────────────
     public bool   IsConnected     => _port is { IsOpen: true };
     public string Channel         => _portName ?? "";
     public int    Bitrate         { get; private set; }
@@ -34,22 +44,22 @@ internal sealed class EspSerialTransport : IBmsTransport
     public int    FramesReceived  { get; private set; }
     public int    ParseErrors     { get; private set; }
 
-    public int    DefaultBitrateKbps => 115;             // 115 200 baud
-    public bool   IsAvailable        => TrySerialEnumerate();
+    public int  DefaultBitrate    => 115200;
+    public bool IsDriverAvailable => TrySerialEnumerate();
 
-    public CanChannel[] EnumerateChannels() => SerialPortHelper.EnumerateComChannels();
+    // ── Pickers ───────────────────────────────────────────────────────────
+    public SerialPortInfo[] Channels => SerialPortHelper.EnumerateComChannels();
 
-    // UART baud rate options. Persisted as `Kbps` (= Baud / 1000).
-    public CanBitrate[] GetBitrates() =>
+    public SerialBaud[] Bitrates =>
     [
-        new(921600, 921, "921 600 baud"),
-        new(460800, 460, "460 800 baud"),
-        new(230400, 230, "230 400 baud"),
-        new(115200, 115, "115 200 baud"),
-        new( 57600,  57,  "57 600 baud"),
-        new( 38400,  38,  "38 400 baud"),
-        new( 19200,  19,  "19 200 baud"),
-        new(  9600,   9,   "9 600 baud"),
+        new(921600, "921 600 baud"),
+        new(460800, "460 800 baud"),
+        new(230400, "230 400 baud"),
+        new(115200, "115 200 baud"),
+        new( 57600,  "57 600 baud"),
+        new( 38400,  "38 400 baud"),
+        new( 19200,  "19 200 baud"),
+        new(  9600,   "9 600 baud"),
     ];
 
     // ── Internal state ────────────────────────────────────────────────────
@@ -61,8 +71,11 @@ internal sealed class EspSerialTransport : IBmsTransport
     private readonly StringBuilder _lineBuf = new(512);
     private readonly object _stateLock = new();
     private BmsData _last = new();
+    private DateTime _lastParseErrorFired = DateTime.MinValue;
+    private static readonly TimeSpan ParseErrorCooldown = TimeSpan.FromSeconds(5);
 
-    public bool Probe(CanChannel channel, CanBitrate bitrate, int timeoutMs)
+    // ── Probe: short-lived open just to verify a port is the BMS ─────────
+    public bool Probe(SerialPortInfo channel, SerialBaud bitrate, int timeoutMs)
     {
         SerialPort? sp = null;
         try
@@ -111,7 +124,8 @@ internal sealed class EspSerialTransport : IBmsTransport
         }
     }
 
-    public bool Connect(CanChannel channel, CanBitrate bitrate)
+    // ── Lifecycle ─────────────────────────────────────────────────────────
+    public bool Connect(SerialPortInfo channel, SerialBaud bitrate)
     {
         if (IsConnected) Disconnect();
 
@@ -152,7 +166,7 @@ internal sealed class EspSerialTransport : IBmsTransport
         _cts      = new CancellationTokenSource();
         _readTask = Task.Run(() => ReadLoop(_cts.Token));
 
-        StatusChanged?.Invoke($"Connected — {channel.DisplayName} @ {bitrate.Baud} baud (ESP)");
+        StatusChanged?.Invoke($"Connected — {channel.DisplayName} @ {bitrate.Baud} baud");
         return true;
     }
 
@@ -173,6 +187,9 @@ internal sealed class EspSerialTransport : IBmsTransport
         StatusChanged?.Invoke("Disconnected");
     }
 
+    public void Dispose() => Disconnect();
+
+    // ── Read loop ─────────────────────────────────────────────────────────
     private void ReadLoop(CancellationToken ct)
     {
         var sp = _port;
@@ -215,7 +232,19 @@ internal sealed class EspSerialTransport : IBmsTransport
 
     private void HandleLine(string line)
     {
-        if (!TryParseLine(line, out var snap)) { ParseErrors++; return; }
+        if (!TryParseLine(line, out var snap))
+        {
+            ParseErrors++;
+            var now = DateTime.Now;
+            if (now - _lastParseErrorFired > ParseErrorCooldown)
+            {
+                _lastParseErrorFired = now;
+                string preview = line.Length > 60 ? line[..60] + "…" : line;
+                ErrorOccurred?.Invoke(
+                    $"ESP JSON parse error (total: {ParseErrors}) — data: \"{preview}\"");
+            }
+            return;
+        }
 
         lock (_stateLock)
         {
@@ -303,6 +332,4 @@ internal sealed class EspSerialTransport : IBmsTransport
         try { _ = SerialPort.GetPortNames(); return true; }
         catch { return false; }
     }
-
-    public void Dispose() => Disconnect();
 }

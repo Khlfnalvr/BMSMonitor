@@ -25,18 +25,16 @@ public sealed partial class LoggingPage : Page
     private static readonly LogFormat[] Formats =
         [LogFormat.Csv, LogFormat.Tsv, LogFormat.Excel, LogFormat.Json];
 
-    // Filtered view — only enabled columns, shown in the horizontal drag strip
-    private static readonly ObservableCollection<LogColumn> ActiveColumns = new();
-    private static bool _activeColsInitialized;
-
-    // Column config lives in ViewModel.LogColumns (persists across navigation)
+    // The fixed column layout used for both the live preview and the on-disk
+    // log file. Sourced from ViewModel.LogColumns (defaults — all enabled).
     private ObservableCollection<LogColumn> Columns => ViewModel.LogColumns;
 
     // ── Stream table cache ─────────────────────────────────────────────────
-    // Grid structure is built ONCE per column-layout change.
-    // On data updates only TextBlock.Text is changed — no UIElement churn.
-    private List<LogColumn>? _streamColumns;   // current column layout in the grid
-    private TextBlock[,]?    _streamCells;     // [row, col] — data rows only
+    // Grid structure is built ONCE on first load (columns are no longer
+    // user-configurable). On data updates only TextBlock.Text is changed —
+    // no UIElement churn.
+    private List<LogColumn>? _streamColumns;
+    private TextBlock[,]?    _streamCells;
     private const int StreamCapacity = 20;
 
     public LoggingPage()
@@ -63,16 +61,7 @@ public sealed partial class LoggingPage : Page
 
         ViewModel.DataStream.CollectionChanged += OnDataStreamChanged;
 
-        // Bind column collections and wire events
-        EnsureActiveColumnsInitialized();
-        ActiveColumnsList.ItemsSource = ActiveColumns;
-        ColumnGrid.ItemsSource = Columns;
-        ActiveColumnsList.DragItemsCompleted += ActiveColumnsList_DragItemsCompleted;
-
-        // Rebuild structure when columns change (enable/disable/reorder/reset)
-        Columns.CollectionChanged += OnColumnsCollectionChanged;
-
-        // Initial build
+        // Build the live-preview grid once. Columns are fixed (default set).
         BuildStreamStructure();
         RefreshStreamData();
     }
@@ -81,7 +70,6 @@ public sealed partial class LoggingPage : Page
     {
         Logging.StateChanged -= OnStateChanged;
         ViewModel.DataStream.CollectionChanged -= OnDataStreamChanged;
-        Columns.CollectionChanged -= OnColumnsCollectionChanged;
         _durationTimer?.Stop();
         _durationTimer = null;
     }
@@ -96,57 +84,6 @@ public sealed partial class LoggingPage : Page
         RefreshStreamData();
     }
 
-    // Column layout changed — structural rebuild required.
-    private void OnColumnsCollectionChanged(object? sender,
-        System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-    {
-        BuildStreamStructure();
-        RefreshStreamData();
-    }
-
-    // ── Column initialization ─────────────────────────────────────────────
-
-    private void EnsureActiveColumnsInitialized()
-    {
-        if (_activeColsInitialized) return;
-        _activeColsInitialized = true;
-
-        foreach (var col in Columns.Where(c => c.IsEnabled))
-            ActiveColumns.Add(col);
-
-        foreach (var col in Columns)
-            col.PropertyChanged += (s, e) =>
-            {
-                if (e.PropertyName != nameof(LogColumn.IsEnabled) || s is not LogColumn lc) return;
-                DispatcherQueue.TryEnqueue(() =>
-                {
-                    if (lc.IsEnabled)
-                    {
-                        if (!ActiveColumns.Contains(lc))
-                            ActiveColumns.Add(lc);
-                    }
-                    else
-                    {
-                        ActiveColumns.Remove(lc);
-                    }
-                    BuildStreamStructure();
-                    RefreshStreamData();
-                });
-            };
-    }
-
-    private void ActiveColumnsList_DragItemsCompleted(object sender, DragItemsCompletedEventArgs e)
-    {
-        // Sync Columns order to match the user's drag-reordered ActiveColumns
-        var disabled  = Columns.Where(c => !c.IsEnabled).ToList();
-        var reordered = ActiveColumns.Concat(disabled).ToList();
-        Columns.Clear();
-        foreach (var col in reordered) Columns.Add(col);
-
-        BuildStreamStructure();
-        RefreshStreamData();
-    }
-
     private void UpdateStreamPlaceholder()
     {
         StreamEmptyText.Visibility = ViewModel.DataStream.Count == 0
@@ -158,7 +95,7 @@ public sealed partial class LoggingPage : Page
 
     /// <summary>
     /// Builds the fixed grid structure (column defs, header, separator, and
-    /// pre-allocated data rows). Called only when the column layout changes.
+    /// pre-allocated data rows). Called once on page load.
     /// </summary>
     private void BuildStreamStructure()
     {
@@ -296,15 +233,6 @@ public sealed partial class LoggingPage : Page
         FormatBox.IsEnabled    = !active;
         BrowseBtn.IsEnabled    = !active;
 
-        // Lock column config while recording
-        ActiveColumnsList.IsEnabled = !active;
-        SelectAllBtn.IsEnabled    = !active;
-        DeselectAllBtn.IsEnabled  = !active;
-        ResetColsBtn.IsEnabled    = !active;
-        ToggleCellsBtn.IsEnabled  = !active;
-        ToggleBalBtn.IsEnabled    = !active;
-        ToggleTempBtn.IsEnabled   = !active;
-
         if (active)
         {
             FolderText.Text   = Path.GetDirectoryName(Logging.FilePath) ?? _selectedFolder;
@@ -360,46 +288,6 @@ public sealed partial class LoggingPage : Page
 
         name = Path.GetFileNameWithoutExtension(name) + ext;
         return Path.Combine(_selectedFolder, name);
-    }
-
-    // ── Column settings handlers ──────────────────────────────────────────
-
-    private void SelectAll_Click(object sender, RoutedEventArgs e)
-    {
-        foreach (var col in Columns) col.IsEnabled = true;
-    }
-
-    private void DeselectAll_Click(object sender, RoutedEventArgs e)
-    {
-        foreach (var col in Columns) col.IsEnabled = false;
-    }
-
-    private void ResetColumns_Click(object sender, RoutedEventArgs e)
-    {
-        var defaults = LogColumn.CreateDefaults();
-        Columns.Clear();
-        foreach (var col in defaults) Columns.Add(col);
-
-        // Rebuild ActiveColumns from the new defaults
-        ActiveColumns.Clear();
-        foreach (var col in Columns.Where(c => c.IsEnabled))
-            ActiveColumns.Add(col);
-    }
-
-    private void ToggleCells_Click(object sender, RoutedEventArgs e)
-        => ToggleGroup("Cells");
-
-    private void ToggleBal_Click(object sender, RoutedEventArgs e)
-        => ToggleGroup("Balancing");
-
-    private void ToggleTemp_Click(object sender, RoutedEventArgs e)
-        => ToggleGroup("Temperatures");
-
-    private void ToggleGroup(string group)
-    {
-        var groupCols   = Columns.Where(c => c.Group == group).ToList();
-        bool allEnabled = groupCols.All(c => c.IsEnabled);
-        foreach (var col in groupCols) col.IsEnabled = !allEnabled;
     }
 
     // ── Event handlers ────────────────────────────────────────────────────

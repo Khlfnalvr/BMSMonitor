@@ -99,14 +99,19 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ui_SwitchToDark   => T(nameof(Ui_SwitchToDark));
     public string Ui_ChangeLanguage => T(nameof(Ui_ChangeLanguage));
 
-    // ── Caption-bar CAN picker ────────────────────────────────────────────
-    public string Ui_CanConnection  => T(nameof(Ui_CanConnection));
-    public string Ui_CanQuickAccess => T(nameof(Ui_CanQuickAccess));
+    // ── Caption-bar serial picker ─────────────────────────────────────────
+    public string Ui_SerialConnection  => T(nameof(Ui_SerialConnection));
+    public string Ui_SerialQuickAccess => T(nameof(Ui_SerialQuickAccess));
 
     // ── Alert history ─────────────────────────────────────────────────────
     public string Ui_AlertHistory   => T(nameof(Ui_AlertHistory));
     public string Ui_NoAlerts       => T(nameof(Ui_NoAlerts));
     public string Ui_ClearAlerts    => T(nameof(Ui_ClearAlerts));
+
+    // ── Logo / customize menu ─────────────────────────────────────────────
+    public string Ui_Menu_Customize  => T(nameof(Ui_Menu_Customize));
+    public string Ui_Menu_View       => T(nameof(Ui_Menu_View));
+    public string Ui_Menu_RefreshApp => T(nameof(Ui_Menu_RefreshApp));
 
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
@@ -166,19 +171,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Cell_CutoffDesc        => T(nameof(Cell_CutoffDesc));
 
     // ── Control Panel ─────────────────────────────────────────────────────
-    public string Ctrl_SecCan          => T(nameof(Ctrl_SecCan));
-    public string Ctrl_TransportMode       => T(nameof(Ctrl_TransportMode));
-    public string Ctrl_TransportEsp        => T(nameof(Ctrl_TransportEsp));
-    public string Ctrl_TransportSlcan      => T(nameof(Ctrl_TransportSlcan));
-    public string Ctrl_TransportPcan       => T(nameof(Ctrl_TransportPcan));
-    public string Ctrl_CanChannel            => T(nameof(Ctrl_CanChannel));
+    public string Ctrl_SecSerial          => T(nameof(Ctrl_SecSerial));
+    public string Ctrl_SerialPort         => T(nameof(Ctrl_SerialPort));
     public string Ctrl_PhScanning         => T(nameof(Ctrl_PhScanning));
     public string Ctrl_PhNoPorts          => T(nameof(Ctrl_PhNoPorts));
-    public string Ctrl_PhNoDriver         => T(nameof(Ctrl_PhNoDriver));
     public string Ctrl_Refresh            => T(nameof(Ctrl_Refresh));
     public string Ctrl_Connect            => T(nameof(Ctrl_Connect));
     public string Ctrl_Disconnect         => T(nameof(Ctrl_Disconnect));
-    public string Ctrl_CanBitrate           => T(nameof(Ctrl_CanBitrate));
+    public string Ctrl_SerialBaud         => T(nameof(Ctrl_SerialBaud));
     public string Ctrl_ConnStatus         => T(nameof(Ctrl_ConnStatus));
     public string Ctrl_NotConnected       => T(nameof(Ctrl_NotConnected));
     public string Ctrl_AutoConnectStatus  => T(nameof(Ctrl_AutoConnectStatus));
@@ -187,6 +187,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ctrl_CapacityHint       => T(nameof(Ctrl_CapacityHint));
     public string Ctrl_SecProtection      => T(nameof(Ctrl_SecProtection));
     public string Ctrl_OvervoltCutoff     => T(nameof(Ctrl_OvervoltCutoff));
+    public string Ctrl_HighVoltWarn       => T(nameof(Ctrl_HighVoltWarn));
     public string Ctrl_UnderVoltCutoff    => T(nameof(Ctrl_UnderVoltCutoff));
     public string Ctrl_LowVoltWarn        => T(nameof(Ctrl_LowVoltWarn));
     public string Ctrl_OverTempWarn       => T(nameof(Ctrl_OverTempWarn));
@@ -201,8 +202,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ctrl_ResetDefaults      => T(nameof(Ctrl_ResetDefaults));
     public string Ctrl_ApplySettings      => T(nameof(Ctrl_ApplySettings));
 
-    // ── Control Panel — advanced CAN parameters ───────────────────────────
-    public string Ctrl_SecCanAdvanced     => T(nameof(Ctrl_SecCanAdvanced));
+    // ── Control Panel — advanced serial parameters ────────────────────────
+    public string Ctrl_SecSerialAdvanced  => T(nameof(Ctrl_SecSerialAdvanced));
     public string Ctrl_AutoConnect        => T(nameof(Ctrl_AutoConnect));
     public string Ctrl_AutoConnectHint    => T(nameof(Ctrl_AutoConnectHint));
     public string Ctrl_ReconnectInterval  => T(nameof(Ctrl_ReconnectInterval));
@@ -211,7 +212,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ctrl_ParseErrors        => T(nameof(Ctrl_ParseErrors));
 
     // ── Feedback messages ─────────────────────────────────────────────────
-    public string Fb_CanError          => T(nameof(Fb_CanError));
+    public string Fb_SerialError       => T(nameof(Fb_SerialError));
     public string Fb_SelectChannel           => T(nameof(Fb_SelectChannel));
     public string Fb_SelectChannelMsg        => T(nameof(Fb_SelectChannelMsg));
     public string Fb_SettingsApplied      => T(nameof(Fb_SettingsApplied));
@@ -230,15 +231,6 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Log_Format             => T(nameof(Log_Format));
     public string Log_Filename           => T(nameof(Log_Filename));
     public string Log_PhAutoFilename     => T(nameof(Log_PhAutoFilename));
-    public string Log_SecColumnSettings  => T(nameof(Log_SecColumnSettings));
-    public string Log_ColumnHint         => T(nameof(Log_ColumnHint));
-    public string Log_SelectAll          => T(nameof(Log_SelectAll));
-    public string Log_DeselectAll        => T(nameof(Log_DeselectAll));
-    public string Log_ResetDefault       => T(nameof(Log_ResetDefault));
-    public string Log_Group              => T(nameof(Log_Group));
-    public string Log_CellVoltages       => T(nameof(Log_CellVoltages));
-    public string Log_Balancing          => T(nameof(Log_Balancing));
-    public string Log_Temperatures       => T(nameof(Log_Temperatures));
     public string Log_SecControls        => T(nameof(Log_SecControls));
     public string Log_ConnectHint        => T(nameof(Log_ConnectHint));
     public string Log_RecordingHint      => T(nameof(Log_RecordingHint));
@@ -297,11 +289,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Switch to Light mode",
             [nameof(Ui_SwitchToDark)]  = "Switch to Dark mode",
             [nameof(Ui_ChangeLanguage)] = "Change language",
-            [nameof(Ui_CanConnection)]  = "CAN Connection",
-            [nameof(Ui_CanQuickAccess)] = "Quick CAN bus access",
+            [nameof(Ui_SerialConnection)]  = "Serial Connection",
+            [nameof(Ui_SerialQuickAccess)] = "Quick serial access",
             [nameof(Ui_AlertHistory)]   = "Alert History",
             [nameof(Ui_NoAlerts)]       = "No alerts yet",
             [nameof(Ui_ClearAlerts)]    = "Clear",
+            [nameof(Ui_Menu_Customize)]  = "Customize",
+            [nameof(Ui_Menu_View)]       = "View",
+            [nameof(Ui_Menu_RefreshApp)] = "Refresh App",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -355,27 +350,23 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Cutoff  (above 70°C)",
             [nameof(Cell_ResetStats)]        = "Reset Statistics",
 
-            [nameof(Ctrl_SecCan)]            = "CAN BUS CONNECTION",
-            [nameof(Ctrl_TransportMode)]     = "Transport",
-            [nameof(Ctrl_TransportEsp)]      = "ESP Serial (USB)",
-            [nameof(Ctrl_TransportSlcan)]    = "SLCAN adapter (CANable)",
-            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
-            [nameof(Ctrl_CanChannel)]        = "Channel",
-            [nameof(Ctrl_PhScanning)]        = "Scanning channels…",
-            [nameof(Ctrl_PhNoPorts)]         = "No CAN channels detected",
-            [nameof(Ctrl_PhNoDriver)]        = "PCAN-Basic driver not installed",
+            [nameof(Ctrl_SecSerial)]            = "SERIAL CONNECTION",
+            [nameof(Ctrl_SerialPort)]        = "COM Port",
+            [nameof(Ctrl_PhScanning)]        = "Scanning ports…",
+            [nameof(Ctrl_PhNoPorts)]         = "No COM ports detected",
             [nameof(Ctrl_Refresh)]           = "Refresh",
             [nameof(Ctrl_Connect)]           = "Connect",
             [nameof(Ctrl_Disconnect)]        = "Disconnect",
-            [nameof(Ctrl_CanBitrate)]        = "Bitrate",
+            [nameof(Ctrl_SerialBaud)]        = "Baud Rate",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Not connected",
-            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect active — waiting for BMS CAN frames…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect active — waiting for ESP32 BMS data…",
             [nameof(Ctrl_SecCapacity)]       = "BATTERY CAPACITY",
             [nameof(Ctrl_NominalCapacity)]   = "Nominal Capacity",
             [nameof(Ctrl_CapacityHint)]      = "Used to calculate remaining capacity (mAh) on dashboard.",
             [nameof(Ctrl_SecProtection)]     = "PROTECTION THRESHOLDS",
             [nameof(Ctrl_OvervoltCutoff)]    = "Overvoltage Cutoff",
+            [nameof(Ctrl_HighVoltWarn)]      = "High Voltage Warning",
             [nameof(Ctrl_UnderVoltCutoff)]   = "Undervoltage Cutoff",
             [nameof(Ctrl_LowVoltWarn)]       = "Low Voltage Warning",
             [nameof(Ctrl_OverTempWarn)]      = "Over-Temp Warning",
@@ -390,17 +381,17 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ResetDefaults)]     = "Reset to Defaults",
             [nameof(Ctrl_ApplySettings)]     = "Apply Settings",
 
-            [nameof(Ctrl_SecCanAdvanced)]    = "CAN BUS PARAMETERS",
+            [nameof(Ctrl_SecSerialAdvanced)]    = "SERIAL PARAMETERS",
             [nameof(Ctrl_AutoConnect)]       = "Auto-Connect",
-            [nameof(Ctrl_AutoConnectHint)]   = "Automatically scan PCAN-USB channels and lock onto the first one that broadcasts BMS heartbeat frames.",
+            [nameof(Ctrl_AutoConnectHint)]   = "Automatically scan COM ports and lock onto the first one that broadcasts BMS data.",
             [nameof(Ctrl_ReconnectInterval)] = "Reconnect Interval",
             [nameof(Ctrl_ProbeTimeout)]      = "Probe Timeout",
             [nameof(Ctrl_FramesReceived)]    = "Frames received",
             [nameof(Ctrl_ParseErrors)]       = "Parse errors",
 
-            [nameof(Fb_CanError)]            = "CAN error",
-            [nameof(Fb_SelectChannel)]       = "Select a channel",
-            [nameof(Fb_SelectChannelMsg)]    = "Pick a CAN channel from the dropdown first.",
+            [nameof(Fb_SerialError)]            = "Serial error",
+            [nameof(Fb_SelectChannel)]       = "Select a port",
+            [nameof(Fb_SelectChannelMsg)]    = "Pick a COM port from the dropdown first.",
             [nameof(Fb_SettingsApplied)]     = "Settings applied",
             [nameof(Fb_SettingsAppliedMsg)]  = "New thresholds are active.",
             [nameof(Fb_DefaultsRestored)]    = "Defaults restored",
@@ -416,15 +407,6 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Log_Format)]            = "Format",
             [nameof(Log_Filename)]          = "Filename",
             [nameof(Log_PhAutoFilename)]    = "auto-generated if left blank",
-            [nameof(Log_SecColumnSettings)] = "COLUMN SETTINGS",
-            [nameof(Log_ColumnHint)]        = "Choose columns to log and drag ≡ to reorder. Locked while logging is active.",
-            [nameof(Log_SelectAll)]         = "Select All",
-            [nameof(Log_DeselectAll)]       = "Deselect All",
-            [nameof(Log_ResetDefault)]      = "Reset Default",
-            [nameof(Log_Group)]             = "Group:",
-            [nameof(Log_CellVoltages)]      = "Cell Voltages",
-            [nameof(Log_Balancing)]         = "Balancing",
-            [nameof(Log_Temperatures)]      = "Temperatures",
             [nameof(Log_SecControls)]       = "CONTROLS",
             [nameof(Log_ConnectHint)]       = "Connect to the ESP32 first, then start logging.",
             [nameof(Log_RecordingHint)]     = "Recording in progress. Stop to close / write the file.",
@@ -478,11 +460,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Beralih ke Mode Terang",
             [nameof(Ui_SwitchToDark)]  = "Beralih ke Mode Gelap",
             [nameof(Ui_ChangeLanguage)] = "Ubah bahasa",
-            [nameof(Ui_CanConnection)]  = "Koneksi CAN",
-            [nameof(Ui_CanQuickAccess)] = "Akses cepat CAN bus",
+            [nameof(Ui_SerialConnection)]  = "Koneksi Serial",
+            [nameof(Ui_SerialQuickAccess)] = "Akses cepat serial",
             [nameof(Ui_AlertHistory)]   = "Riwayat Alert",
             [nameof(Ui_NoAlerts)]       = "Belum ada alert",
             [nameof(Ui_ClearAlerts)]    = "Hapus",
+            [nameof(Ui_Menu_Customize)]  = "Kustomisasi",
+            [nameof(Ui_Menu_View)]       = "Tampilan",
+            [nameof(Ui_Menu_RefreshApp)] = "Muat Ulang Aplikasi",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -536,27 +521,23 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
             [nameof(Cell_ResetStats)]        = "Reset Statistik",
 
-            [nameof(Ctrl_SecCan)]            = "KONEKSI CAN BUS",
-            [nameof(Ctrl_TransportMode)]     = "Transport",
-            [nameof(Ctrl_TransportEsp)]      = "ESP Serial (USB)",
-            [nameof(Ctrl_TransportSlcan)]    = "Adapter SLCAN (CANable)",
-            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
-            [nameof(Ctrl_CanChannel)]        = "Channel",
-            [nameof(Ctrl_PhScanning)]        = "Memindai channel…",
-            [nameof(Ctrl_PhNoPorts)]         = "Tidak ada channel CAN terdeteksi",
-            [nameof(Ctrl_PhNoDriver)]        = "Driver PCAN-Basic belum terinstal",
+            [nameof(Ctrl_SecSerial)]            = "KONEKSI SERIAL",
+            [nameof(Ctrl_SerialPort)]        = "Port COM",
+            [nameof(Ctrl_PhScanning)]        = "Memindai port…",
+            [nameof(Ctrl_PhNoPorts)]         = "Tidak ada port COM terdeteksi",
             [nameof(Ctrl_Refresh)]           = "Perbarui",
             [nameof(Ctrl_Connect)]           = "Hubungkan",
             [nameof(Ctrl_Disconnect)]        = "Putuskan",
-            [nameof(Ctrl_CanBitrate)]        = "Bitrate",
+            [nameof(Ctrl_SerialBaud)]        = "Baud Rate",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Tidak terhubung",
-            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect aktif — menunggu frame CAN BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Auto-connect aktif — menunggu data BMS dari ESP32…",
             [nameof(Ctrl_SecCapacity)]       = "KAPASITAS BATERAI",
             [nameof(Ctrl_NominalCapacity)]   = "Kapasitas Nominal",
             [nameof(Ctrl_CapacityHint)]      = "Digunakan untuk menghitung kapasitas sisa (mAh) di dashboard.",
             [nameof(Ctrl_SecProtection)]     = "AMBANG PERLINDUNGAN",
             [nameof(Ctrl_OvervoltCutoff)]    = "Pemutus Tegangan Tinggi",
+            [nameof(Ctrl_HighVoltWarn)]      = "Peringatan Tegangan Tinggi",
             [nameof(Ctrl_UnderVoltCutoff)]   = "Pemutus Tegangan Rendah",
             [nameof(Ctrl_LowVoltWarn)]       = "Peringatan Tegangan Rendah",
             [nameof(Ctrl_OverTempWarn)]      = "Peringatan Suhu Tinggi",
@@ -571,17 +552,17 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ResetDefaults)]     = "Reset ke Default",
             [nameof(Ctrl_ApplySettings)]     = "Terapkan Pengaturan",
 
-            [nameof(Ctrl_SecCanAdvanced)]    = "PARAMETER CAN BUS",
+            [nameof(Ctrl_SecSerialAdvanced)]    = "PARAMETER SERIAL",
             [nameof(Ctrl_AutoConnect)]       = "Auto-Hubungkan",
-            [nameof(Ctrl_AutoConnectHint)]   = "Memindai channel PCAN-USB secara otomatis dan terhubung ke yang mengirim frame heartbeat BMS.",
+            [nameof(Ctrl_AutoConnectHint)]   = "Memindai port COM secara otomatis dan terhubung ke yang mengirim data BMS.",
             [nameof(Ctrl_ReconnectInterval)] = "Interval Pindai",
             [nameof(Ctrl_ProbeTimeout)]      = "Timeout Verifikasi",
             [nameof(Ctrl_FramesReceived)]    = "Frame diterima",
             [nameof(Ctrl_ParseErrors)]       = "Kesalahan parsing",
 
-            [nameof(Fb_CanError)]            = "Kesalahan CAN",
-            [nameof(Fb_SelectChannel)]       = "Pilih channel",
-            [nameof(Fb_SelectChannelMsg)]    = "Pilih channel CAN dari dropdown terlebih dahulu.",
+            [nameof(Fb_SerialError)]            = "Kesalahan Serial",
+            [nameof(Fb_SelectChannel)]       = "Pilih port",
+            [nameof(Fb_SelectChannelMsg)]    = "Pilih port COM dari dropdown terlebih dahulu.",
             [nameof(Fb_SettingsApplied)]     = "Pengaturan diterapkan",
             [nameof(Fb_SettingsAppliedMsg)]  = "Ambang batas baru aktif.",
             [nameof(Fb_DefaultsRestored)]    = "Default dipulihkan",
@@ -597,15 +578,6 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Log_Format)]            = "Format",
             [nameof(Log_Filename)]          = "Nama File",
             [nameof(Log_PhAutoFilename)]    = "dibuat otomatis jika kosong",
-            [nameof(Log_SecColumnSettings)] = "PENGATURAN KOLOM",
-            [nameof(Log_ColumnHint)]        = "Pilih kolom yang ingin di-log dan atur urutannya dengan drag ≡. Dikunci saat logging aktif.",
-            [nameof(Log_SelectAll)]         = "Pilih Semua",
-            [nameof(Log_DeselectAll)]       = "Hapus Semua",
-            [nameof(Log_ResetDefault)]      = "Reset Default",
-            [nameof(Log_Group)]             = "Grup:",
-            [nameof(Log_CellVoltages)]      = "Cell Voltages",
-            [nameof(Log_Balancing)]         = "Balancing",
-            [nameof(Log_Temperatures)]      = "Temperatures",
             [nameof(Log_SecControls)]       = "KONTROL",
             [nameof(Log_ConnectHint)]       = "Hubungkan ke ESP32 terlebih dahulu, lalu mulai logging.",
             [nameof(Log_RecordingHint)]     = "Perekaman sedang berlangsung. Hentikan untuk menutup / menulis file.",
@@ -659,11 +631,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Tukar ke Mod Cerah",
             [nameof(Ui_SwitchToDark)]  = "Tukar ke Mod Gelap",
             [nameof(Ui_ChangeLanguage)] = "Tukar bahasa",
-            [nameof(Ui_CanConnection)]  = "Sambungan CAN",
-            [nameof(Ui_CanQuickAccess)] = "Akses pantas CAN bus",
+            [nameof(Ui_SerialConnection)]  = "Sambungan Serial",
+            [nameof(Ui_SerialQuickAccess)] = "Akses pantas serial",
             [nameof(Ui_AlertHistory)]   = "Sejarah Amaran",
             [nameof(Ui_NoAlerts)]       = "Tiada amaran lagi",
             [nameof(Ui_ClearAlerts)]    = "Hapus",
+            [nameof(Ui_Menu_Customize)]  = "Sesuaikan",
+            [nameof(Ui_Menu_View)]       = "Paparan",
+            [nameof(Ui_Menu_RefreshApp)] = "Muat Semula Aplikasi",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -717,27 +692,23 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
             [nameof(Cell_ResetStats)]        = "Tetapkan Semula Statistik",
 
-            [nameof(Ctrl_SecCan)]            = "SAMBUNGAN CAN BUS",
-            [nameof(Ctrl_TransportMode)]     = "Pengangkutan",
-            [nameof(Ctrl_TransportEsp)]      = "ESP Serial (USB)",
-            [nameof(Ctrl_TransportSlcan)]    = "Penyesuai SLCAN (CANable)",
-            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
-            [nameof(Ctrl_CanChannel)]        = "Saluran",
-            [nameof(Ctrl_PhScanning)]        = "Mengimbas saluran…",
-            [nameof(Ctrl_PhNoPorts)]         = "Tiada saluran CAN dikesan",
-            [nameof(Ctrl_PhNoDriver)]        = "Pemacu PCAN-Basic belum dipasang",
+            [nameof(Ctrl_SecSerial)]            = "SAMBUNGAN SERIAL",
+            [nameof(Ctrl_SerialPort)]        = "Port COM",
+            [nameof(Ctrl_PhScanning)]        = "Mengimbas port…",
+            [nameof(Ctrl_PhNoPorts)]         = "Tiada port COM dikesan",
             [nameof(Ctrl_Refresh)]           = "Muat Semula",
             [nameof(Ctrl_Connect)]           = "Sambungkan",
             [nameof(Ctrl_Disconnect)]        = "Putuskan",
-            [nameof(Ctrl_CanBitrate)]        = "Kadar Bit",
+            [nameof(Ctrl_SerialBaud)]        = "Kadar Baud",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Tidak disambungkan",
-            [nameof(Ctrl_AutoConnectStatus)] = "Auto-sambung aktif — menunggu bingkai CAN BMS…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Auto-sambung aktif — menunggu data BMS dari ESP32…",
             [nameof(Ctrl_SecCapacity)]       = "KAPASITI BATERI",
             [nameof(Ctrl_NominalCapacity)]   = "Kapasiti Nominal",
             [nameof(Ctrl_CapacityHint)]      = "Digunakan untuk mengira kapasiti sisa (mAh) di papan pemuka.",
             [nameof(Ctrl_SecProtection)]     = "AMBANG PERLINDUNGAN",
             [nameof(Ctrl_OvervoltCutoff)]    = "Pemutus Voltan Tinggi",
+            [nameof(Ctrl_HighVoltWarn)]      = "Amaran Voltan Tinggi",
             [nameof(Ctrl_UnderVoltCutoff)]   = "Pemutus Voltan Rendah",
             [nameof(Ctrl_LowVoltWarn)]       = "Amaran Voltan Rendah",
             [nameof(Ctrl_OverTempWarn)]      = "Amaran Suhu Tinggi",
@@ -752,17 +723,17 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ResetDefaults)]     = "Tetapkan Semula",
             [nameof(Ctrl_ApplySettings)]     = "Guna Tetapan",
 
-            [nameof(Ctrl_SecCanAdvanced)]    = "PARAMETER CAN BUS",
+            [nameof(Ctrl_SecSerialAdvanced)]    = "PARAMETER SERIAL",
             [nameof(Ctrl_AutoConnect)]       = "Auto-Sambung",
-            [nameof(Ctrl_AutoConnectHint)]   = "Mengimbas saluran PCAN-USB secara automatik dan menyambung ke saluran yang menghantar bingkai heartbeat BMS.",
+            [nameof(Ctrl_AutoConnectHint)]   = "Mengimbas port COM secara automatik dan menyambung ke port yang menghantar data BMS.",
             [nameof(Ctrl_ReconnectInterval)] = "Selang Imbasan",
             [nameof(Ctrl_ProbeTimeout)]      = "Tamat Masa Pemeriksaan",
             [nameof(Ctrl_FramesReceived)]    = "Bingkai diterima",
             [nameof(Ctrl_ParseErrors)]       = "Ralat penghuraian",
 
-            [nameof(Fb_CanError)]            = "Ralat CAN",
-            [nameof(Fb_SelectChannel)]       = "Pilih saluran",
-            [nameof(Fb_SelectChannelMsg)]    = "Pilih saluran CAN dari senarai juntai bawah terlebih dahulu.",
+            [nameof(Fb_SerialError)]            = "Ralat Serial",
+            [nameof(Fb_SelectChannel)]       = "Pilih port",
+            [nameof(Fb_SelectChannelMsg)]    = "Pilih port COM dari senarai juntai bawah terlebih dahulu.",
             [nameof(Fb_SettingsApplied)]     = "Tetapan digunakan",
             [nameof(Fb_SettingsAppliedMsg)]  = "Ambang baru adalah aktif.",
             [nameof(Fb_DefaultsRestored)]    = "Tetapan asal dipulihkan",
@@ -778,15 +749,6 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Log_Format)]            = "Format",
             [nameof(Log_Filename)]          = "Nama Fail",
             [nameof(Log_PhAutoFilename)]    = "dijana secara automatik jika kosong",
-            [nameof(Log_SecColumnSettings)] = "TETAPAN LAJUR",
-            [nameof(Log_ColumnHint)]        = "Pilih lajur untuk dilog dan susun semula dengan seret ≡. Dikunci semasa pembalakan aktif.",
-            [nameof(Log_SelectAll)]         = "Pilih Semua",
-            [nameof(Log_DeselectAll)]       = "Nyahpilih Semua",
-            [nameof(Log_ResetDefault)]      = "Tetapkan Semula",
-            [nameof(Log_Group)]             = "Kumpulan:",
-            [nameof(Log_CellVoltages)]      = "Voltan Sel",
-            [nameof(Log_Balancing)]         = "Pengimbangan",
-            [nameof(Log_Temperatures)]      = "Suhu",
             [nameof(Log_SecControls)]       = "KAWALAN",
             [nameof(Log_ConnectHint)]       = "Sambung ke ESP32 terlebih dahulu, kemudian mulakan pembalakan.",
             [nameof(Log_RecordingHint)]     = "Rakaman sedang berlangsung. Hentikan untuk menutup / menulis fail.",
@@ -840,11 +802,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "Overschakelen naar lichte modus",
             [nameof(Ui_SwitchToDark)]  = "Overschakelen naar donkere modus",
             [nameof(Ui_ChangeLanguage)] = "Taal wijzigen",
-            [nameof(Ui_CanConnection)]  = "CAN-verbinding",
-            [nameof(Ui_CanQuickAccess)] = "Snelle toegang tot CAN-bus",
+            [nameof(Ui_SerialConnection)]  = "Seriële verbinding",
+            [nameof(Ui_SerialQuickAccess)] = "Snelle seriële toegang",
             [nameof(Ui_AlertHistory)]   = "Waarschuwingslog",
             [nameof(Ui_NoAlerts)]       = "Geen waarschuwingen",
             [nameof(Ui_ClearAlerts)]    = "Wissen",
+            [nameof(Ui_Menu_Customize)]  = "Aanpassen",
+            [nameof(Ui_Menu_View)]       = "Weergave",
+            [nameof(Ui_Menu_RefreshApp)] = "App vernieuwen",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -898,27 +863,23 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Beveiliging  (boven 70°C)",
             [nameof(Cell_ResetStats)]        = "Statistieken resetten",
 
-            [nameof(Ctrl_SecCan)]            = "CAN-BUS VERBINDING",
-            [nameof(Ctrl_TransportMode)]     = "Transport",
-            [nameof(Ctrl_TransportEsp)]      = "ESP Seriële (USB)",
-            [nameof(Ctrl_TransportSlcan)]    = "SLCAN-adapter (CANable)",
-            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
-            [nameof(Ctrl_CanChannel)]        = "Kanaal",
-            [nameof(Ctrl_PhScanning)]        = "Kanalen scannen…",
-            [nameof(Ctrl_PhNoPorts)]         = "Geen CAN-kanalen gevonden",
-            [nameof(Ctrl_PhNoDriver)]        = "PCAN-Basic-stuurprogramma niet geïnstalleerd",
+            [nameof(Ctrl_SecSerial)]            = "SERIËLE VERBINDING",
+            [nameof(Ctrl_SerialPort)]        = "COM-poort",
+            [nameof(Ctrl_PhScanning)]        = "Poorten scannen…",
+            [nameof(Ctrl_PhNoPorts)]         = "Geen COM-poorten gevonden",
             [nameof(Ctrl_Refresh)]           = "Vernieuwen",
             [nameof(Ctrl_Connect)]           = "Verbinden",
             [nameof(Ctrl_Disconnect)]        = "Verbreken",
-            [nameof(Ctrl_CanBitrate)]        = "Bitrate",
+            [nameof(Ctrl_SerialBaud)]        = "Baudrate",
             [nameof(Ctrl_ConnStatus)]        = "Status",
             [nameof(Ctrl_NotConnected)]      = "Niet verbonden",
-            [nameof(Ctrl_AutoConnectStatus)] = "Automatisch verbinden actief — wacht op BMS CAN-frames…",
+            [nameof(Ctrl_AutoConnectStatus)] = "Automatisch verbinden actief — wacht op BMS-data van ESP32…",
             [nameof(Ctrl_SecCapacity)]       = "BATTERIJCAPACITEIT",
             [nameof(Ctrl_NominalCapacity)]   = "Nominale Capaciteit",
             [nameof(Ctrl_CapacityHint)]      = "Gebruikt om de resterende capaciteit (mAh) op het dashboard te berekenen.",
             [nameof(Ctrl_SecProtection)]     = "BESCHERMINGSDREMPELS",
             [nameof(Ctrl_OvervoltCutoff)]    = "Overspanningsbeveiliging",
+            [nameof(Ctrl_HighVoltWarn)]      = "Hoogspanningswaarschuwing",
             [nameof(Ctrl_UnderVoltCutoff)]   = "Onderspanningsbeveiliging",
             [nameof(Ctrl_LowVoltWarn)]       = "Laagspanningswaarschuwing",
             [nameof(Ctrl_OverTempWarn)]      = "Temperatuurwaarschuwing",
@@ -933,17 +894,17 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ResetDefaults)]     = "Standaard herstellen",
             [nameof(Ctrl_ApplySettings)]     = "Instellingen toepassen",
 
-            [nameof(Ctrl_SecCanAdvanced)]    = "CAN-BUS PARAMETERS",
+            [nameof(Ctrl_SecSerialAdvanced)]    = "SERIËLE PARAMETERS",
             [nameof(Ctrl_AutoConnect)]       = "Automatisch verbinden",
-            [nameof(Ctrl_AutoConnectHint)]   = "Scan automatisch PCAN-USB-kanalen en maak verbinding met het kanaal dat BMS-heartbeat-frames uitzendt.",
+            [nameof(Ctrl_AutoConnectHint)]   = "Scan automatisch COM-poorten en maak verbinding met de poort die BMS-data verstuurt.",
             [nameof(Ctrl_ReconnectInterval)] = "Scan-interval",
             [nameof(Ctrl_ProbeTimeout)]      = "Detectie-timeout",
             [nameof(Ctrl_FramesReceived)]    = "Frames ontvangen",
             [nameof(Ctrl_ParseErrors)]       = "Parse-fouten",
 
-            [nameof(Fb_CanError)]            = "CAN-fout",
-            [nameof(Fb_SelectChannel)]       = "Selecteer een kanaal",
-            [nameof(Fb_SelectChannelMsg)]    = "Selecteer eerst een CAN-kanaal uit de vervolgkeuzelijst.",
+            [nameof(Fb_SerialError)]            = "Seriële fout",
+            [nameof(Fb_SelectChannel)]       = "Selecteer een poort",
+            [nameof(Fb_SelectChannelMsg)]    = "Selecteer eerst een COM-poort uit de vervolgkeuzelijst.",
             [nameof(Fb_SettingsApplied)]     = "Instellingen toegepast",
             [nameof(Fb_SettingsAppliedMsg)]  = "Nieuwe drempelwaarden zijn actief.",
             [nameof(Fb_DefaultsRestored)]    = "Standaard hersteld",
@@ -959,15 +920,6 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Log_Format)]            = "Formaat",
             [nameof(Log_Filename)]          = "Bestandsnaam",
             [nameof(Log_PhAutoFilename)]    = "automatisch gegenereerd als leeg",
-            [nameof(Log_SecColumnSettings)] = "KOLOMINSTELLINGEN",
-            [nameof(Log_ColumnHint)]        = "Kies kolommen om te loggen en sleep ≡ om te herordenen. Vergrendeld tijdens actief loggen.",
-            [nameof(Log_SelectAll)]         = "Alles selecteren",
-            [nameof(Log_DeselectAll)]       = "Alles deselecteren",
-            [nameof(Log_ResetDefault)]      = "Standaard herstellen",
-            [nameof(Log_Group)]             = "Groep:",
-            [nameof(Log_CellVoltages)]      = "Celspanning",
-            [nameof(Log_Balancing)]         = "Balanceren",
-            [nameof(Log_Temperatures)]      = "Temperaturen",
             [nameof(Log_SecControls)]       = "BEDIENINGSMIDDELEN",
             [nameof(Log_ConnectHint)]       = "Verbind eerst met de ESP32 en start dan met loggen.",
             [nameof(Log_RecordingHint)]     = "Opname bezig. Stop om het bestand te sluiten / schrijven.",
@@ -1021,11 +973,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_SwitchToLight)] = "切换到浅色模式",
             [nameof(Ui_SwitchToDark)]  = "切换到深色模式",
             [nameof(Ui_ChangeLanguage)] = "更改语言",
-            [nameof(Ui_CanConnection)]  = "CAN 连接",
-            [nameof(Ui_CanQuickAccess)] = "CAN 总线快速访问",
+            [nameof(Ui_SerialConnection)]  = "串口连接",
+            [nameof(Ui_SerialQuickAccess)] = "串口快速访问",
             [nameof(Ui_AlertHistory)]   = "警报历史",
             [nameof(Ui_NoAlerts)]       = "暂无警报",
             [nameof(Ui_ClearAlerts)]    = "清除",
+            [nameof(Ui_Menu_Customize)]  = "自定义",
+            [nameof(Ui_Menu_View)]       = "视图",
+            [nameof(Ui_Menu_RefreshApp)] = "刷新应用",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",
@@ -1079,27 +1034,23 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "断路 (高于 70°C)",
             [nameof(Cell_ResetStats)]        = "重置统计",
 
-            [nameof(Ctrl_SecCan)]            = "CAN 总线连接",
-            [nameof(Ctrl_TransportMode)]     = "传输方式",
-            [nameof(Ctrl_TransportEsp)]      = "ESP 串口 (USB)",
-            [nameof(Ctrl_TransportSlcan)]    = "SLCAN 适配器 (CANable)",
-            [nameof(Ctrl_TransportPcan)]     = "PEAK PCAN-USB",
-            [nameof(Ctrl_CanChannel)]        = "通道",
-            [nameof(Ctrl_PhScanning)]        = "正在扫描通道…",
-            [nameof(Ctrl_PhNoPorts)]         = "未检测到 CAN 通道",
-            [nameof(Ctrl_PhNoDriver)]        = "未安装 PCAN-Basic 驱动",
+            [nameof(Ctrl_SecSerial)]            = "串口连接",
+            [nameof(Ctrl_SerialPort)]        = "COM 端口",
+            [nameof(Ctrl_PhScanning)]        = "正在扫描端口…",
+            [nameof(Ctrl_PhNoPorts)]         = "未检测到 COM 端口",
             [nameof(Ctrl_Refresh)]           = "刷新",
             [nameof(Ctrl_Connect)]           = "连接",
             [nameof(Ctrl_Disconnect)]        = "断开",
-            [nameof(Ctrl_CanBitrate)]        = "比特率",
+            [nameof(Ctrl_SerialBaud)]        = "波特率",
             [nameof(Ctrl_ConnStatus)]        = "状态",
             [nameof(Ctrl_NotConnected)]      = "未连接",
-            [nameof(Ctrl_AutoConnectStatus)] = "自动连接已启动 — 等待 BMS CAN 帧…",
+            [nameof(Ctrl_AutoConnectStatus)] = "自动连接已启动 — 等待 ESP32 BMS 数据…",
             [nameof(Ctrl_SecCapacity)]       = "电池容量",
             [nameof(Ctrl_NominalCapacity)]   = "额定容量",
             [nameof(Ctrl_CapacityHint)]      = "用于计算仪表盘上的剩余容量 (mAh)。",
             [nameof(Ctrl_SecProtection)]     = "保护阈值",
             [nameof(Ctrl_OvervoltCutoff)]    = "过压截止",
+            [nameof(Ctrl_HighVoltWarn)]      = "过压警告",
             [nameof(Ctrl_UnderVoltCutoff)]   = "欠压截止",
             [nameof(Ctrl_LowVoltWarn)]       = "低压警告",
             [nameof(Ctrl_OverTempWarn)]      = "过温警告",
@@ -1114,17 +1065,17 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ResetDefaults)]     = "恢复默认",
             [nameof(Ctrl_ApplySettings)]     = "应用设置",
 
-            [nameof(Ctrl_SecCanAdvanced)]    = "CAN 总线参数",
+            [nameof(Ctrl_SecSerialAdvanced)]    = "串口参数",
             [nameof(Ctrl_AutoConnect)]       = "自动连接",
-            [nameof(Ctrl_AutoConnectHint)]   = "自动扫描 PCAN-USB 通道并连接到广播 BMS 心跳帧的通道。",
+            [nameof(Ctrl_AutoConnectHint)]   = "自动扫描 COM 端口并连接到广播 BMS 数据的端口。",
             [nameof(Ctrl_ReconnectInterval)] = "扫描间隔",
             [nameof(Ctrl_ProbeTimeout)]      = "探测超时",
             [nameof(Ctrl_FramesReceived)]    = "已接收帧数",
             [nameof(Ctrl_ParseErrors)]       = "解析错误",
 
-            [nameof(Fb_CanError)]            = "CAN 错误",
-            [nameof(Fb_SelectChannel)]       = "选择通道",
-            [nameof(Fb_SelectChannelMsg)]    = "请先从下拉列表中选择一个 CAN 通道。",
+            [nameof(Fb_SerialError)]            = "串口错误",
+            [nameof(Fb_SelectChannel)]       = "选择端口",
+            [nameof(Fb_SelectChannelMsg)]    = "请先从下拉列表中选择一个 COM 端口。",
             [nameof(Fb_SettingsApplied)]     = "设置已应用",
             [nameof(Fb_SettingsAppliedMsg)]  = "新阈值已生效。",
             [nameof(Fb_DefaultsRestored)]    = "已恢复默认",
@@ -1140,15 +1091,6 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Log_Format)]            = "格式",
             [nameof(Log_Filename)]          = "文件名",
             [nameof(Log_PhAutoFilename)]    = "留空则自动生成",
-            [nameof(Log_SecColumnSettings)] = "列设置",
-            [nameof(Log_ColumnHint)]        = "选择要记录的列，拖动 ≡ 重新排序。记录时锁定。",
-            [nameof(Log_SelectAll)]         = "全选",
-            [nameof(Log_DeselectAll)]       = "取消全选",
-            [nameof(Log_ResetDefault)]      = "重置默认",
-            [nameof(Log_Group)]             = "组别:",
-            [nameof(Log_CellVoltages)]      = "电池格电压",
-            [nameof(Log_Balancing)]         = "均衡",
-            [nameof(Log_Temperatures)]      = "温度",
             [nameof(Log_SecControls)]       = "控制",
             [nameof(Log_ConnectHint)]       = "请先连接 ESP32，然后开始记录。",
             [nameof(Log_RecordingHint)]     = "正在记录。停止以关闭/写入文件。",

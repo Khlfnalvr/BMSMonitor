@@ -20,11 +20,36 @@
             IsBackButtonVisible="Collapsed"
             IsSettingsVisible="False"
             SelectionChanged="NavView_SelectionChanged"
-            Loaded="NavView_Loaded">
+            Loaded="NavView_Loaded"
+            RightTapped="TitleBar_RightTapped">
+
+            <NavigationView.Resources>
+                <!--
+                    Compact top pane (32 px) matches the AppTitleBar height
+                    exactly so the logo + nav labels sit visually centered
+                    inside the title-bar strip.
+
+                    The framework defaults position the selection underline a
+                    few pixels above the item's bottom edge (via
+                    NavigationViewItemBackgroundMargin +
+                    TopNavigationViewItemSelectionIndicatorMargin), which is
+                    what was causing the underline to overlap the text
+                    descenders. We pin both to zero so the indicator sits
+                    flush against the item bottom, freeing the full 30 px
+                    above it for a vertically centered label.
+                -->
+                <x:Double x:Key="NavigationViewTopPaneHeight">32</x:Double>
+                <x:Double x:Key="TopNavigationViewItemContentMinHeight">32</x:Double>
+                <Thickness x:Key="NavigationViewItemButtonMargin">1,2</Thickness>
+                <Thickness x:Key="TopNavigationViewItemContentOnlyContentPresenterMargin">6,0</Thickness>
+                <Thickness x:Key="TopNavigationViewItemContentPresenterMargin">4,-1,6,-1</Thickness>
+                <Thickness x:Key="NavigationViewItemBackgroundMargin">0,0,0,0</Thickness>
+                <Thickness x:Key="TopNavigationViewItemSelectionIndicatorMargin">0,0,0,0</Thickness>
+            </NavigationView.Resources>
 
             <NavigationView.PaneHeader>
                 <Image Source="logo.png"
-                       Height="28"
+                       Height="22"
                        Margin="12,0,8,0"
                        VerticalAlignment="Center"
                        HorizontalAlignment="Left"
@@ -32,11 +57,49 @@
             </NavigationView.PaneHeader>
 
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="{x:Bind Lang.Nav_Dashboard,    Mode=OneWay}" Tag="Dashboard"/>
-                <NavigationViewItem Content="{x:Bind Lang.Nav_CellView,     Mode=OneWay}" Tag="CellView"/>
-                <NavigationViewItem Content="{x:Bind Lang.Nav_ControlPanel, Mode=OneWay}" Tag="ControlPanel"/>
-                <NavigationViewItem Content="{x:Bind Lang.Nav_Logging,      Mode=OneWay}" Tag="Logging"/>
-                <NavigationViewItem Content="{x:Bind Lang.Nav_Playback,     Mode=OneWay}" Tag="Playback"/>
+                <!--
+                    Content is wrapped in an explicit TextBlock with
+                    VerticalAlignment=Center because the default item template
+                    hard-codes ContentPresenter.VerticalAlignment to Stretch,
+                    leaving the label glued to the indicator. The top-nav
+                    template does not honor item padding for label placement,
+                    so the labels are translated up slightly.
+                -->
+                <NavigationViewItem x:Name="NavDashboard"    Tag="Dashboard"    MinWidth="0" MinHeight="32" Height="32" Padding="0,0,0,2">
+                    <TextBlock Text="{x:Bind Lang.Nav_Dashboard,    Mode=OneWay}" FontSize="12" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="-3"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavCellView"     Tag="CellView"     MinWidth="0" MinHeight="32" Height="32" Padding="0,0,0,2">
+                    <TextBlock Text="{x:Bind Lang.Nav_CellView,     Mode=OneWay}" FontSize="12" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="-3"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavControlPanel" Tag="ControlPanel" MinWidth="0" MinHeight="32" Height="32" Padding="0,0,0,2">
+                    <TextBlock Text="{x:Bind Lang.Nav_ControlPanel, Mode=OneWay}" FontSize="12" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="-3"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavLogging"      Tag="Logging"      MinWidth="0" MinHeight="32" Height="32" Padding="0,0,0,2">
+                    <TextBlock Text="{x:Bind Lang.Nav_Logging,      Mode=OneWay}" FontSize="12" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="-3"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </NavigationViewItem>
+                <NavigationViewItem x:Name="NavPlayback"     Tag="Playback"     MinWidth="0" MinHeight="32" Height="32" Padding="0,0,0,2">
+                    <TextBlock Text="{x:Bind Lang.Nav_Playback,     Mode=OneWay}" FontSize="12" VerticalAlignment="Center">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform Y="-3"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <Frame x:Name="ContentFrame" Padding="0"/>
@@ -52,7 +115,56 @@
                 VerticalAlignment="Top"
                 HorizontalAlignment="Stretch"
                 Background="Transparent"
-                IsHitTestVisible="False"/>
+                IsHitTestVisible="False">
+            <Border.ContextFlyout>
+                <MenuFlyout x:Name="TitleBarCustomizeMenu" Placement="Bottom">
+                    <MenuFlyoutSubItem x:Name="MenuView"
+                                       FontSize="12"
+                                       Text="{x:Bind Lang.Ui_Menu_View, Mode=OneWay}">
+                        <ToggleMenuFlyoutItem x:Name="ViewNavDashboard"
+                                              FontSize="12"
+                                              Text="{x:Bind Lang.Nav_Dashboard, Mode=OneWay}"
+                                              Tag="Dashboard"
+                                              IsChecked="True"
+                                              Click="ViewNavToggle_Click"/>
+                        <ToggleMenuFlyoutItem x:Name="ViewNavCellView"
+                                              FontSize="12"
+                                              Text="{x:Bind Lang.Nav_CellView, Mode=OneWay}"
+                                              Tag="CellView"
+                                              IsChecked="True"
+                                              Click="ViewNavToggle_Click"/>
+                        <ToggleMenuFlyoutItem x:Name="ViewNavControlPanel"
+                                              FontSize="12"
+                                              Text="{x:Bind Lang.Nav_ControlPanel, Mode=OneWay}"
+                                              Tag="ControlPanel"
+                                              IsChecked="True"
+                                              Click="ViewNavToggle_Click"/>
+                        <ToggleMenuFlyoutItem x:Name="ViewNavLogging"
+                                              FontSize="12"
+                                              Text="{x:Bind Lang.Nav_Logging, Mode=OneWay}"
+                                              Tag="Logging"
+                                              IsChecked="True"
+                                              Click="ViewNavToggle_Click"/>
+                        <ToggleMenuFlyoutItem x:Name="ViewNavPlayback"
+                                              FontSize="12"
+                                              Text="{x:Bind Lang.Nav_Playback, Mode=OneWay}"
+                                              Tag="Playback"
+                                              IsChecked="True"
+                                              Click="ViewNavToggle_Click"/>
+                    </MenuFlyoutSubItem>
+                    <MenuFlyoutSeparator/>
+                    <MenuFlyoutItem x:Name="MenuRefreshApp"
+                                    FontSize="12"
+                                    Text="{x:Bind Lang.Ui_Menu_RefreshApp, Mode=OneWay}"
+                                    Click="RefreshApp_Click">
+                        <MenuFlyoutItem.Icon>
+                            <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                      Glyph="&#xE72C;"/>
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuFlyout>
+            </Border.ContextFlyout>
+        </Border>
 
         <!--
             Caption-style icon buttons — language picker + theme toggle, sitting
@@ -101,7 +213,7 @@
                                 <!-- Header -->
                                 <Grid>
                                     <TextBlock Text="{x:Bind Lang.Ui_AlertHistory, Mode=OneWay}"
-                                               FontWeight="SemiBold" FontSize="14"
+                                               FontWeight="SemiBold" FontSize="12"
                                                VerticalAlignment="Center"/>
                                     <Button x:Name="ClearAlertsBtn"
                                             HorizontalAlignment="Right"
@@ -113,24 +225,39 @@
 
                                 <!-- Alert list -->
                                 <ListView x:Name="AlertListView"
-                                          Height="320"
+                                          Height="160"
                                           SelectionMode="None"
                                           ItemsSource="{x:Bind AlertHistory}">
                                     <ListView.ItemTemplate>
                                         <DataTemplate x:DataType="models:AlertRecord">
-                                            <StackPanel Spacing="2" Padding="0,4,0,4">
-                                                <TextBlock Text="{x:Bind Title}"
-                                                           FontWeight="SemiBold"
-                                                           FontSize="12"/>
-                                                <TextBlock Text="{x:Bind Body}"
-                                                           FontSize="11"
-                                                           Opacity="0.7"
-                                                           TextWrapping="Wrap"/>
-                                                <TextBlock Text="{x:Bind TimeText}"
-                                                           FontSize="10"
-                                                           Opacity="0.5"
-                                                           FontFamily="Consolas"/>
-                                            </StackPanel>
+                                            <Grid ColumnSpacing="8" Padding="0,4,0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="18"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <!-- Severity icon -->
+                                                <FontIcon Grid.Column="0"
+                                                          FontFamily="Segoe MDL2 Assets"
+                                                          Glyph="{x:Bind SeverityIcon}"
+                                                          FontSize="13"
+                                                          Foreground="{x:Bind SeverityColorBrush}"
+                                                          VerticalAlignment="Top"
+                                                          Margin="0,2,0,0"/>
+                                                <!-- Content -->
+                                                <StackPanel Grid.Column="1" Spacing="2">
+                                                    <TextBlock Text="{x:Bind Title}"
+                                                               FontWeight="SemiBold"
+                                                               FontSize="12"/>
+                                                    <TextBlock Text="{x:Bind Body}"
+                                                               FontSize="11"
+                                                               Opacity="0.7"
+                                                               TextWrapping="Wrap"/>
+                                                    <TextBlock Text="{x:Bind TimeText}"
+                                                               FontSize="10"
+                                                               Opacity="0.5"
+                                                               FontFamily="Consolas"/>
+                                                </StackPanel>
+                                            </Grid>
                                         </DataTemplate>
                                     </ListView.ItemTemplate>
                                 </ListView>
@@ -148,29 +275,29 @@
                 </Button>
 
                 <!--
-                    CAN channel picker — sits to the left of the language /
+                    Serial channel picker — sits to the left of the language /
                     theme buttons. Opens a flyout where the user can pick the
-                    PCAN-USB channel + bitrate and connect without leaving
-                    the current page. The small dot at the bottom-right
+                    COM port + baud rate and connect to the ESP32 without
+                    leaving the current page. The small dot at the bottom-right
                     indicates live connection state.
                 -->
-                <Button x:Name="CanBtn"
+                <Button x:Name="SerialBtn"
                         Style="{StaticResource CaptionButtonStyle}">
                     <Grid>
                         <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
                                   FontSize="14"
                                   Glyph="&#xE839;"/>
-                        <Ellipse x:Name="CanStatusDot"
+                        <Ellipse x:Name="SerialStatusDot"
                                  Width="6" Height="6"
                                  HorizontalAlignment="Right"
                                  VerticalAlignment="Bottom"
                                  Margin="0,0,10,6"/>
                     </Grid>
                     <Button.Flyout>
-                        <Flyout x:Name="CanFlyout" Placement="Bottom">
+                        <Flyout x:Name="SerialFlyout" Placement="Bottom">
                             <StackPanel Width="300" Spacing="10">
-                                <TextBlock Text="{x:Bind Lang.Ui_CanConnection, Mode=OneWay}"
-                                           FontWeight="SemiBold" FontSize="14"/>
+                                <TextBlock Text="{x:Bind Lang.Ui_SerialConnection, Mode=OneWay}"
+                                           FontWeight="SemiBold" FontSize="12"/>
 
                                 <!-- Channel row + refresh -->
                                 <Grid ColumnSpacing="6">
@@ -179,7 +306,8 @@
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <ComboBox Grid.Column="0"
-                                              x:Name="CapCanChannel"
+                                              x:Name="CapSerialPort"
+                                              FontSize="12"
                                               HorizontalAlignment="Stretch"
                                               PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"/>
                                     <Button Grid.Column="1"
@@ -192,11 +320,13 @@
                                 </Grid>
 
                                 <!-- Bitrate row -->
-                                <ComboBox x:Name="CapCanBitrate"
+                                <ComboBox x:Name="CapSerialBaud"
+                                          FontSize="12"
                                           HorizontalAlignment="Stretch"/>
 
                                 <!-- Connect / Disconnect -->
                                 <Button x:Name="CapConnectBtn"
+                                        FontSize="12"
                                         HorizontalAlignment="Stretch"
                                         Style="{ThemeResource AccentButtonStyle}"
                                         Click="CapConnectBtn_Click"
@@ -219,11 +349,11 @@
                               Glyph="&#xE12B;"/>
                     <Button.Flyout>
                         <MenuFlyout Placement="Bottom">
-                            <RadioMenuFlyoutItem x:Name="LangItemId" Text="Indonesia"  Tag="id" GroupName="LangGroup" Click="LangItem_Click"/>
-                            <RadioMenuFlyoutItem x:Name="LangItemMs" Text="Malay"      Tag="ms" GroupName="LangGroup" Click="LangItem_Click"/>
-                            <RadioMenuFlyoutItem x:Name="LangItemEn" Text="English"    Tag="en" GroupName="LangGroup" Click="LangItem_Click"/>
-                            <RadioMenuFlyoutItem x:Name="LangItemNl" Text="Nederlands" Tag="nl" GroupName="LangGroup" Click="LangItem_Click"/>
-                            <RadioMenuFlyoutItem x:Name="LangItemZh" Text="中文"        Tag="zh" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemId" FontSize="12" Text="Indonesia"  Tag="id" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemMs" FontSize="12" Text="Malay"      Tag="ms" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemEn" FontSize="12" Text="English"    Tag="en" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemNl" FontSize="12" Text="Nederlands" Tag="nl" GroupName="LangGroup" Click="LangItem_Click"/>
+                            <RadioMenuFlyoutItem x:Name="LangItemZh" FontSize="12" Text="中文"        Tag="zh" GroupName="LangGroup" Click="LangItem_Click"/>
                         </MenuFlyout>
                     </Button.Flyout>
                 </Button>

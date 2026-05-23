@@ -39,6 +39,21 @@ public class NotificationService
         }
     }
 
+    /// <summary>
+    /// Logs an application diagnostic event (parse error, connection change, etc.)
+    /// directly to the alert history without a Windows toast and without cooldown.
+    /// </summary>
+    public void LogDiagnostic(AlertSeverity severity, string title, string body)
+    {
+        var rec = new AlertRecord(DateTime.Now, title, body, severity);
+        lock (_histLock)
+        {
+            if (_history.Count >= MaxHistory) _history.RemoveAt(0);
+            _history.Add(rec);
+        }
+        AlertFired?.Invoke(rec);
+    }
+
     public void CheckAndNotify(BmsData data, BmsConfig config)
     {
         if (!_registered) return;
@@ -55,7 +70,7 @@ public class NotificationService
 
         double cellMin = cells[0], cellMax = cells[0];
 
-        // Cell voltages
+        // Cell voltages — check hard cutoffs first, then soft warnings.
         for (int i = 0; i < cells.Length; i++)
         {
             double v = cells[i];
@@ -65,9 +80,15 @@ public class NotificationService
             if (v >= config.OvervoltageThreshold)
                 Fire($"ov_{i}", "BMS - Overvoltage",
                     $"Cell {i + 1} at {v:F3}V — exceeds {config.OvervoltageThreshold:F2}V cutoff");
+            else if (v >= config.HighVoltageWarning)
+                Fire($"ovw_{i}", "BMS - High Voltage Warning",
+                    $"Cell {i + 1} at {v:F3}V — exceeds {config.HighVoltageWarning:F2}V warning");
             else if (v <= config.UndervoltageThreshold)
                 Fire($"uv_{i}", "BMS - Undervoltage",
                     $"Cell {i + 1} at {v:F3}V — below {config.UndervoltageThreshold:F2}V cutoff");
+            else if (v > 0 && v <= config.LowVoltageWarning)
+                Fire($"uvw_{i}", "BMS - Low Voltage Warning",
+                    $"Cell {i + 1} at {v:F3}V — below {config.LowVoltageWarning:F2}V warning");
         }
 
         // Current

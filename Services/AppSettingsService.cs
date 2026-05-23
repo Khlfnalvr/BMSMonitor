@@ -11,6 +11,7 @@ public class AppSettings
     public double MaxChargeCurrent       { get; set; } = 20;
     public double MaxDischargeCurrent    { get; set; } = 40;
     public double OvervoltageThreshold   { get; set; } = 4.20;
+    public double HighVoltageWarning     { get; set; } = 4.10;
     public double UndervoltageThreshold  { get; set; } = 2.80;
     public double LowVoltageWarning      { get; set; } = 3.00;
     public double OverTempWarning        { get; set; } = 60;
@@ -18,18 +19,18 @@ public class AppSettings
     public double BalancingStartDeltaMv  { get; set; } = 20;
     public double BalancingStopDeltaMv   { get; set; } = 5;
 
-    // Transport selection. 0 = EspSerial, 1 = Slcan, 2 = Pcan — kept as int
-    // so settings.json stays human-editable. Falls through to EspSerial on
-    // missing / unknown values.
-    public int    TransportMode          { get; set; } = 0;
-
-    // Bitrate key in Kbps. Means UART baud / 1000 for ESP, CAN bus speed for
-    // SLCAN & PCAN. Resolved against the active backend's bitrate list at
-    // startup; unrecognised values fall through to that backend's default.
-    public int    CanBitrateKbps         { get; set; } = 115;
+    // UART baud rate to the ESP32 master.
+    public int    SerialBaud             { get; set; } = 115200;
     public int    ReconnectIntervalSec   { get; set; } = 2;
     public int    ProbeTimeoutMs         { get; set; } = 3000;
     public bool   AutoConnectEnabled     { get; set; } = true;
+
+    // Navigation visibility — driven by the customize menu in the pane header.
+    public bool   ShowNav_Dashboard      { get; set; } = true;
+    public bool   ShowNav_CellView       { get; set; } = true;
+    public bool   ShowNav_ControlPanel   { get; set; } = true;
+    public bool   ShowNav_Logging        { get; set; } = true;
+    public bool   ShowNav_Playback       { get; set; } = true;
 }
 
 public static class AppSettingsService

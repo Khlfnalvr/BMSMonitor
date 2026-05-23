@@ -5,387 +5,460 @@
     xmlns:local="using:BMSMonitor.Views"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
-    <Page.Resources>
-        <Thickness x:Key="CardSpacing">0,8,0,0</Thickness>
-    </Page.Resources>
-
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
-        <Grid Padding="32,20,32,40">
-            <StackPanel Spacing="10" MaxWidth="880"
-                        HorizontalAlignment="Center">
+        <Grid Padding="20,16,20,12">
 
-                <!-- ── CAN BUS CONNECTION ─────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecCan, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="14">
-                        <!-- Transport mode picker (drives the channel + bitrate combos) -->
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_TransportMode, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <ComboBox Grid.Column="1" x:Name="ComboTransport"
-                                      HorizontalAlignment="Stretch"
-                                      SelectionChanged="ComboTransport_SelectionChanged"/>
-                        </Grid>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_CanChannel, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <ComboBox Grid.Column="1" x:Name="ComboCanChannel"
-                                      PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"
-                                      HorizontalAlignment="Stretch"/>
-                            <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshChannels_Click"/>
-                            <Button Grid.Column="3" x:Name="ConnectBtn"
-                                    Content=""
-                                    Style="{ThemeResource AccentButtonStyle}"
-                                    Click="ConnectBtn_Click"/>
-                        </Grid>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_CanBitrate, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <ComboBox Grid.Column="1" x:Name="ComboCanBitrate" HorizontalAlignment="Stretch"/>
-                        </Grid>
-                        <!-- Status -->
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ConnStatus, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                <TextBlock x:Name="ConnStatusText" FontSize="13" Text=""/>
-                                <TextBlock x:Name="AutoConnectStatusText"
-                                           FontSize="11" Opacity="0.5" TextWrapping="Wrap"
-                                           Text="{x:Bind Lang.Ctrl_AutoConnectStatus, Mode=OneWay}"/>
-                            </StackPanel>
-                        </Grid>
+            <!--
+                Adaptive layout:
+                  Wide (>= 1100 px)  → 2-column grid, fills the whole window
+                                       (left = CAN setup + capacity,
+                                        right = protection + limits + balancing)
+                  Narrow (< 1100 px) → single column, MaxWidth=880 centered
+                                       (matches the original layout when the
+                                        window is split half-screen)
+            -->
+            <VisualStateManager.VisualStateGroups>
+                <VisualStateGroup>
+                    <VisualState x:Name="Narrow">
+                        <VisualState.StateTriggers>
+                            <AdaptiveTrigger MinWindowWidth="0"/>
+                        </VisualState.StateTriggers>
+                        <VisualState.Setters>
+                            <Setter Target="RootGrid.MaxWidth" Value="880"/>
+                            <Setter Target="RootGrid.HorizontalAlignment" Value="Center"/>
+                            <Setter Target="LeftStack.(Grid.ColumnSpan)" Value="2"/>
+                            <Setter Target="RightStack.(Grid.Row)" Value="1"/>
+                            <Setter Target="RightStack.(Grid.Column)" Value="0"/>
+                            <Setter Target="RightStack.(Grid.ColumnSpan)" Value="2"/>
+                            <Setter Target="ButtonsRow.(Grid.Row)" Value="2"/>
+                            <Setter Target="FeedbackBar.(Grid.Row)" Value="3"/>
+                        </VisualState.Setters>
+                    </VisualState>
+                    <VisualState x:Name="Wide">
+                        <VisualState.StateTriggers>
+                            <AdaptiveTrigger MinWindowWidth="1100"/>
+                        </VisualState.StateTriggers>
+                        <!-- Defaults from the XAML literals below: full width, 2 columns -->
+                    </VisualState>
+                </VisualStateGroup>
+            </VisualStateManager.VisualStateGroups>
+
+            <Grid x:Name="RootGrid" RowSpacing="8" ColumnSpacing="12">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- ══ LEFT COLUMN — CAN setup + battery capacity ══════════ -->
+                <Grid x:Name="LeftStack" Grid.Row="0" Grid.Column="0" RowSpacing="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Spacing="10">
+
+                    <!-- ── SERIAL CONNECTION ──────────────────────────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecSerial, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_SerialPort, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <ComboBox Grid.Column="1" x:Name="ComboSerialPort"
+                                          PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"
+                                          HorizontalAlignment="Stretch"/>
+                                <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshChannels_Click"/>
+                                <Button Grid.Column="3" x:Name="ConnectBtn"
+                                        Content=""
+                                        Style="{ThemeResource AccentButtonStyle}"
+                                        Click="ConnectBtn_Click"/>
+                            </Grid>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_SerialBaud, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <ComboBox Grid.Column="1" x:Name="ComboSerialBaud" HorizontalAlignment="Stretch"/>
+                            </Grid>
+                            <!-- Status -->
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ConnStatus, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock x:Name="ConnStatusText" FontSize="13" Text=""/>
+                                    <TextBlock x:Name="AutoConnectStatusText"
+                                               FontSize="11" Opacity="0.5" TextWrapping="Wrap"
+                                               Text="{x:Bind Lang.Ctrl_AutoConnectStatus, Mode=OneWay}"/>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                     </StackPanel>
-                </Border>
 
-                <!-- ── CAN BUS PARAMETERS ─────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecCanAdvanced, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="14">
+                    <StackPanel Grid.Row="1" Spacing="10">
 
-                        <!-- Auto-connect toggle -->
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_AutoConnect, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <StackPanel Grid.Column="1" Spacing="2">
-                                <ToggleSwitch x:Name="ToggleAutoConnect"
-                                              Toggled="ToggleAutoConnect_Toggled"
-                                              OnContent="" OffContent=""/>
-                                <TextBlock Text="{x:Bind Lang.Ctrl_AutoConnectHint, Mode=OneWay}"
-                                           FontSize="11" Opacity="0.5" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Grid>
+                    <!-- ── SERIAL PARAMETERS ──────────────────────────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecSerialAdvanced, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="14">
 
-                        <!-- Reconnect interval -->
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ReconnectInterval, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxReconnectInterval"
-                                       Value="2" Minimum="1" Maximum="30"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       ValueChanged="NbxReconnectInterval_ValueChanged"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="s" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
+                            <!-- Auto-connect toggle -->
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_AutoConnect, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <ToggleSwitch x:Name="ToggleAutoConnect"
+                                                  Toggled="ToggleAutoConnect_Toggled"
+                                                  OnContent="" OffContent=""/>
+                                    <TextBlock Text="{x:Bind Lang.Ctrl_AutoConnectHint, Mode=OneWay}"
+                                               FontSize="11" Opacity="0.5" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
 
-                        <!-- Probe timeout -->
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ProbeTimeout, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxProbeTimeout"
-                                       Value="3000" Minimum="500" Maximum="10000"
-                                       SmallChange="100" LargeChange="500"
-                                       SpinButtonPlacementMode="Compact"
-                                       ValueChanged="NbxProbeTimeout_ValueChanged"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="ms" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
+                            <!-- Reconnect interval -->
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ReconnectInterval, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxReconnectInterval"
+                                           Value="2" Minimum="1" Maximum="30"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           ValueChanged="NbxReconnectInterval_ValueChanged"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="s" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
 
-                        <!-- Live counters -->
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_FramesReceived, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <TextBlock Grid.Column="1" x:Name="FramesReceivedText"
-                                       VerticalAlignment="Center"
-                                       FontFamily="Consolas" FontSize="13" Text="0"/>
-                        </Grid>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ParseErrors, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <TextBlock Grid.Column="1" x:Name="ParseErrorsText"
-                                       VerticalAlignment="Center"
-                                       FontFamily="Consolas" FontSize="13" Text="0"/>
-                        </Grid>
+                            <!-- Probe timeout -->
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ProbeTimeout, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxProbeTimeout"
+                                           Value="3000" Minimum="500" Maximum="10000"
+                                           SmallChange="100" LargeChange="500"
+                                           SpinButtonPlacementMode="Compact"
+                                           ValueChanged="NbxProbeTimeout_ValueChanged"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="ms" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+
+                            <!-- Live counters -->
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_FramesReceived, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <TextBlock Grid.Column="1" x:Name="FramesReceivedText"
+                                           VerticalAlignment="Center"
+                                           FontFamily="Consolas" FontSize="13" Text="0"/>
+                            </Grid>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ParseErrors, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <TextBlock Grid.Column="1" x:Name="ParseErrorsText"
+                                           VerticalAlignment="Center"
+                                           FontFamily="Consolas" FontSize="13" Text="0"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                     </StackPanel>
-                </Border>
 
-                <!-- ── BATTERY CAPACITY ─────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecCapacity, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <Grid ColumnSpacing="10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="220"/>
-                            <ColumnDefinition Width="180"/>
-                            <ColumnDefinition Width="40"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_NominalCapacity, Mode=OneWay}"
-                                   Style="{StaticResource FormLabelStyle}"/>
-                        <NumberBox Grid.Column="1" x:Name="NbxCapacity"
-                                   Value="20" Minimum="1" Maximum="500"
-                                   SmallChange="1" LargeChange="5"
-                                   SpinButtonPlacementMode="Compact"
-                                   HorizontalAlignment="Stretch"/>
-                        <TextBlock Grid.Column="2" Text="Ah" VerticalAlignment="Center"
-                                   Opacity="0.65" FontSize="13"/>
-                        <TextBlock Grid.Column="3" Text="{x:Bind Lang.Ctrl_CapacityHint, Mode=OneWay}"
-                                   FontSize="11" Opacity="0.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
-                    </Grid>
-                </Border>
+                    <StackPanel Grid.Row="2" Spacing="10" VerticalAlignment="Bottom">
 
-                <!-- ── PROTECTION THRESHOLDS ─────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecProtection, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="14">
-
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OvervoltCutoff, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxOvervolt"
-                                       Value="4.20" Minimum="3.5" Maximum="4.35"
-                                       SmallChange="0.01" LargeChange="0.1"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_UnderVoltCutoff, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxUndervolt"
-                                       Value="2.80" Minimum="2.0" Maximum="3.5"
-                                       SmallChange="0.01" LargeChange="0.1"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_LowVoltWarn, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxLowVolt"
-                                       Value="3.00" Minimum="2.5" Maximum="3.8"
-                                       SmallChange="0.01" LargeChange="0.1"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OverTempWarn, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxTempWarn"
-                                       Value="60" Minimum="30" Maximum="90"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="°C" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OverTempCutoff, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxTempCutoff"
-                                       Value="70" Minimum="40" Maximum="100"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="°C" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
+                    <!-- ── BALANCING SETTINGS ────────────────────────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecBalancing, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_StartDelta, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxBalStart"
+                                           Value="20" Minimum="5" Maximum="100"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="mV" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_StopDelta, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxBalStop"
+                                           Value="5" Minimum="1" Maximum="50"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="mV" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                     </StackPanel>
-                </Border>
+                </Grid>
 
-                <!-- ── CURRENT LIMITS ────────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecCurrentLimits, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="14">
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxCharge, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxMaxCharge"
-                                       Value="20" Minimum="1" Maximum="60"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="A" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxDischarge, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxMaxDischarge"
-                                       Value="40" Minimum="1" Maximum="120"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="A" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxDod, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxMaxDod"
-                                       Value="80" Minimum="50" Maximum="100"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="%" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                <!-- ══ RIGHT COLUMN — protection + limits + capacity ═════════ -->
+                <StackPanel x:Name="RightStack" Grid.Row="0" Grid.Column="1" Spacing="10"
+                            VerticalAlignment="Bottom">
 
-                <!-- ── BALANCING SETTINGS ────────────────────────────────── -->
-                <TextBlock Text="{x:Bind Lang.Ctrl_SecBalancing, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                <Border Style="{StaticResource CardStyle}">
-                    <StackPanel Spacing="14">
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_StartDelta, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxBalStart"
-                                       Value="20" Minimum="5" Maximum="100"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="mV" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-                        <Grid ColumnSpacing="10">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="220"/>
-                                <ColumnDefinition Width="180"/>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_StopDelta, Mode=OneWay}"
-                                       Style="{StaticResource FormLabelStyle}"/>
-                            <NumberBox  Grid.Column="1" x:Name="NbxBalStop"
-                                       Value="5" Minimum="1" Maximum="50"
-                                       SmallChange="1" LargeChange="5"
-                                       SpinButtonPlacementMode="Compact"
-                                       HorizontalAlignment="Stretch"/>
-                            <TextBlock Grid.Column="2" Text="mV" VerticalAlignment="Center"
-                                       Opacity="0.65" FontSize="13"/>
-                        </Grid>
-                    </StackPanel>
-                </Border>
+                    <!-- ── PROTECTION THRESHOLDS ─────────────────────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecProtection, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="14">
 
-                <!-- ── ACTION BUTTONS ─────────────────────────────────────── -->
-                <StackPanel Orientation="Horizontal" Spacing="10"
+                            <!-- Cell voltage rows are listed in a descending ladder:
+                                 overvolt cutoff → high warn → low warn → undervolt cutoff. -->
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OvervoltCutoff, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxOvervolt"
+                                           Value="4.20" Minimum="3.5" Maximum="4.35"
+                                           SmallChange="0.01" LargeChange="0.1"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_HighVoltWarn, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxHighVolt"
+                                           Value="4.10" Minimum="3.5" Maximum="4.30"
+                                           SmallChange="0.01" LargeChange="0.1"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_LowVoltWarn, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxLowVolt"
+                                           Value="3.00" Minimum="2.5" Maximum="3.8"
+                                           SmallChange="0.01" LargeChange="0.1"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_UnderVoltCutoff, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxUndervolt"
+                                           Value="2.80" Minimum="2.0" Maximum="3.5"
+                                           SmallChange="0.01" LargeChange="0.1"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="V" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OverTempWarn, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxTempWarn"
+                                           Value="60" Minimum="30" Maximum="90"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="°C" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_OverTempCutoff, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxTempCutoff"
+                                           Value="70" Minimum="40" Maximum="100"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="°C" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── CURRENT LIMITS ────────────────────────────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecCurrentLimits, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxCharge, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxMaxCharge"
+                                           Value="20" Minimum="1" Maximum="60"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="A" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxDischarge, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxMaxDischarge"
+                                           Value="40" Minimum="1" Maximum="120"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="A" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+                            <Grid ColumnSpacing="10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220"/>
+                                    <ColumnDefinition Width="180"/>
+                                    <ColumnDefinition Width="40"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_MaxDod, Mode=OneWay}"
+                                           Style="{StaticResource FormLabelStyle}"/>
+                                <NumberBox  Grid.Column="1" x:Name="NbxMaxDod"
+                                           Value="80" Minimum="50" Maximum="100"
+                                           SmallChange="1" LargeChange="5"
+                                           SpinButtonPlacementMode="Compact"
+                                           HorizontalAlignment="Stretch"/>
+                                <TextBlock Grid.Column="2" Text="%" VerticalAlignment="Center"
+                                           Opacity="0.65" FontSize="13"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ── BATTERY CAPACITY ─────────────────────────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecCapacity, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <Border Style="{StaticResource CardStyle}">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="220"/>
+                                <ColumnDefinition Width="180"/>
+                                <ColumnDefinition Width="40"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_NominalCapacity, Mode=OneWay}"
+                                       Style="{StaticResource FormLabelStyle}"/>
+                            <NumberBox Grid.Column="1" x:Name="NbxCapacity"
+                                       Value="20" Minimum="1" Maximum="500"
+                                       SmallChange="1" LargeChange="5"
+                                       SpinButtonPlacementMode="Compact"
+                                       HorizontalAlignment="Stretch"/>
+                            <TextBlock Grid.Column="2" Text="Ah" VerticalAlignment="Center"
+                                       Opacity="0.65" FontSize="13"/>
+                            <TextBlock Grid.Column="3" Text="{x:Bind Lang.Ctrl_CapacityHint, Mode=OneWay}"
+                                       FontSize="11" Opacity="0.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- ══ ACTION BUTTONS — span the full content width ═══════════ -->
+                <StackPanel x:Name="ButtonsRow" Grid.Row="1" Grid.ColumnSpan="2"
+                            Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Right"
                             Margin="0,16,0,0">
                     <Button Content="{x:Bind Lang.Ctrl_ResetDefaults, Mode=OneWay}"
@@ -397,11 +470,14 @@
                             MinWidth="140"/>
                 </StackPanel>
 
-                <!-- Feedback bar -->
-                <InfoBar x:Name="FeedbackBar" IsOpen="False" IsClosable="True"
+                <!-- Feedback bar — also spans the full width -->
+                <InfoBar x:Name="FeedbackBar" Grid.Row="2" Grid.ColumnSpan="2"
+                         IsOpen="False" IsClosable="True"
+                         Visibility="Collapsed"
+                         Closed="FeedbackBar_Closed"
                          Margin="0,4,0,0"/>
 
-            </StackPanel>
+            </Grid>
         </Grid>
     </ScrollViewer>
 </Page>

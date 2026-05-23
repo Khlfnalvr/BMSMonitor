@@ -12,7 +12,7 @@ public partial class MainViewModel : ObservableObject
 {
     private readonly DispatcherQueue _dispatcherQueue;
 
-    public CanBusService      CanBus      { get; }
+    public SerialService      Serial      { get; }
     public LoggingService     Logging     { get; } = new();
     public AutoConnectService AutoConnect { get; }
 
@@ -32,7 +32,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty][NotifyPropertyChangedFor(nameof(BalancingText))] private int _balancingCount;
 
     // --- Connection ---
-    [ObservableProperty] private string _connectionStatus = "Not connected — open Control Panel to connect CAN bus";
+    [ObservableProperty] private string _connectionStatus = "Not connected — open Control Panel to connect to the ESP32";
     [ObservableProperty] private bool   _isConnected;
     [ObservableProperty] private string _dataSourceText = "SOURCE: NOT CONNECTED";
 
@@ -151,22 +151,20 @@ public partial class MainViewModel : ObservableObject
         _dispatcherQueue = dispatcherQueue;
 
         var savedSettings = AppSettingsService.Load();
-        // Construct the CAN service with the *saved* transport so the rest
-        // of startup sees the right backend / pickers / defaults.
-        CanBus      = new CanBusService(IntToMode(savedSettings.TransportMode));
-        AutoConnect = new AutoConnectService(CanBus);
+        Serial      = new SerialService();
+        AutoConnect = new AutoConnectService(Serial);
 
         ApplySettings(savedSettings);
-        var savedBtr = CanBus.Bitrates.FirstOrDefault(b => b.Kbps == savedSettings.CanBitrateKbps);
-        AutoConnect.Start(savedBtr?.Kbps ?? CanBus.DefaultBitrate);
+        var savedBaud = Serial.Bitrates.FirstOrDefault(b => b.Baud == savedSettings.SerialBaud);
+        AutoConnect.Start(savedBaud?.Baud ?? Serial.DefaultBitrate);
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
 
-        // Live CAN — skip if a playback file is loaded (don't overwrite review data).
-        CanBus.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
-        CanBus.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnCanStatus(msg));
-        CanBus.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
+        // Live data — skip if a playback file is loaded (don't overwrite review data).
+        Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
+        Serial.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnSerialStatus(msg));
+        Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
 
         // Playback frames feed through the same pipeline as live data
         // (the chart history is pre-populated by FileLoaded, so ApplyData
@@ -196,14 +194,14 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(RemainingCapacityText));
     }
 
-    private void OnCanStatus(string msg)
+    private void OnSerialStatus(string msg)
     {
         ConnectionStatus = msg;
-        IsConnected      = CanBus.IsConnected;
+        IsConnected      = Serial.IsConnected;
 
-        if (CanBus.IsConnected)
+        if (Serial.IsConnected)
         {
-            DataSourceText = $"SOURCE: {CanBus.ChannelName} @ {CanBus.BitrateText} ({CanBus.Mode})";
+            DataSourceText = $"SOURCE: {Serial.ChannelName} @ {Serial.BitrateText}";
         }
         else
         {
@@ -427,6 +425,7 @@ public partial class MainViewModel : ObservableObject
         Config.MaxChargeCurrent      = s.MaxChargeCurrent;
         Config.MaxDischargeCurrent   = s.MaxDischargeCurrent;
         Config.OvervoltageThreshold  = s.OvervoltageThreshold;
+        Config.HighVoltageWarning    = s.HighVoltageWarning;
         Config.UndervoltageThreshold = s.UndervoltageThreshold;
         Config.LowVoltageWarning     = s.LowVoltageWarning;
         Config.OverTempWarning       = s.OverTempWarning;
@@ -441,33 +440,27 @@ public partial class MainViewModel : ObservableObject
 
     public void SaveSettings()
     {
-        AppSettingsService.Save(new AppSettings
-        {
-            NominalCapacityAh     = Config.NominalCapacityAh,
-            MaxDod                = Config.MaxDod,
-            MaxChargeCurrent      = Config.MaxChargeCurrent,
-            MaxDischargeCurrent   = Config.MaxDischargeCurrent,
-            OvervoltageThreshold  = Config.OvervoltageThreshold,
-            UndervoltageThreshold = Config.UndervoltageThreshold,
-            LowVoltageWarning     = Config.LowVoltageWarning,
-            OverTempWarning       = Config.OverTempWarning,
-            OverTempCutoff        = Config.OverTempCutoff,
-            BalancingStartDeltaMv = Config.BalancingStartDelta * 1000.0,
-            BalancingStopDeltaMv  = Config.BalancingStopDelta  * 1000.0,
-            TransportMode         = (int)CanBus.Mode,
-            CanBitrateKbps        = AutoConnect.BitrateKbps,
-            ReconnectIntervalSec  = AutoConnect.ReconnectIntervalSec,
-            ProbeTimeoutMs        = AutoConnect.ProbeTimeoutMs,
-            AutoConnectEnabled    = !AutoConnect.IsSuspended,
-        });
+        // Load first, mutate, save — so fields owned by other components
+        // (e.g. MainWindow's nav visibility) survive a partial write.
+        var s = AppSettingsService.Load();
+        s.NominalCapacityAh     = Config.NominalCapacityAh;
+        s.MaxDod                = Config.MaxDod;
+        s.MaxChargeCurrent      = Config.MaxChargeCurrent;
+        s.MaxDischargeCurrent   = Config.MaxDischargeCurrent;
+        s.OvervoltageThreshold  = Config.OvervoltageThreshold;
+        s.HighVoltageWarning    = Config.HighVoltageWarning;
+        s.UndervoltageThreshold = Config.UndervoltageThreshold;
+        s.LowVoltageWarning     = Config.LowVoltageWarning;
+        s.OverTempWarning       = Config.OverTempWarning;
+        s.OverTempCutoff        = Config.OverTempCutoff;
+        s.BalancingStartDeltaMv = Config.BalancingStartDelta * 1000.0;
+        s.BalancingStopDeltaMv  = Config.BalancingStopDelta  * 1000.0;
+        s.SerialBaud            = AutoConnect.Baud;
+        s.ReconnectIntervalSec  = AutoConnect.ReconnectIntervalSec;
+        s.ProbeTimeoutMs        = AutoConnect.ProbeTimeoutMs;
+        s.AutoConnectEnabled    = !AutoConnect.IsSuspended;
+        AppSettingsService.Save(s);
     }
-
-    private static TransportMode IntToMode(int i) => i switch
-    {
-        1 => TransportMode.Slcan,
-        2 => TransportMode.Pcan,
-        _ => TransportMode.EspSerial,
-    };
 
     private CellState GetCellState(double voltage)
     {

@@ -73,6 +73,53 @@
             </Style>
 
             <!--
+                LogoButtonStyle — minimal button used as a clickable wrapper
+                around the app logo in the NavigationView pane header. Opens
+                a customize menu (view toggles + refresh). Subtle rounded
+                hover, no border, sized to fit the 28px logo + caret.
+            -->
+            <Style x:Key="LogoButtonStyle" TargetType="Button">
+                <Setter Property="Background"            Value="Transparent"/>
+                <Setter Property="BorderThickness"       Value="0"/>
+                <Setter Property="CornerRadius"          Value="4"/>
+                <Setter Property="Padding"               Value="6,2"/>
+                <Setter Property="VerticalAlignment"     Value="Center"/>
+                <Setter Property="HorizontalAlignment"   Value="Left"/>
+                <Setter Property="UseSystemFocusVisuals" Value="True"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Grid x:Name="RootGrid"
+                                  Background="{TemplateBinding Background}"
+                                  CornerRadius="{TemplateBinding CornerRadius}"
+                                  Padding="{TemplateBinding Padding}">
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+                                        <VisualState x:Name="Normal"/>
+                                        <VisualState x:Name="PointerOver">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background"
+                                                        Value="{ThemeResource SubtleFillColorSecondaryBrush}"/>
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                        <VisualState x:Name="Pressed">
+                                            <VisualState.Setters>
+                                                <Setter Target="RootGrid.Background"
+                                                        Value="{ThemeResource SubtleFillColorTertiaryBrush}"/>
+                                            </VisualState.Setters>
+                                        </VisualState>
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!--
                 CaptionButtonStyle — flat, square-cornered button that matches
                 the OS minimize/maximize/close buttons (46x32, transparent bg,
                 subtle hover). Used for the theme toggle that sits next to the

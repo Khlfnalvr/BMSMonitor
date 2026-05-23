@@ -5,21 +5,19 @@ using System.Threading;
 namespace BMSMonitor.Services;
 
 /// <summary>
-/// Always-on auto-connect for whichever transport the user has selected.
-/// Enumerates candidate channels via the live backend
-/// (<see cref="CanBusService.Channels"/>), probes each at the user-chosen
-/// bitrate, and holds the first one that returns a valid BMS sample.
+/// Always-on auto-connect for the ESP serial link. Enumerates available COM
+/// ports via the live service (<see cref="SerialService.Channels"/>), probes
+/// each at the user-chosen baud rate, and holds the first one that returns
+/// a valid BMS JSON line.
 ///
 ///   • <b>Suspended</b> — set when the user clicks Disconnect; scanning halts
 ///     until <see cref="ResumeReconnect"/> is called.
-///   • <b>Unexpected drop</b> — backend reports disconnect; scanning resumes
+///   • <b>Unexpected drop</b> — service reports disconnect; scanning resumes
 ///     automatically (no suspension).
-///   • <b>Mode change</b> — failed-channel list is cleared so the new backend
-///     starts with a fresh scan.
 /// </summary>
 public sealed class AutoConnectService : IDisposable
 {
-    private readonly CanBusService _can;
+    private readonly SerialService _serial;
     private readonly object        _lock          = new();
     private Timer?                 _timer;
     private HashSet<string>        _failedPorts   = new(StringComparer.OrdinalIgnoreCase);
@@ -27,9 +25,9 @@ public sealed class AutoConnectService : IDisposable
     private bool                   _suspended     = false;
     private int                    _polling       = 0;   // concurrent-call guard
 
-    /// <summary>The user-chosen bitrate, in Kbps. Used as the lookup key
-    /// into <see cref="CanBusService.Bitrates"/> for the active backend.</summary>
-    public int  BitrateKbps    { get; set; }
+    /// <summary>The user-chosen baud rate. Used as the lookup key
+    /// into <see cref="SerialService.Bitrates"/>.</summary>
+    public int  Baud           { get; set; }
     public bool IsSuspended    { get { lock (_lock) return _suspended; } }
     public bool IsEnabled      => !IsSuspended;
 
@@ -53,29 +51,17 @@ public sealed class AutoConnectService : IDisposable
 
     public event Action<string>? Notification;
 
-    public AutoConnectService(CanBusService can)
+    public AutoConnectService(SerialService serial)
     {
-        _can = can;
-        BitrateKbps = can.DefaultBitrate;
-
-        // Reset scan state when the user changes transport so the new
-        // backend starts with a clean slate.
-        _can.ModeChanged += _ =>
-        {
-            lock (_lock)
-            {
-                _failedPorts.Clear();
-                _lastFailClear = DateTime.Now;
-                BitrateKbps    = _can.DefaultBitrate;
-            }
-        };
+        _serial = serial;
+        Baud    = serial.DefaultBitrate;
     }
 
-    public void Start(int bitrateKbps)
+    public void Start(int baud)
     {
         lock (_lock)
         {
-            BitrateKbps    = bitrateKbps;
+            Baud           = baud;
             _failedPorts.Clear();
             _suspended     = false;
             _lastFailClear = DateTime.Now;
@@ -117,16 +103,16 @@ public sealed class AutoConnectService : IDisposable
 
     private void DoPoll()
     {
-        CanChannel? candidate = null;
-        CanBitrate? bitrate   = null;
-        int kbps;
+        SerialPortInfo? candidate = null;
+        SerialBaud?     bitrate   = null;
+        int baud;
 
         lock (_lock)
         {
-            kbps = BitrateKbps;
+            baud = Baud;
 
-            if (_can.IsConnected) return;
-            if (_suspended)        return;
+            if (_serial.IsConnected) return;
+            if (_suspended)          return;
 
             // Periodically retry ports that failed earlier (USB re-enumeration,
             // device replugged, etc.).
@@ -136,14 +122,12 @@ public sealed class AutoConnectService : IDisposable
                 _lastFailClear = DateTime.Now;
             }
 
-            // Resolve the bitrate against the *current* backend — switching
-            // mode swaps the available bitrate set.
-            bitrate = _can.Bitrates.FirstOrDefault(b => b.Kbps == kbps)
-                   ?? _can.Bitrates.FirstOrDefault(b => b.Kbps == _can.DefaultBitrate)
-                   ?? _can.Bitrates.FirstOrDefault();
+            bitrate = _serial.Bitrates.FirstOrDefault(b => b.Baud == baud)
+                   ?? _serial.Bitrates.FirstOrDefault(b => b.Baud == _serial.DefaultBitrate)
+                   ?? _serial.Bitrates.FirstOrDefault();
             if (bitrate is null) return;
 
-            foreach (var ch in _can.Channels)
+            foreach (var ch in _serial.Channels)
             {
                 if (_failedPorts.Contains(ch.PortName)) continue;
                 candidate = ch;
@@ -151,11 +135,11 @@ public sealed class AutoConnectService : IDisposable
             }
         }
 
-        if (candidate is null || _can.IsConnected) return;
+        if (candidate is null || _serial.IsConnected) return;
 
         Notification?.Invoke($"Mendeteksi {candidate.DisplayName} @ {bitrate.DisplayName} — menunggu data BMS…");
         bool verified;
-        try { verified = _can.Probe(candidate, bitrate, timeoutMs: ProbeTimeoutMs); }
+        try { verified = _serial.Probe(candidate, bitrate, timeoutMs: ProbeTimeoutMs); }
         catch { verified = false; }
 
         lock (_lock)
@@ -170,7 +154,7 @@ public sealed class AutoConnectService : IDisposable
         }
 
         Notification?.Invoke($"{candidate.DisplayName} terverifikasi — menghubungkan…");
-        bool ok = _can.Connect(candidate, bitrate);
+        bool ok = _serial.Connect(candidate, bitrate);
 
         if (!ok)
         {

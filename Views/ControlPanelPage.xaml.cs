@@ -17,12 +17,11 @@ public sealed partial class ControlPanelPage : Page
     {
         InitializeComponent();
         LoadConfig();
-        PopulateTransports();
         PopulateBitrates();
         RefreshChannels();
-        HookCanBus();
+        HookSerial();
         SyncConnectButton();
-        LoadCanParams();
+        LoadSerialParams();
 
         // Poll frame counters at 2 Hz — cheap and avoids wiring an event
         // for every received frame. Started/stopped with page lifecycle.
@@ -34,22 +33,19 @@ public sealed partial class ControlPanelPage : Page
         Unloaded += (_, _) => _counterTimer.Stop();
     }
 
-    // ── CAN bus controls ──────────────────────────────────────────────────
-    private void HookCanBus()
+    // ── Serial controls ───────────────────────────────────────────────────
+    private void HookSerial()
     {
-        ViewModel.CanBus.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
+        ViewModel.Serial.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
         {
             ConnStatusText.Text = msg;
             SyncConnectButton();
         });
-        ViewModel.CanBus.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
+        ViewModel.Serial.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
         {
             // Suppress errors while auto-connect is scanning — expected when probing channels.
             if (!ViewModel.AutoConnect.IsSuspended) return;
-            FeedbackBar.Title    = Lang.Fb_CanError;
-            FeedbackBar.Message  = msg;
-            FeedbackBar.Severity = InfoBarSeverity.Error;
-            FeedbackBar.IsOpen   = true;
+            ShowFeedback(Lang.Fb_SerialError, msg, InfoBarSeverity.Error);
         });
         ViewModel.AutoConnect.Notification += msg => DispatcherQueue.TryEnqueue(() =>
             AutoConnectStatusText.Text = msg);
@@ -57,10 +53,10 @@ public sealed partial class ControlPanelPage : Page
 
     private void SyncConnectButton()
     {
-        bool connected = ViewModel.CanBus.IsConnected;
+        bool connected = ViewModel.Serial.IsConnected;
         ConnectBtn.Content        = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
-        ComboCanChannel.IsEnabled = !connected;
-        ComboCanBitrate.IsEnabled = !connected;
+        ComboSerialPort.IsEnabled = !connected;
+        ComboSerialBaud.IsEnabled = !connected;
         if (!connected) ConnStatusText.Text = Lang.Ctrl_NotConnected;
 
         // Auto-connect toggle reflects the service's suspended flag.
@@ -69,121 +65,75 @@ public sealed partial class ControlPanelPage : Page
         _initializingParams = false;
     }
 
-    private void PopulateTransports()
-    {
-        _initializingParams = true;
-        ComboTransport.Items.Clear();
-        AddTransport(TransportMode.EspSerial, Lang.Ctrl_TransportEsp);
-        AddTransport(TransportMode.Slcan,     Lang.Ctrl_TransportSlcan);
-        AddTransport(TransportMode.Pcan,      Lang.Ctrl_TransportPcan);
-
-        // Preselect the live mode
-        for (int i = 0; i < ComboTransport.Items.Count; i++)
-        {
-            if (ComboTransport.Items[i] is ComboBoxItem item &&
-                item.Tag is TransportMode tm && tm == ViewModel.CanBus.Mode)
-            {
-                ComboTransport.SelectedIndex = i;
-                break;
-            }
-        }
-        if (ComboTransport.SelectedIndex < 0) ComboTransport.SelectedIndex = 0;
-        _initializingParams = false;
-
-        void AddTransport(TransportMode mode, string label) =>
-            ComboTransport.Items.Add(new ComboBoxItem { Content = label, Tag = mode });
-    }
-
-    private void ComboTransport_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (_initializingParams) return;
-        if (ComboTransport.SelectedItem is not ComboBoxItem item ||
-            item.Tag is not TransportMode mode) return;
-        if (mode == ViewModel.CanBus.Mode) return;
-
-        // Switching mode disconnects the current backend (the service does
-        // this internally). Suspend auto-connect so the user has to click
-        // Connect deliberately after picking the new mode.
-        ViewModel.AutoConnect.SuspendReconnect();
-        ViewModel.CanBus.Mode = mode;
-
-        // The new backend exposes different channels & bitrates — repopulate.
-        PopulateBitrates();
-        RefreshChannels();
-        SyncConnectButton();
-
-        ViewModel.SaveSettings();
-    }
-
     private void PopulateBitrates()
     {
-        ComboCanBitrate.Items.Clear();
-        foreach (var b in ViewModel.CanBus.Bitrates)
-            ComboCanBitrate.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
+        ComboSerialBaud.Items.Clear();
+        foreach (var b in ViewModel.Serial.Bitrates)
+            ComboSerialBaud.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
 
-        // Prefer the backend's default; fall back to the first entry.
-        int defKbps = ViewModel.CanBus.DefaultBitrate;
-        for (int i = 0; i < ComboCanBitrate.Items.Count; i++)
+        // Prefer the saved baud rate; fall back to default (115 200).
+        int defBaud = ViewModel.Serial.DefaultBitrate;
+        for (int i = 0; i < ComboSerialBaud.Items.Count; i++)
         {
-            if (ComboCanBitrate.Items[i] is ComboBoxItem item &&
-                item.Tag is CanBitrate br &&
-                br.Kbps == defKbps)
+            if (ComboSerialBaud.Items[i] is ComboBoxItem item &&
+                item.Tag is SerialBaud br &&
+                br.Baud == defBaud)
             {
-                ComboCanBitrate.SelectedIndex = i;
+                ComboSerialBaud.SelectedIndex = i;
                 break;
             }
         }
-        if (ComboCanBitrate.SelectedIndex < 0 && ComboCanBitrate.Items.Count > 0)
-            ComboCanBitrate.SelectedIndex = 0;
+        if (ComboSerialBaud.SelectedIndex < 0 && ComboSerialBaud.Items.Count > 0)
+            ComboSerialBaud.SelectedIndex = 0;
     }
 
     private void RefreshChannels()
     {
-        var current = (ComboCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanChannel;
-        ComboCanChannel.Items.Clear();
+        var current = (ComboSerialPort.SelectedItem as ComboBoxItem)?.Tag as SerialPortInfo;
+        ComboSerialPort.Items.Clear();
 
-        if (!ViewModel.CanBus.IsDriverAvailable)
+        if (!ViewModel.Serial.IsDriverAvailable)
         {
-            ComboCanChannel.PlaceholderText = Lang.Ctrl_PhNoDriver;
+            ComboSerialPort.PlaceholderText = Lang.Ctrl_PhNoPorts;
             return;
         }
 
-        foreach (var ch in ViewModel.CanBus.Channels)
-            ComboCanChannel.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
+        foreach (var ch in ViewModel.Serial.Channels)
+            ComboSerialPort.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
 
-        ComboCanChannel.PlaceholderText = Lang.Ctrl_PhScanning;
+        ComboSerialPort.PlaceholderText = Lang.Ctrl_PhScanning;
 
         if (current is not null)
         {
-            for (int i = 0; i < ComboCanChannel.Items.Count; i++)
+            for (int i = 0; i < ComboSerialPort.Items.Count; i++)
             {
-                if (ComboCanChannel.Items[i] is ComboBoxItem it &&
-                    it.Tag is CanChannel c &&
+                if (ComboSerialPort.Items[i] is ComboBoxItem it &&
+                    it.Tag is SerialPortInfo c &&
                     string.Equals(c.PortName, current.PortName, StringComparison.OrdinalIgnoreCase))
                 {
-                    ComboCanChannel.SelectedIndex = i;
+                    ComboSerialPort.SelectedIndex = i;
                     return;
                 }
             }
         }
-        if (ComboCanChannel.Items.Count > 0)
-            ComboCanChannel.SelectedIndex = 0;
+        if (ComboSerialPort.Items.Count > 0)
+            ComboSerialPort.SelectedIndex = 0;
     }
 
     private void RefreshChannels_Click(object sender, RoutedEventArgs e) => RefreshChannels();
 
-    private CanBitrate? GetSelectedBitrate() =>
-        (ComboCanBitrate.SelectedItem as ComboBoxItem)?.Tag as CanBitrate;
+    private SerialBaud? GetSelectedBitrate() =>
+        (ComboSerialBaud.SelectedItem as ComboBoxItem)?.Tag as SerialBaud;
 
-    private CanChannel? GetSelectedChannel() =>
-        (ComboCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanChannel;
+    private SerialPortInfo? GetSelectedChannel() =>
+        (ComboSerialPort.SelectedItem as ComboBoxItem)?.Tag as SerialPortInfo;
 
     private void ConnectBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.CanBus.IsConnected)
+        if (ViewModel.Serial.IsConnected)
         {
             ViewModel.AutoConnect.SuspendReconnect();
-            ViewModel.CanBus.Disconnect();
+            ViewModel.Serial.Disconnect();
             return;
         }
 
@@ -191,20 +141,17 @@ public sealed partial class ControlPanelPage : Page
         var bitrate = GetSelectedBitrate();
         if (channel is null || bitrate is null)
         {
-            FeedbackBar.Title    = Lang.Fb_SelectChannel;
-            FeedbackBar.Message  = Lang.Fb_SelectChannelMsg;
-            FeedbackBar.Severity = InfoBarSeverity.Warning;
-            FeedbackBar.IsOpen   = true;
+            ShowFeedback(Lang.Fb_SelectChannel, Lang.Fb_SelectChannelMsg, InfoBarSeverity.Warning);
             return;
         }
 
-        ViewModel.AutoConnect.BitrateKbps = bitrate.Kbps;
+        ViewModel.AutoConnect.Baud = bitrate.Baud;
         ViewModel.AutoConnect.ResumeReconnect();
-        ViewModel.CanBus.Connect(channel, bitrate);
+        ViewModel.Serial.Connect(channel, bitrate);
     }
 
-    // ── CAN bus parameters ────────────────────────────────────────────────
-    private void LoadCanParams()
+    // ── Serial parameters ─────────────────────────────────────────────────
+    private void LoadSerialParams()
     {
         _initializingParams = true;
         ToggleAutoConnect.IsOn    = !ViewModel.AutoConnect.IsSuspended;
@@ -243,8 +190,8 @@ public sealed partial class ControlPanelPage : Page
 
     private void UpdateCounters()
     {
-        FramesReceivedText.Text = ViewModel.CanBus.FramesReceived.ToString("N0");
-        ParseErrorsText.Text    = ViewModel.CanBus.ParseErrors.ToString("N0");
+        FramesReceivedText.Text = ViewModel.Serial.FramesReceived.ToString("N0");
+        ParseErrorsText.Text    = ViewModel.Serial.ParseErrors.ToString("N0");
     }
 
     // ── Settings ──────────────────────────────────────────────────────────
@@ -253,6 +200,7 @@ public sealed partial class ControlPanelPage : Page
         var cfg = ViewModel.Config;
         NbxCapacity.Value     = cfg.NominalCapacityAh;
         NbxOvervolt.Value     = cfg.OvervoltageThreshold;
+        NbxHighVolt.Value     = cfg.HighVoltageWarning;
         NbxUndervolt.Value    = cfg.UndervoltageThreshold;
         NbxLowVolt.Value      = cfg.LowVoltageWarning;
         NbxTempWarn.Value     = cfg.OverTempWarning;
@@ -269,6 +217,7 @@ public sealed partial class ControlPanelPage : Page
         var cfg = ViewModel.Config;
         cfg.NominalCapacityAh     = NbxCapacity.Value;
         cfg.OvervoltageThreshold  = NbxOvervolt.Value;
+        cfg.HighVoltageWarning    = NbxHighVolt.Value;
         cfg.UndervoltageThreshold = NbxUndervolt.Value;
         cfg.LowVoltageWarning     = NbxLowVolt.Value;
         cfg.OverTempWarning       = NbxTempWarn.Value;
@@ -281,16 +230,14 @@ public sealed partial class ControlPanelPage : Page
 
         ViewModel.SaveSettings();
 
-        FeedbackBar.Title    = Lang.Fb_SettingsApplied;
-        FeedbackBar.Message  = Lang.Fb_SettingsAppliedMsg;
-        FeedbackBar.Severity = InfoBarSeverity.Success;
-        FeedbackBar.IsOpen   = true;
+        ShowFeedback(Lang.Fb_SettingsApplied, Lang.Fb_SettingsAppliedMsg, InfoBarSeverity.Success);
     }
 
     private void ResetDefaults_Click(object sender, RoutedEventArgs e)
     {
         NbxCapacity.Value     = 20;
         NbxOvervolt.Value     = 4.20;
+        NbxHighVolt.Value     = 4.10;
         NbxUndervolt.Value    = 2.80;
         NbxLowVolt.Value      = 3.00;
         NbxTempWarn.Value     = 60;
@@ -301,9 +248,20 @@ public sealed partial class ControlPanelPage : Page
         NbxBalStart.Value     = 20;
         NbxBalStop.Value      = 5;
 
-        FeedbackBar.Title    = Lang.Fb_DefaultsRestored;
-        FeedbackBar.Message  = Lang.Fb_DefaultsRestoredMsg;
-        FeedbackBar.Severity = InfoBarSeverity.Informational;
-        FeedbackBar.IsOpen   = true;
+        ShowFeedback(Lang.Fb_DefaultsRestored, Lang.Fb_DefaultsRestoredMsg, InfoBarSeverity.Informational);
+    }
+
+    private void ShowFeedback(string title, string message, InfoBarSeverity severity)
+    {
+        FeedbackBar.Visibility = Visibility.Visible;
+        FeedbackBar.Title      = title;
+        FeedbackBar.Message    = message;
+        FeedbackBar.Severity   = severity;
+        FeedbackBar.IsOpen     = true;
+    }
+
+    private void FeedbackBar_Closed(InfoBar sender, InfoBarClosedEventArgs args)
+    {
+        FeedbackBar.Visibility = Visibility.Collapsed;
     }
 }

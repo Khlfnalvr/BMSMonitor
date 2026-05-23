@@ -1,19 +1,47 @@
+using Microsoft.UI.Xaml.Media;
+using Windows.UI;
+
 namespace BMSMonitor.Models;
 
 public enum LogFormat { Csv, Tsv, Excel, Json }
 
+public enum AlertSeverity { Info, Warning, Error, Alert }
+
 public class AlertRecord
 {
-    public DateTime Timestamp { get; }
-    public string   Title     { get; }
-    public string   Body      { get; }
-    public string   TimeText  => Timestamp.ToString("HH:mm:ss  dd/MM");
+    public DateTime     Timestamp { get; }
+    public string       Title     { get; }
+    public string       Body      { get; }
+    public AlertSeverity Severity { get; }
 
-    public AlertRecord(DateTime ts, string title, string body)
+    public string TimeText => Timestamp.ToString("HH:mm:ss  dd/MM");
+
+    // Segoe MDL2 Assets glyphs
+    public string SeverityIcon => Severity switch
+    {
+        AlertSeverity.Info    => "",  // InfoSolid
+        AlertSeverity.Warning => "",  // Warning
+        AlertSeverity.Error   => "",  // StatusCircleErrorX
+        AlertSeverity.Alert   => "",  // BellBadge
+        _                     => "",
+    };
+
+    public SolidColorBrush SeverityColorBrush => new(Severity switch
+    {
+        AlertSeverity.Info    => Color.FromArgb(0xFF, 0x00, 0x78, 0xD4),  // accent blue
+        AlertSeverity.Warning => Color.FromArgb(0xFF, 0xCC, 0x6E, 0x00),  // amber
+        AlertSeverity.Error   => Color.FromArgb(0xFF, 0xC4, 0x26, 0x2F),  // red
+        AlertSeverity.Alert   => Color.FromArgb(0xFF, 0xFF, 0x88, 0x00),  // orange
+        _                     => Color.FromArgb(0xFF, 0x80, 0x80, 0x80),
+    });
+
+    public AlertRecord(DateTime ts, string title, string body,
+                       AlertSeverity severity = AlertSeverity.Alert)
     {
         Timestamp = ts;
         Title     = title;
         Body      = body;
+        Severity  = severity;
     }
 }
 
@@ -46,6 +74,7 @@ public class BmsConfig
     public double MaxChargeCurrent { get; set; } = 20;
     public double MaxDischargeCurrent { get; set; } = 40;
     public double OvervoltageThreshold { get; set; } = 4.20;
+    public double HighVoltageWarning { get; set; } = 4.10;
     public double UndervoltageThreshold { get; set; } = 2.80;
     public double LowVoltageWarning { get; set; } = 3.00;
     public double OverTempWarning { get; set; } = 60;

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using Microsoft.UI;
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
@@ -10,8 +11,10 @@ using BMSMonitor.Models;
 using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 using BMSMonitor.Views;
+using Windows.Foundation;
 using Windows.UI;
 using Windows.UI.ViewManagement;
+using WinRT.Interop;
 
 namespace BMSMonitor;
 
@@ -36,6 +39,9 @@ public sealed partial class MainWindow : Window
 
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _clock;
     private bool _initializing;
+    private IntPtr _hwnd;
+    private IntPtr _oldWndProc;
+    private WndProcDelegate? _newWndProc;
 
     public MainWindow()
     {
@@ -46,6 +52,7 @@ public sealed partial class MainWindow : Window
         ApplyMicaBackdrop();
         InitializeTitleBar();
         SetAppIcon();
+        InstallMinimumWindowSizeHook();
         InitializeTheme();
 
         _clock = DispatcherQueue.CreateTimer();
@@ -67,13 +74,107 @@ public sealed partial class MainWindow : Window
         {
             RefreshThemeButtonTooltip();
             UpdateLangMenuState();
-            RefreshCanButtonTooltip();
+            RefreshSerialButtonTooltip();
             SyncCapConnectButton();
         };
         UpdateLangMenuState();
 
-        InitCanFlyout();
+        InitSerialFlyout();
         InitAlertFlyout();
+    }
+
+    public void MaximizeOnLaunch()
+    {
+        if (AppWindow.Presenter is OverlappedPresenter presenter)
+            presenter.Maximize();
+    }
+
+    private void InstallMinimumWindowSizeHook()
+    {
+        _hwnd = WindowNative.GetWindowHandle(this);
+        if (_hwnd == IntPtr.Zero) return;
+
+        _newWndProc = WindowProc;
+        _oldWndProc = SetWindowLongPtr(
+            _hwnd,
+            GWLP_WNDPROC,
+            Marshal.GetFunctionPointerForDelegate(_newWndProc));
+
+        Closed += (_, _) =>
+        {
+            if (_hwnd != IntPtr.Zero && _oldWndProc != IntPtr.Zero)
+                SetWindowLongPtr(_hwnd, GWLP_WNDPROC, _oldWndProc);
+        };
+    }
+
+    private IntPtr WindowProc(IntPtr hWnd, uint msg, IntPtr wParam, IntPtr lParam)
+    {
+        if (msg == WM_NCRBUTTONDOWN && wParam == new IntPtr(HTCAPTION))
+            return IntPtr.Zero;
+
+        if (msg == WM_NCRBUTTONUP && wParam == new IntPtr(HTCAPTION))
+        {
+            ShowTitleBarCustomizeMenuFromCursor();
+            return IntPtr.Zero;
+        }
+
+        if (msg == WM_CONTEXTMENU && IsCursorInTitleBar())
+        {
+            ShowTitleBarCustomizeMenuFromCursor();
+            return IntPtr.Zero;
+        }
+
+        var result = CallWindowProc(_oldWndProc, hWnd, msg, wParam, lParam);
+
+        if (msg == WM_GETMINMAXINFO)
+        {
+            var info = Marshal.PtrToStructure<MINMAXINFO>(lParam);
+            int minWidth = GetHalfScreenWidth(hWnd);
+            if (minWidth > 0 && info.ptMinTrackSize.x < minWidth)
+            {
+                info.ptMinTrackSize.x = minWidth;
+                Marshal.StructureToPtr(info, lParam, false);
+            }
+        }
+
+        return result;
+    }
+
+    private bool IsCursorInTitleBar()
+    {
+        if (!GetCursorPos(out var screenPoint)) return false;
+        if (!ScreenToClient(_hwnd, ref screenPoint)) return false;
+
+        double scale = Content?.XamlRoot?.RasterizationScale ?? 1;
+        return screenPoint.y / scale <= AppTitleBar.Height;
+    }
+
+    private void ShowTitleBarCustomizeMenuFromCursor()
+    {
+        if (!GetCursorPos(out var screenPoint)) return;
+        if (!ScreenToClient(_hwnd, ref screenPoint)) return;
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            double scale = Content?.XamlRoot?.RasterizationScale ?? 1;
+            TitleBarCustomizeMenu.ShowAt(
+                NavView,
+                new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+                {
+                    Position = new Point(screenPoint.x / scale, screenPoint.y / scale)
+                });
+        });
+    }
+
+    private static int GetHalfScreenWidth(IntPtr hWnd)
+    {
+        IntPtr monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+        if (monitor == IntPtr.Zero) return 0;
+
+        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
+        if (!GetMonitorInfo(monitor, ref info)) return 0;
+
+        return Math.Max(0, (info.rcWork.right - info.rcWork.left) / 2);
     }
 
     // ── Icon ─────────────────────────────────────────────────────────────
@@ -214,7 +315,9 @@ public sealed partial class MainWindow : Window
     // ── Navigation ────────────────────────────────────────────────────────
     private void NavView_Loaded(object sender, RoutedEventArgs e)
     {
-        NavView.SelectedItem = NavView.MenuItems[0];
+        // Apply persisted nav-item visibility, then select the first visible.
+        ApplyNavVisibilityFromSettings();
+        NavView.SelectedItem = FirstVisibleNavItem() ?? NavView.MenuItems[0];
         UpdateTitleBarLayout();
     }
 
@@ -223,6 +326,105 @@ public sealed partial class MainWindow : Window
         if (args.SelectedItem is NavigationViewItem item && item.Tag is string tag)
             if (_pages.TryGetValue(tag, out var pageType))
                 ContentFrame.Navigate(pageType);
+    }
+
+    // ── Logo customize menu ──────────────────────────────────────────────
+    private void TitleBar_RightTapped(
+        object sender,
+        Microsoft.UI.Xaml.Input.RightTappedRoutedEventArgs e)
+    {
+        var position = e.GetPosition(NavView);
+        if (position.Y > AppTitleBar.Height) return;
+
+        e.Handled = true;
+        TitleBarCustomizeMenu.ShowAt(
+            NavView,
+            new Microsoft.UI.Xaml.Controls.Primitives.FlyoutShowOptions
+            {
+                Position = position
+            });
+    }
+
+    private (NavigationViewItem nav, ToggleMenuFlyoutItem toggle)[] NavToggles() =>
+    [
+        (NavDashboard,    ViewNavDashboard),
+        (NavCellView,     ViewNavCellView),
+        (NavControlPanel, ViewNavControlPanel),
+        (NavLogging,      ViewNavLogging),
+        (NavPlayback,     ViewNavPlayback),
+    ];
+
+    private void ApplyNavVisibilityFromSettings()
+    {
+        var s = AppSettingsService.Load();
+        ApplyNavVisibility(NavDashboard,    ViewNavDashboard,    s.ShowNav_Dashboard);
+        ApplyNavVisibility(NavCellView,     ViewNavCellView,     s.ShowNav_CellView);
+        ApplyNavVisibility(NavControlPanel, ViewNavControlPanel, s.ShowNav_ControlPanel);
+        ApplyNavVisibility(NavLogging,      ViewNavLogging,      s.ShowNav_Logging);
+        ApplyNavVisibility(NavPlayback,     ViewNavPlayback,     s.ShowNav_Playback);
+    }
+
+    private static void ApplyNavVisibility(NavigationViewItem item, ToggleMenuFlyoutItem toggle, bool show)
+    {
+        item.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        toggle.IsChecked = show;
+    }
+
+    private NavigationViewItem? FirstVisibleNavItem()
+    {
+        foreach (var (nav, _) in NavToggles())
+            if (nav.Visibility == Visibility.Visible) return nav;
+        return null;
+    }
+
+    private void ViewNavToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleMenuFlyoutItem toggle || toggle.Tag is not string tag)
+            return;
+
+        var match = NavToggles().FirstOrDefault(t => t.nav.Tag is string s && s == tag);
+        if (match.nav is null) return;
+
+        // Don't allow hiding the last visible item — there must always be at
+        // least one page to land on.
+        if (!toggle.IsChecked &&
+            NavToggles().Count(t => t.nav.Visibility == Visibility.Visible) <= 1)
+        {
+            toggle.IsChecked = true;
+            return;
+        }
+
+        match.nav.Visibility = toggle.IsChecked ? Visibility.Visible : Visibility.Collapsed;
+
+        // If the hidden item was selected, jump to the first visible one.
+        if (!toggle.IsChecked && ReferenceEquals(NavView.SelectedItem, match.nav))
+            NavView.SelectedItem = FirstVisibleNavItem();
+
+        SaveNavVisibility();
+    }
+
+    private void SaveNavVisibility()
+    {
+        var s = AppSettingsService.Load();
+        s.ShowNav_Dashboard    = ViewNavDashboard.IsChecked;
+        s.ShowNav_CellView     = ViewNavCellView.IsChecked;
+        s.ShowNav_ControlPanel = ViewNavControlPanel.IsChecked;
+        s.ShowNav_Logging      = ViewNavLogging.IsChecked;
+        s.ShowNav_Playback     = ViewNavPlayback.IsChecked;
+        AppSettingsService.Save(s);
+    }
+
+    private void RefreshApp_Click(object sender, RoutedEventArgs e)
+    {
+        // Re-navigate to the current page so it tears down and rebuilds —
+        // covers stale chart visuals, ComboBox state, etc.
+        if (NavView.SelectedItem is not NavigationViewItem item ||
+            item.Tag is not string tag ||
+            !_pages.TryGetValue(tag, out var pageType))
+            return;
+
+        ContentFrame.Content = null;
+        ContentFrame.Navigate(pageType);
     }
 
     // ── Playback bar ──────────────────────────────────────────────────────
@@ -276,6 +478,25 @@ public sealed partial class MainWindow : Window
     {
         App.Notifications.AlertFired += OnAlertFired;
         NoAlertsText.Visibility = Visibility.Visible;
+
+        // Route serial errors (parse failures, port errors) to the alert history.
+        ViewModel.Serial.ErrorOccurred += msg =>
+            App.Notifications.LogDiagnostic(AlertSeverity.Error, "Serial Error", msg);
+
+        // Log meaningful connection state changes — skip intermediate status strings.
+        ViewModel.Serial.StatusChanged += msg =>
+        {
+            AlertSeverity sev;
+            if (msg.StartsWith("Connected"))             sev = AlertSeverity.Info;
+            else if (msg == "Disconnected")              sev = AlertSeverity.Warning;
+            else return;   // skip "Mendeteksi…" and other intermediate strings
+            App.Notifications.LogDiagnostic(sev, "Connection", msg);
+        };
+
+        // Note: auto-connect probe notifications are intentionally NOT piped
+        // into the alert history. They fire every scan cycle and would drown
+        // out genuinely critical alerts (overvoltage, overtemp, etc.).
+        // The Control Panel still shows them inline as a live status label.
     }
 
     private void OnAlertFired(AlertRecord rec)
@@ -317,120 +538,111 @@ public sealed partial class MainWindow : Window
         NoAlertsText.Visibility = Visibility.Visible;
     }
 
-    // ── Caption-bar CAN picker ───────────────────────────────────────────
-    private void InitCanFlyout()
+    // ── Caption-bar serial picker ────────────────────────────────────────
+    private void InitSerialFlyout()
     {
-        PopulateCapBitrates();
+        PopulateCapBauds();
         RefreshCapChannels();
-        RefreshCanButtonTooltip();
-        UpdateCanStatusDot();
+        RefreshSerialButtonTooltip();
+        UpdateSerialStatusDot();
 
         // Mirror connection status into the flyout text + the status dot.
-        ViewModel.CanBus.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
+        ViewModel.Serial.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
         {
             CapConnStatus.Text = msg;
             SyncCapConnectButton();
-            UpdateCanStatusDot();
-        });
-
-        // Repopulate the dropdowns when the user changes transport mode
-        // from the Control Panel — channels & bitrates are mode-specific.
-        ViewModel.CanBus.ModeChanged += _ => DispatcherQueue.TryEnqueue(() =>
-        {
-            PopulateCapBitrates();
-            RefreshCapChannels();
-            SyncCapConnectButton();
+            UpdateSerialStatusDot();
         });
 
         // Re-sync channel preselection whenever the flyout opens, so the
         // dropdown reflects the live channel even if the user connected
         // from the Control Panel instead.
-        CanFlyout.Opening += (_, _) =>
+        SerialFlyout.Opening += (_, _) =>
         {
             RefreshCapChannels();
             SyncCapConnectButton();
         };
     }
 
-    private void RefreshCanButtonTooltip()
+    private void RefreshSerialButtonTooltip()
     {
-        if (CanBtn is null) return;
-        ToolTipService.SetToolTip(CanBtn, Lang.Ui_CanQuickAccess);
+        if (SerialBtn is null) return;
+        ToolTipService.SetToolTip(SerialBtn, Lang.Ui_SerialQuickAccess);
     }
 
-    private void UpdateCanStatusDot()
+    private void UpdateSerialStatusDot()
     {
-        if (CanStatusDot is null) return;
+        if (SerialStatusDot is null) return;
         // Green when connected, dimmed when idle. Tinted from theme
         // resources so it adapts to dark/light mode automatically.
-        CanStatusDot.Fill = ViewModel.CanBus.IsConnected
+        SerialStatusDot.Fill = ViewModel.Serial.IsConnected
             ? new SolidColorBrush(Color.FromArgb(0xFF, 0x25, 0xC6, 0x85))
             : new SolidColorBrush(Color.FromArgb(0xCC, 0x9E, 0x9E, 0x9E));
     }
 
-    private void PopulateCapBitrates()
+    private void PopulateCapBauds()
     {
-        CapCanBitrate.Items.Clear();
-        foreach (var b in ViewModel.CanBus.Bitrates)
-            CapCanBitrate.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
+        CapSerialBaud.Items.Clear();
+        foreach (var b in ViewModel.Serial.Bitrates)
+            CapSerialBaud.Items.Add(new ComboBoxItem { Content = b.DisplayName, Tag = b });
 
-        int defKbps = ViewModel.CanBus.DefaultBitrate;
-        for (int i = 0; i < CapCanBitrate.Items.Count; i++)
+        int defBaud = ViewModel.Serial.DefaultBitrate;
+        for (int i = 0; i < CapSerialBaud.Items.Count; i++)
         {
-            if (CapCanBitrate.Items[i] is ComboBoxItem item &&
-                item.Tag is CanBitrate br &&
-                br.Kbps == defKbps)
+            if (CapSerialBaud.Items[i] is ComboBoxItem item &&
+                item.Tag is SerialBaud br &&
+                br.Baud == defBaud)
             {
-                CapCanBitrate.SelectedIndex = i;
+                CapSerialBaud.SelectedIndex = i;
                 return;
             }
         }
-        if (CapCanBitrate.SelectedIndex < 0 && CapCanBitrate.Items.Count > 0)
-            CapCanBitrate.SelectedIndex = 0;
+        if (CapSerialBaud.SelectedIndex < 0 && CapSerialBaud.Items.Count > 0)
+            CapSerialBaud.SelectedIndex = 0;
     }
 
     private void RefreshCapChannels()
     {
-        var previous = (CapCanChannel.SelectedItem as ComboBoxItem)?.Tag as CanChannel;
-        CapCanChannel.Items.Clear();
+        var previous = (CapSerialPort.SelectedItem as ComboBoxItem)?.Tag as SerialPortInfo;
+        CapSerialPort.Items.Clear();
 
-        if (!ViewModel.CanBus.IsDriverAvailable)
+        if (!ViewModel.Serial.IsDriverAvailable)
         {
-            CapCanChannel.PlaceholderText = Lang.Ctrl_PhNoDriver;
+            CapSerialPort.PlaceholderText = Lang.Ctrl_PhNoPorts;
             return;
         }
 
-        foreach (var ch in ViewModel.CanBus.Channels)
-            CapCanChannel.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
+        foreach (var ch in ViewModel.Serial.Channels)
+            CapSerialPort.Items.Add(new ComboBoxItem { Content = ch.DisplayName, Tag = ch });
 
-        CapCanChannel.PlaceholderText = Lang.Ctrl_PhScanning;
+        CapSerialPort.PlaceholderText = Lang.Ctrl_PhScanning;
 
         // Prefer the live channel — fall back to whatever the user picked last,
         // then default to the first entry.
-        string live = ViewModel.CanBus.Channel;     // "" when not connected
-        for (int i = 0; i < CapCanChannel.Items.Count; i++)
+        string live = ViewModel.Serial.Channel;     // "" when not connected
+        for (int i = 0; i < CapSerialPort.Items.Count; i++)
         {
-            if (CapCanChannel.Items[i] is ComboBoxItem it &&
-                it.Tag is CanChannel c &&
+            if (CapSerialPort.Items[i] is ComboBoxItem it &&
+                it.Tag is SerialPortInfo c &&
                 (string.Equals(c.PortName, live, StringComparison.OrdinalIgnoreCase)
                  || (string.IsNullOrEmpty(live) && previous != null
                      && string.Equals(c.PortName, previous.PortName, StringComparison.OrdinalIgnoreCase))))
             {
-                CapCanChannel.SelectedIndex = i;
+                CapSerialPort.SelectedIndex = i;
                 return;
             }
         }
-        if (CapCanChannel.Items.Count > 0)
-            CapCanChannel.SelectedIndex = 0;
+        if (CapSerialPort.Items.Count > 0)
+            CapSerialPort.SelectedIndex = 0;
     }
 
     private void SyncCapConnectButton()
     {
         if (CapConnectBtn is null) return;
-        bool connected = ViewModel.CanBus.IsConnected;
+        bool connected = ViewModel.Serial.IsConnected;
         CapConnectBtn.Content   = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
-        CapCanChannel.IsEnabled = !connected;
-        CapCanBitrate.IsEnabled = !connected;
+        CapSerialPort.IsEnabled = !connected;
+        CapSerialBaud.IsEnabled = !connected;
         if (!connected) CapConnStatus.Text = Lang.Ctrl_NotConnected;
     }
 
@@ -438,29 +650,104 @@ public sealed partial class MainWindow : Window
 
     private void CapConnectBtn_Click(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.CanBus.IsConnected)
+        if (ViewModel.Serial.IsConnected)
         {
             ViewModel.AutoConnect.SuspendReconnect();
-            ViewModel.CanBus.Disconnect();
+            ViewModel.Serial.Disconnect();
             return;
         }
 
-        if (CapCanChannel.SelectedItem is not ComboBoxItem chItem ||
-            chItem.Tag is not CanChannel channel)
+        if (CapSerialPort.SelectedItem is not ComboBoxItem chItem ||
+            chItem.Tag is not SerialPortInfo channel)
         {
             CapConnStatus.Text = Lang.Fb_SelectChannelMsg;
             return;
         }
 
-        if (CapCanBitrate.SelectedItem is not ComboBoxItem brItem ||
-            brItem.Tag is not CanBitrate bitrate)
+        if (CapSerialBaud.SelectedItem is not ComboBoxItem brItem ||
+            brItem.Tag is not SerialBaud bitrate)
         {
             CapConnStatus.Text = Lang.Fb_SelectChannelMsg;
             return;
         }
 
-        ViewModel.AutoConnect.BitrateKbps = bitrate.Kbps;
+        ViewModel.AutoConnect.Baud = bitrate.Baud;
         ViewModel.AutoConnect.ResumeReconnect();
-        ViewModel.CanBus.Connect(channel, bitrate);
+        ViewModel.Serial.Connect(channel, bitrate);
+    }
+
+    private const int GWLP_WNDPROC = -4;
+    private const uint WM_GETMINMAXINFO = 0x0024;
+    private const uint WM_NCRBUTTONDOWN = 0x00A4;
+    private const uint WM_NCRBUTTONUP = 0x00A5;
+    private const uint WM_CONTEXTMENU = 0x007B;
+    private const int HTCAPTION = 2;
+    private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+    private delegate IntPtr WndProcDelegate(
+        IntPtr hWnd,
+        uint msg,
+        IntPtr wParam,
+        IntPtr lParam);
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtrW", SetLastError = true)]
+    private static extern IntPtr SetWindowLongPtr(
+        IntPtr hWnd,
+        int nIndex,
+        IntPtr dwNewLong);
+
+    [DllImport("user32.dll", EntryPoint = "CallWindowProcW", SetLastError = true)]
+    private static extern IntPtr CallWindowProc(
+        IntPtr lpPrevWndFunc,
+        IntPtr hWnd,
+        uint msg,
+        IntPtr wParam,
+        IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll", EntryPoint = "GetMonitorInfoW", SetLastError = true)]
+    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MINMAXINFO
+    {
+        public POINT ptReserved;
+        public POINT ptMaxSize;
+        public POINT ptMaxPosition;
+        public POINT ptMinTrackSize;
+        public POINT ptMaxTrackSize;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
     }
 }
