@@ -39,6 +39,57 @@ public partial class MainViewModel : ObservableObject
     // --- Live data indicator ---
     [ObservableProperty] private bool _hasData;
 
+    private string _temperatureUnit = "C";
+    private string _voltageUnit = "V";
+    private string _capacityUnit = "mAh";
+
+    public string TemperatureUnit
+    {
+        get => _temperatureUnit;
+        private set
+        {
+            var normalized = UnitFormatter.NormalizeTemperatureUnit(value);
+            if (!SetProperty(ref _temperatureUnit, normalized)) return;
+
+            OnPropertyChanged(nameof(TemperatureSymbol));
+            foreach (var temp in Temperatures)
+                temp.TemperatureUnit = normalized;
+        }
+    }
+
+    public string VoltageUnit
+    {
+        get => _voltageUnit;
+        private set
+        {
+            var normalized = UnitFormatter.NormalizeVoltageUnit(value);
+            if (!SetProperty(ref _voltageUnit, normalized)) return;
+
+            foreach (var cell in Cells)
+                cell.VoltageUnit = normalized;
+
+            OnPropertyChanged(nameof(VoltageSymbol));
+            NotifyVoltageTextProperties();
+        }
+    }
+
+    public string CapacityUnit
+    {
+        get => _capacityUnit;
+        private set
+        {
+            var normalized = UnitFormatter.NormalizeCapacityUnit(value);
+            if (!SetProperty(ref _capacityUnit, normalized)) return;
+
+            OnPropertyChanged(nameof(CapacitySymbol));
+            OnPropertyChanged(nameof(RemainingCapacityText));
+        }
+    }
+
+    public string TemperatureSymbol => UnitFormatter.TemperatureSymbol(TemperatureUnit);
+    public string VoltageSymbol => UnitFormatter.VoltageSymbol(VoltageUnit);
+    public string CapacitySymbol => UnitFormatter.CapacitySymbol(CapacityUnit);
+
     // --- SOC / V / I history (UI-thread only) ---
     public static readonly (double Minutes, string Label)[] TimeframeOptions =
     [
@@ -106,16 +157,17 @@ public partial class MainViewModel : ObservableObject
     public event Action? HistoryReset;
 
     // --- Formatted text ---
-    public string PackVoltageText       => HasData ? $"{PackVoltage:F2} V" : "— V";
+    public string PackVoltageText       => HasData ? UnitFormatter.FormatPackVoltage(PackVoltage, VoltageUnit)
+                                         : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string SocText               => HasData ? $"{Soc:F1} %"        : "— %";
     public string CurrentText           => !HasData ? "— A"
                                          : Current >= 0 ? $"+{Current:F2} A" : $"{Current:F2} A";
-    public string RemainingCapacityText => !HasData ? "— mAh"
-                                         : $"{Soc / 100.0 * Config.NominalCapacityAh * 1000:N0} mAh";
-    public string MinCellText     => HasData ? $"{MinCellVoltage:F3} V" : "— V";
-    public string MaxCellText     => HasData ? $"{MaxCellVoltage:F3} V" : "— V";
-    public string AvgCellText     => HasData ? $"{AvgCellVoltage:F3} V" : "— V";
-    public string DeltaText       => HasData ? $"{DeltaVoltage * 1000:F1} mV" : "— mV";
+    public string RemainingCapacityText => !HasData ? UnitFormatter.MissingWithUnit(CapacitySymbol)
+                                         : UnitFormatter.FormatCapacityFromAh(Soc / 100.0 * Config.NominalCapacityAh, CapacityUnit);
+    public string MinCellText     => HasData ? UnitFormatter.FormatVoltage(MinCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
+    public string MaxCellText     => HasData ? UnitFormatter.FormatVoltage(MaxCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
+    public string AvgCellText     => HasData ? UnitFormatter.FormatVoltage(AvgCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
+    public string DeltaText       => HasData ? UnitFormatter.FormatVoltageDelta(DeltaVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string BalancingText   => !HasData      ? "—"
                                    : BalancingCount > 0 ? $"{BalancingCount} cells balancing"
                                                         : "Not balancing";
@@ -158,8 +210,8 @@ public partial class MainViewModel : ObservableObject
         var savedBaud = Serial.Bitrates.FirstOrDefault(b => b.Baud == savedSettings.SerialBaud);
         AutoConnect.Start(savedBaud?.Baud ?? Serial.DefaultBitrate);
 
-        for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1 });
-        for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1 });
+        for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1, VoltageUnit = VoltageUnit });
+        for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit });
 
         // Live data — skip if a playback file is loaded (don't overwrite review data).
         Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
@@ -183,15 +235,50 @@ public partial class MainViewModel : ObservableObject
     partial void OnHasDataChanged(bool value)
     {
         // Re-trigger formatted-text bindings when HasData flips.
-        OnPropertyChanged(nameof(PackVoltageText));
+        NotifyVoltageTextProperties();
         OnPropertyChanged(nameof(SocText));
         OnPropertyChanged(nameof(CurrentText));
+        OnPropertyChanged(nameof(BalancingText));
+        OnPropertyChanged(nameof(RemainingCapacityText));
+    }
+
+    private void NotifyVoltageTextProperties()
+    {
+        OnPropertyChanged(nameof(PackVoltageText));
         OnPropertyChanged(nameof(MinCellText));
         OnPropertyChanged(nameof(MaxCellText));
         OnPropertyChanged(nameof(AvgCellText));
         OnPropertyChanged(nameof(DeltaText));
-        OnPropertyChanged(nameof(BalancingText));
-        OnPropertyChanged(nameof(RemainingCapacityText));
+    }
+
+    public void SetTemperatureUnit(string unit)
+    {
+        var normalized = UnitFormatter.NormalizeTemperatureUnit(unit);
+        if (TemperatureUnit == normalized) return;
+
+        TemperatureUnit = normalized;
+        SaveSettings();
+        HistoryUpdated?.Invoke();
+    }
+
+    public void SetVoltageUnit(string unit)
+    {
+        var normalized = UnitFormatter.NormalizeVoltageUnit(unit);
+        if (VoltageUnit == normalized) return;
+
+        VoltageUnit = normalized;
+        SaveSettings();
+        HistoryUpdated?.Invoke();
+    }
+
+    public void SetCapacityUnit(string unit)
+    {
+        var normalized = UnitFormatter.NormalizeCapacityUnit(unit);
+        if (CapacityUnit == normalized) return;
+
+        CapacityUnit = normalized;
+        SaveSettings();
+        HistoryUpdated?.Invoke();
     }
 
     private void OnSerialStatus(string msg)
@@ -433,6 +520,10 @@ public partial class MainViewModel : ObservableObject
         Config.BalancingStartDelta   = s.BalancingStartDeltaMv / 1000.0;
         Config.BalancingStopDelta    = s.BalancingStopDeltaMv  / 1000.0;
 
+        TemperatureUnit = s.TemperatureUnit;
+        VoltageUnit     = s.VoltageUnit;
+        CapacityUnit    = s.CapacityUnit;
+
         AutoConnect.ReconnectIntervalSec = s.ReconnectIntervalSec;
         AutoConnect.ProbeTimeoutMs       = s.ProbeTimeoutMs;
         if (!s.AutoConnectEnabled) AutoConnect.SuspendReconnect();
@@ -459,6 +550,9 @@ public partial class MainViewModel : ObservableObject
         s.ReconnectIntervalSec  = AutoConnect.ReconnectIntervalSec;
         s.ProbeTimeoutMs        = AutoConnect.ProbeTimeoutMs;
         s.AutoConnectEnabled    = !AutoConnect.IsSuspended;
+        s.TemperatureUnit       = TemperatureUnit;
+        s.VoltageUnit           = VoltageUnit;
+        s.CapacityUnit          = CapacityUnit;
         AppSettingsService.Save(s);
     }
 

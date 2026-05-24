@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 using Windows.Foundation;
 using Windows.UI;
@@ -19,10 +20,498 @@ public sealed partial class CellViewPage : Page
     private Flyout? _cellChartFlyout;
     private bool _ntcPopupOpen;
     private Flyout? _ntcChartFlyout;
+    private const int MaxTicks = 24;
+    private const int TempSensorCount = 10;
+    private readonly Polyline[] _tempLines = new Polyline[TempSensorCount];
+    private readonly Border[] _tempLegendItems = new Border[TempSensorCount];
+    private TextBlock[] _tempTicks = [];
+    private int? _selectedTempSensor;
+    private DateTime? _filterStart;
+    private DateTime? _filterEnd;
+    private DateTime[]? _tsCache;
 
     public CellViewPage()
     {
         InitializeComponent();
+        InitializeTempChart();
+        InitializeTempLegend();
+        ApplyTempChartColors();
+        UpdateTempXAxisLabels();
+
+        Loaded += (_, _) =>
+        {
+            ViewModel.HistoryUpdated += OnHistoryUpdated;
+            ViewModel.HistoryReset += OnHistoryReset;
+            OnHistoryUpdated();
+        };
+        Unloaded += (_, _) =>
+        {
+            ViewModel.HistoryUpdated -= OnHistoryUpdated;
+            ViewModel.HistoryReset -= OnHistoryReset;
+        };
+    }
+
+    private void InitializeTempChart()
+    {
+        _tempTicks = new TextBlock[MaxTicks];
+        for (int i = 0; i < MaxTicks; i++)
+        {
+            _tempTicks[i] = MakeTickLabel();
+            TempChartCanvas.Children.Add(_tempTicks[i]);
+        }
+
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            var line = new Polyline
+            {
+                StrokeThickness = 1.5,
+                StrokeLineJoin = PenLineJoin.Round,
+                Fill = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
+                Stroke = new SolidColorBrush(TempSensorColor(s)),
+                Tag = s
+            };
+            int sensor = s;
+            line.PointerEntered += (_, _) =>
+            {
+                _selectedTempSensor = sensor;
+                UpdateTempSpotlight();
+            };
+            line.PointerExited += (_, _) =>
+            {
+                if (_selectedTempSensor == sensor) _selectedTempSensor = null;
+                UpdateTempSpotlight();
+            };
+            line.Tapped += (_, _) =>
+            {
+                _selectedTempSensor = _selectedTempSensor == sensor ? null : sensor;
+                UpdateTempSpotlight();
+            };
+            _tempLines[s] = line;
+            TempChartCanvas.Children.Add(line);
+        }
+    }
+
+    private void InitializeTempLegend()
+    {
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            int sensor = s;
+            var color = TempSensorColor(s);
+
+            var dot = new Rectangle
+            {
+                Width = 12,
+                Height = 12,
+                RadiusX = 2,
+                RadiusY = 2,
+                Fill = new SolidColorBrush(color),
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var label = new TextBlock
+            {
+                Text = $"NTC {s + 1}",
+                FontSize = 10,
+                Opacity = 0.7,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+            var border = new Border
+            {
+                Padding = new Thickness(4, 2, 4, 2),
+                CornerRadius = new CornerRadius(3),
+                Child = panel,
+                Tag = sensor
+            };
+
+            border.PointerEntered += (_, _) =>
+            {
+                _selectedTempSensor = sensor;
+                UpdateTempSpotlight();
+            };
+            border.PointerExited += (_, _) =>
+            {
+                if (_selectedTempSensor == sensor) _selectedTempSensor = null;
+                UpdateTempSpotlight();
+            };
+            border.Tapped += (_, _) =>
+            {
+                _selectedTempSensor = _selectedTempSensor == sensor ? null : sensor;
+                UpdateTempSpotlight();
+            };
+
+            panel.Children.Add(dot);
+            panel.Children.Add(label);
+            _tempLegendItems[s] = border;
+            TempLegendPanel.Children.Add(border);
+        }
+    }
+
+    private static Color TempSensorColor(int index) => index switch
+    {
+        0 => Color.FromArgb(255, 244, 67, 54),
+        1 => Color.FromArgb(255, 33, 150, 243),
+        2 => Color.FromArgb(255, 76, 175, 80),
+        3 => Color.FromArgb(255, 255, 152, 0),
+        4 => Color.FromArgb(255, 156, 39, 176),
+        5 => Color.FromArgb(255, 0, 188, 212),
+        6 => Color.FromArgb(255, 205, 220, 57),
+        7 => Color.FromArgb(255, 255, 87, 34),
+        8 => Color.FromArgb(255, 121, 85, 72),
+        9 => Color.FromArgb(255, 158, 158, 158),
+        _ => Color.FromArgb(255, 128, 128, 128),
+    };
+
+    private void ApplyTempChartColors()
+    {
+        var gridBrush = new SolidColorBrush(Color.FromArgb(35, 128, 128, 128));
+        TempGridH1.Stroke = gridBrush;
+        TempGridH2.Stroke = gridBrush;
+        TempGridH3.Stroke = gridBrush;
+    }
+
+    private void UpdateTempSpotlight()
+    {
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            bool spotlight = _selectedTempSensor == null || _selectedTempSensor == s;
+            _tempLines[s].Opacity = spotlight ? 1.0 : 0.15;
+            _tempLines[s].StrokeThickness = spotlight ? 2.5 : 0.8;
+
+            if (_tempLegendItems[s].Child is StackPanel sp)
+            {
+                sp.Opacity = spotlight ? 1.0 : 0.25;
+                _tempLegendItems[s].Background = spotlight
+                    ? new SolidColorBrush(Color.FromArgb(
+                        30,
+                        TempSensorColor(s).R,
+                        TempSensorColor(s).G,
+                        TempSensorColor(s).B))
+                    : null;
+            }
+        }
+    }
+
+    private static TextBlock MakeTickLabel() => new()
+    {
+        FontSize = 9,
+        Opacity = 0.55,
+        FontFamily = new FontFamily("Consolas"),
+        TextAlignment = TextAlignment.Center,
+        Visibility = Visibility.Collapsed
+    };
+
+    private void OnHistoryUpdated()
+    {
+        _tsCache = ViewModel.GetTimestamps();
+        string unit = RedrawTempChart();
+        UpdateTempXAxisLabels(unit);
+        _tsCache = null;
+    }
+
+    private void OnHistoryReset()
+    {
+        _filterStart = null;
+        _filterEnd = null;
+    }
+
+    private DateTime[] GetCachedTimestamps() => _tsCache ?? ViewModel.GetTimestamps();
+
+    private void TempChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        string unit = RedrawTempChart();
+        if (!string.IsNullOrEmpty(unit))
+            TempNowLabel.Text = $"time ({unit})";
+    }
+
+    private void UpdateTempXAxisLabels(string tempUnit = "")
+    {
+        TempTimeAgoLabel.Text = GetSampleRateLabel();
+        TempNowLabel.Text = string.IsNullOrEmpty(tempUnit) ? "" : $"time ({tempUnit})";
+    }
+
+    private string GetSampleRateLabel()
+    {
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest = ViewModel.LatestTimestamp;
+        int count = ViewModel.HistorySampleCount;
+
+        if (count < 2 || !earliest.HasValue || !latest.HasValue) return "— sample/s";
+
+        double sec = (latest.Value - earliest.Value).TotalSeconds;
+        if (sec <= 0) return "— sample/s";
+
+        double rate = (count - 1) / sec;
+        if (rate >= 10) return $"{rate:F0} samples/s";
+        if (rate >= 1) return $"{rate:F1} samples/s";
+        return $"{1.0 / rate:F1} s/sample";
+    }
+
+    private (int start, int end) GetActiveRange(int fullLength)
+    {
+        var ts = GetCachedTimestamps();
+
+        if (_filterStart.HasValue || _filterEnd.HasValue)
+        {
+            int s = 0;
+            int eIdx = Math.Min(ts.Length, fullLength);
+
+            if (_filterStart.HasValue)
+            {
+                s = -1;
+                for (int i = 0; i < ts.Length; i++)
+                    if (ts[i] >= _filterStart.Value) { s = i; break; }
+                if (s < 0) s = ts.Length;
+            }
+
+            if (_filterEnd.HasValue)
+            {
+                eIdx = 0;
+                for (int i = ts.Length - 1; i >= 0; i--)
+                    if (ts[i] <= _filterEnd.Value) { eIdx = i + 1; break; }
+            }
+
+            if (eIdx < s) eIdx = s;
+            return (Math.Clamp(s, 0, fullLength), Math.Clamp(eIdx, 0, fullLength));
+        }
+
+        return (0, fullLength);
+    }
+
+    private string RedrawTempChart()
+    {
+        double w = TempChartCanvas.ActualWidth;
+        double h = TempChartCanvas.ActualHeight;
+        if (w == 0 || h == 0) return "";
+
+        UpdateGridLine(TempGridH1, w, h * 0.25);
+        UpdateGridLine(TempGridH2, w, h * 0.50);
+        UpdateGridLine(TempGridH3, w, h * 0.75);
+
+        double[][] allTemps = ViewModel.GetTempHistory();
+        if (allTemps.Length < TempSensorCount || allTemps[0].Length < 2)
+        {
+            foreach (var line in _tempLines) line.Points = [];
+            HideTicks(_tempTicks);
+            return "";
+        }
+
+        int fullLength = allTemps[0].Length;
+        var timestamps = GetCachedTimestamps();
+        if (timestamps.Length < fullLength)
+        {
+            foreach (var line in _tempLines) line.Points = [];
+            HideTicks(_tempTicks);
+            return "";
+        }
+
+        var (rangeStart, rangeEnd) = GetActiveRange(fullLength);
+        int n = Math.Max(0, rangeEnd - rangeStart);
+
+        if (n < 2)
+        {
+            foreach (var line in _tempLines) line.Points = [];
+            HideTicks(_tempTicks);
+            return "";
+        }
+
+        double tMin = double.MaxValue;
+        double tMax = double.MinValue;
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            for (int i = rangeStart; i < rangeEnd; i++)
+            {
+                double t = allTemps[s][i];
+                if (t < tMin) tMin = t;
+                if (t > tMax) tMax = t;
+            }
+        }
+
+        if (tMax <= tMin) tMax = tMin + 10;
+        double tRange = tMax - tMin;
+
+        const double fontH = 11.0;
+        const double unitLabelH = 14.0;
+        CLabel4.Text = $"{tMax:F0}"; Canvas.SetTop(CLabel4, unitLabelH);
+        CLabel3.Text = $"{tMax - tRange * 0.25:F0}"; Canvas.SetTop(CLabel3, h * 0.25 - fontH / 2);
+        CLabel2.Text = $"{tMax - tRange * 0.50:F0}"; Canvas.SetTop(CLabel2, h * 0.50 - fontH / 2);
+        CLabel1.Text = $"{tMax - tRange * 0.75:F0}"; Canvas.SetTop(CLabel1, h * 0.75 - fontH / 2);
+        CLabel0.Text = $"{tMin:F0}"; Canvas.SetTop(CLabel0, h - fontH);
+
+        double fMin = tMin * 9.0 / 5.0 + 32.0;
+        double fMax = tMax * 9.0 / 5.0 + 32.0;
+        double fRange = fMax - fMin;
+        FLabel4.Text = $"{fMax:F0}"; Canvas.SetTop(FLabel4, unitLabelH);
+        FLabel3.Text = $"{fMax - fRange * 0.25:F0}"; Canvas.SetTop(FLabel3, h * 0.25 - fontH / 2);
+        FLabel2.Text = $"{fMax - fRange * 0.50:F0}"; Canvas.SetTop(FLabel2, h * 0.50 - fontH / 2);
+        FLabel1.Text = $"{fMax - fRange * 0.75:F0}"; Canvas.SetTop(FLabel1, h * 0.75 - fontH / 2);
+        FLabel0.Text = $"{fMin:F0}"; Canvas.SetTop(FLabel0, h - fontH);
+
+        DateTime tStartTs = timestamps[rangeStart];
+        DateTime tEndTs = timestamps[rangeStart + n - 1];
+        double totalSec = Math.Max(1e-9, (tEndTs - tStartTs).TotalSeconds);
+
+        int stride = StrideFor(n, MaxRenderPoints(w));
+        for (int s = 0; s < TempSensorCount; s++)
+        {
+            var points = new PointCollection();
+            int lastEmitted = -1;
+            var series = allTemps[s];
+
+            for (int j = 0; j < n; j += stride)
+            {
+                double x = w * (timestamps[rangeStart + j] - tStartTs).TotalSeconds / totalSec;
+                double y = h * (1.0 - (series[rangeStart + j] - tMin) / tRange);
+                points.Add(new Point(x, y));
+                lastEmitted = j;
+            }
+
+            if (lastEmitted != n - 1)
+            {
+                int j = n - 1;
+                double x = w * (timestamps[rangeStart + j] - tStartTs).TotalSeconds / totalSec;
+                double y = h * (1.0 - (series[rangeStart + j] - tMin) / tRange);
+                points.Add(new Point(x, y));
+            }
+
+            _tempLines[s].Points = points;
+        }
+
+        return UpdateTimeTicks(w, h, totalSec, _tempTicks);
+    }
+
+    private static int MaxRenderPoints(double width) =>
+        Math.Max(64, (int)Math.Ceiling(width));
+
+    private static int StrideFor(int n, int maxPoints)
+    {
+        if (n <= maxPoints || maxPoints <= 1) return 1;
+        int stride = (n + maxPoints - 1) / maxPoints;
+        return stride < 1 ? 1 : stride;
+    }
+
+    private static void UpdateGridLine(Line line, double width, double y)
+    {
+        line.X1 = 0;
+        line.X2 = width;
+        line.Y1 = y;
+        line.Y2 = y;
+    }
+
+    private static void HideTicks(TextBlock[] ticks)
+    {
+        for (int i = 0; i < ticks.Length; i++)
+            ticks[i].Visibility = Visibility.Collapsed;
+    }
+
+    private static string UpdateTimeTicks(double w, double h, double totalSeconds, TextBlock[] ticks)
+    {
+        if (totalSeconds <= 0) totalSeconds = 1;
+
+        int targetTicks = (int)Math.Clamp(w / 70.0, 6, 18);
+        var (unit, divisor, step) = PickAxisScale(totalSeconds, targetTicks);
+        string fmt = step >= 1.0 ? "F0" : "F1";
+        double totalUnits = totalSeconds / divisor;
+
+        int used = 0;
+        for (double v = 0.0; v <= totalUnits + 1e-9 && used < ticks.Length; v += step)
+        {
+            double frac = totalUnits > 0 ? v / totalUnits : 0;
+            double xPos = frac * w;
+            double display = Math.Round(v, fmt == "F1" ? 1 : 0);
+
+            var tb = ticks[used];
+            tb.Text = display.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture);
+            tb.Visibility = Visibility.Visible;
+
+            double halfW = tb.Text.Length * 2.8;
+            double left = Math.Clamp(xPos - halfW, 0, Math.Max(0, w - halfW * 2));
+            Canvas.SetLeft(tb, left);
+            Canvas.SetTop(tb, h - 14);
+
+            used++;
+        }
+
+        for (int i = used; i < ticks.Length; i++)
+            ticks[i].Visibility = Visibility.Collapsed;
+
+        return unit;
+    }
+
+    private static (string unit, double divisor, double step)
+        PickAxisScale(double totalSeconds, int targetTicks)
+    {
+        string unit;
+        double divisor;
+
+        if (totalSeconds < 90) { unit = "seconds"; divisor = 1.0; }
+        else if (totalSeconds < 5400) { unit = "minutes"; divisor = 60.0; }
+        else { unit = "hours"; divisor = 3600.0; }
+
+        double totalInUnit = totalSeconds / divisor;
+        double rawStep = totalInUnit / Math.Max(1, targetTicks - 1);
+        return (unit, divisor, NiceStep(rawStep));
+    }
+
+    private static double NiceStep(double rawStep)
+    {
+        if (rawStep <= 0) return 1;
+        double exponent = Math.Floor(Math.Log10(rawStep));
+        double pow = Math.Pow(10, exponent);
+        double fraction = rawStep / pow;
+
+        double niceFraction =
+              fraction < 1.5 ? 1
+            : fraction < 3 ? 2
+            : fraction < 7 ? 5
+            : 10;
+
+        return niceFraction * pow;
+    }
+
+    private async void SaveTempChart_Click(object sender, RoutedEventArgs e)
+    {
+        var root = TempChartArea.XamlRoot;
+        if (root is null) return;
+
+        var prevStart = _filterStart;
+        var prevEnd = _filterEnd;
+
+        await ChartExportService.SaveChartFlowAsync(
+            root,
+            TempChartArea,
+            TempChartCanvas,
+            "BMS_Temp_Chart",
+            ViewModel.GetTimestamps(),
+            opts =>
+            {
+                if (opts.StartSec.HasValue || opts.EndSec.HasValue)
+                {
+                    var ts = ViewModel.GetTimestamps();
+                    if (ts.Length > 0)
+                    {
+                        var baseTime = ts[0];
+                        if (opts.StartSec.HasValue)
+                            _filterStart = baseTime.AddSeconds(opts.StartSec.Value);
+                        if (opts.EndSec.HasValue)
+                            _filterEnd = baseTime.AddSeconds(opts.EndSec.Value);
+                    }
+                    OnHistoryUpdated();
+                }
+
+                return Task.CompletedTask;
+            },
+            () =>
+            {
+                _filterStart = prevStart;
+                _filterEnd = prevEnd;
+                OnHistoryUpdated();
+                return Task.CompletedTask;
+            },
+            handler => ViewModel.HistoryUpdated += handler,
+            handler => ViewModel.HistoryUpdated -= handler,
+            DispatcherQueue);
     }
 
     private void ResetStats_Click(object sender, RoutedEventArgs e) => ViewModel.ResetCellStats();
@@ -180,7 +669,10 @@ public sealed partial class CellViewPage : Page
             double h = canvas.ActualHeight;
             if (w <= 0 || h <= 0) return;
 
-            var hist = ViewModel.GetTempSensorHistory(sensorIndex);
+            var rawHist = ViewModel.GetTempSensorHistory(sensorIndex);
+            var hist = rawHist
+                .Select(t => UnitFormatter.ToDisplayTemperature(t, ViewModel.TemperatureUnit))
+                .ToArray();
             var timestamps = ViewModel.GetTimestamps();
             int n = hist.Length;
             currentLabel.Text = $"Current: {ViewModel.Temperatures[sensorIndex].TempText}";
@@ -210,7 +702,7 @@ public sealed partial class CellViewPage : Page
             else
             {
                 double center = sensorIndex >= 0 && sensorIndex < ViewModel.Temperatures.Count
-                    ? ViewModel.Temperatures[sensorIndex].Temperature
+                    ? UnitFormatter.ToDisplayTemperature(ViewModel.Temperatures[sensorIndex].Temperature, ViewModel.TemperatureUnit)
                     : 25;
                 tMin = center - 5;
                 tMax = center + 5;
@@ -220,7 +712,7 @@ public sealed partial class CellViewPage : Page
             yAxisCanvas.Children.Clear();
             xAxisCanvas.Children.Clear();
             AddCanvasLabel(yAxisCanvas, "Temp", 0, 0, yAxisWidth - 4, TextAlignment.Right, 0.85);
-            AddCanvasLabel(yAxisCanvas, "(°C)", 0, 12, yAxisWidth - 4, TextAlignment.Right, 0.85);
+            AddCanvasLabel(yAxisCanvas, $"({ViewModel.TemperatureSymbol})", 0, 12, yAxisWidth - 4, TextAlignment.Right, 0.85);
             AddCanvasLabel(yAxisCanvas, $"{tMax:F1}", 0, 29, yAxisWidth - 4, TextAlignment.Right);
             AddCanvasLabel(yAxisCanvas, $"{(tMin + tR / 2):F1}", 0, h / 2 - 7, yAxisWidth - 4, TextAlignment.Right);
             AddCanvasLabel(yAxisCanvas, $"{tMin:F1}", 0, h - 14, yAxisWidth - 4, TextAlignment.Right);
@@ -281,7 +773,7 @@ public sealed partial class CellViewPage : Page
                 pts.Add(new Point(x, h * (1.0 - (hist[j] - tMin) / tR)));
             }
             polyline.Points = pts;
-            rangeLabel.Text = $"{n} samples  ·  {hist.Min():F1}-{hist.Max():F1} °C  ·  Range {hist.Max() - hist.Min():F1} °C";
+            rangeLabel.Text = $"{n} samples  ·  {hist.Min():F1}-{hist.Max():F1} {ViewModel.TemperatureSymbol}  ·  Range {hist.Max() - hist.Min():F1} {ViewModel.TemperatureSymbol}";
         }
 
         canvas.SizeChanged += (_, _) => Redraw();
@@ -484,10 +976,17 @@ public sealed partial class CellViewPage : Page
             double h = canvas.ActualHeight;
             if (w <= 0 || h <= 0) return;
 
-            var hist = ViewModel.GetCellHistory(cellIndex);
+            var rawHist = ViewModel.GetCellHistory(cellIndex);
+            var hist = rawHist
+                .Select(v => UnitFormatter.ToDisplayVoltage(v, ViewModel.VoltageUnit))
+                .ToArray();
             var timestamps = ViewModel.GetTimestamps();
             int n = hist.Length;
             currentLabel.Text = $"Current: {ViewModel.Cells[cellIndex].VoltageText}";
+            string valueFormat = ViewModel.VoltageUnit == "mV" ? "F1" : "F3";
+            double minPadding = ViewModel.VoltageUnit == "mV" ? 10.0 : 0.01;
+            double fallbackPadding = ViewModel.VoltageUnit == "mV" ? 50.0 : 0.05;
+            double minRange = ViewModel.VoltageUnit == "mV" ? 100.0 : 0.1;
 
             int gi = 0;
             foreach (var c in canvas.Children)
@@ -507,29 +1006,29 @@ public sealed partial class CellViewPage : Page
             double vR;
             if (n >= 2)
             {
-                double m = Math.Max(0.01, (hist.Max() - hist.Min()) * 0.1);
+                double m = Math.Max(minPadding, (hist.Max() - hist.Min()) * 0.1);
                 vMin = hist.Min() - m;
                 vMax = hist.Max() + m;
                 vR = vMax - vMin;
-                if (vR <= 0) vR = 0.1;
+                if (vR <= 0) vR = minRange;
             }
             else
             {
                 double center = cellIndex >= 0 && cellIndex < ViewModel.Cells.Count
-                    ? ViewModel.Cells[cellIndex].Voltage
+                    ? UnitFormatter.ToDisplayVoltage(ViewModel.Cells[cellIndex].Voltage, ViewModel.VoltageUnit)
                     : 0;
-                vMin = center > 0 ? center - 0.05 : 0;
-                vMax = center > 0 ? center + 0.05 : 1;
+                vMin = center > 0 ? center - fallbackPadding : 0;
+                vMax = center > 0 ? center + fallbackPadding : minRange;
                 vR = vMax - vMin;
             }
 
             yAxisCanvas.Children.Clear();
             xAxisCanvas.Children.Clear();
             AddCanvasLabel(yAxisCanvas, "Voltage", 0, 0, yAxisWidth - 4, TextAlignment.Right, 0.85);
-            AddCanvasLabel(yAxisCanvas, "(V)", 0, 12, yAxisWidth - 4, TextAlignment.Right, 0.85);
-            AddCanvasLabel(yAxisCanvas, $"{vMax:F3}", 0, 29, yAxisWidth - 4, TextAlignment.Right);
-            AddCanvasLabel(yAxisCanvas, $"{(vMin + vR / 2):F3}", 0, h / 2 - 7, yAxisWidth - 4, TextAlignment.Right);
-            AddCanvasLabel(yAxisCanvas, $"{vMin:F3}", 0, h - 14, yAxisWidth - 4, TextAlignment.Right);
+            AddCanvasLabel(yAxisCanvas, $"({ViewModel.VoltageSymbol})", 0, 12, yAxisWidth - 4, TextAlignment.Right, 0.85);
+            AddCanvasLabel(yAxisCanvas, vMax.ToString(valueFormat), 0, 29, yAxisWidth - 4, TextAlignment.Right);
+            AddCanvasLabel(yAxisCanvas, (vMin + vR / 2).ToString(valueFormat), 0, h / 2 - 7, yAxisWidth - 4, TextAlignment.Right);
+            AddCanvasLabel(yAxisCanvas, vMin.ToString(valueFormat), 0, h - 14, yAxisWidth - 4, TextAlignment.Right);
 
             var leftTick = "0s";
             var midTick = n > 1 ? $"{(n - 1) / 2}" : "0";
@@ -575,7 +1074,7 @@ public sealed partial class CellViewPage : Page
             if (lastEmitted != n - 1)
                 pts.Add(new Point((n - 1) * xs, h * (1.0 - (hist[n - 1] - vMin) / vR)));
             polyline.Points = pts;
-            rangeLabel.Text = $"{n} samples  ·  {hist.Min():F3}-{hist.Max():F3} V  ·  Delta {hist.Max() - hist.Min():F3} V";
+            rangeLabel.Text = $"{n} samples  ·  {hist.Min().ToString(valueFormat)}-{hist.Max().ToString(valueFormat)} {ViewModel.VoltageSymbol}  ·  Delta {(hist.Max() - hist.Min()).ToString(valueFormat)} {ViewModel.VoltageSymbol}";
         }
 
         canvas.SizeChanged += (_, _) => Redraw();

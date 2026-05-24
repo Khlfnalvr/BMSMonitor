@@ -208,6 +208,88 @@
                 </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
 
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{x:Bind Lang.Dash_SecTempHistory, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <Button Grid.Column="1" x:Name="SaveTempBtn"
+                        Width="36" Height="28" Padding="0"
+                        Click="SaveTempChart_Click"
+                        ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
+                    <SymbolIcon Symbol="Save"/>
+                </Button>
+            </Grid>
+            <Border x:Name="TempChartCard" Style="{StaticResource CardStyle}">
+                <Grid x:Name="TempChartArea" RowSpacing="2">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0" ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="42"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Canvas x:Name="CAxisCanvas" Grid.Column="0" Height="160">
+                            <TextBlock Text="°C" FontSize="9" FontWeight="SemiBold" Opacity="0.7"
+                                       Width="36" TextAlignment="Right" Canvas.Top="0"/>
+                            <TextBlock x:Name="CLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="14"/>
+                            <TextBlock x:Name="CLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="46"/>
+                            <TextBlock x:Name="CLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="86"/>
+                            <TextBlock x:Name="CLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="126"/>
+                            <TextBlock x:Name="CLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Width="36" TextAlignment="Right" Canvas.Top="148"/>
+                        </Canvas>
+
+                        <Canvas x:Name="TempChartCanvas" Grid.Column="1" Height="160"
+                                SizeChanged="TempChartCanvas_SizeChanged">
+                            <Line x:Name="TempGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="TempGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
+                            <Line x:Name="TempGridH3" StrokeThickness="1" StrokeDashArray="3,3"/>
+                        </Canvas>
+
+                        <Canvas x:Name="FAxisCanvas" Grid.Column="2" Height="160">
+                            <TextBlock Text="°F" FontSize="9" FontWeight="SemiBold" Opacity="0.7"
+                                       Canvas.Left="2" Canvas.Top="0"/>
+                            <TextBlock x:Name="FLabel4" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="14"/>
+                            <TextBlock x:Name="FLabel3" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="46"/>
+                            <TextBlock x:Name="FLabel2" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="86"/>
+                            <TextBlock x:Name="FLabel1" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="126"/>
+                            <TextBlock x:Name="FLabel0" Text="—" FontSize="9" Opacity="0.55"
+                                       Canvas.Left="2" Canvas.Top="148"/>
+                        </Canvas>
+                    </Grid>
+
+                    <StackPanel Grid.Row="1" x:Name="TempLegendPanel"
+                                Orientation="Horizontal" Spacing="12"
+                                HorizontalAlignment="Center" Margin="0,4,0,0"/>
+
+                    <Grid Grid.Row="2" Margin="48,0,48,0">
+                        <TextBlock x:Name="TempTimeAgoLabel" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Left"/>
+                        <TextBlock x:Name="TempNowLabel" FontSize="10" Opacity="0.4"
+                                   HorizontalAlignment="Right" FontFamily="Consolas"/>
+                    </Grid>
+                </Grid>
+            </Border>
+
             <!-- Thresholds reference -->
             <Border Style="{StaticResource CardStyle}" Margin="0,4,0,0">
                 <Grid ColumnSpacing="40">

@@ -25,6 +25,11 @@ public class AppSettings
     public int    ProbeTimeoutMs         { get; set; } = 3000;
     public bool   AutoConnectEnabled     { get; set; } = true;
 
+    // Display units selected from the title-bar customize menu.
+    public string TemperatureUnit         { get; set; } = "C";
+    public string VoltageUnit             { get; set; } = "V";
+    public string CapacityUnit            { get; set; } = "mAh";
+
     // Navigation visibility — driven by the customize menu in the pane header.
     public bool   ShowNav_Dashboard      { get; set; } = true;
     public bool   ShowNav_CellView       { get; set; } = true;

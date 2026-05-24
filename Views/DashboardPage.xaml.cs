@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -7,6 +8,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Shapes;
+using BMSMonitor.Models;
 using BMSMonitor.ViewModels;
 using Windows.Foundation;
 using Windows.Graphics.Imaging;
@@ -16,6 +18,7 @@ using Windows.Storage.Streams;
 using Windows.UI;
 using Windows.UI.ViewManagement;
 using WinRT.Interop;
+using BMSMonitor.Services;
 
 namespace BMSMonitor.Views;
 
@@ -23,13 +26,13 @@ public sealed partial class DashboardPage : Page
 {
     private MainViewModel ViewModel => App.ViewModel;
     private Services.LocalizationManager Lang => App.Lang;
+    public ObservableCollection<AlertRecord> DashboardAlerts { get; } = new();
 
     // ── Dynamic X-axis tick pools ──────────────────────────────────────────
     // Pre-allocated once; reused on every redraw (no UIElement churn).
     private const int MaxTicks = 24;
     private TextBlock[] _socTicks  = [];
     private TextBlock[] _viTicks   = [];
-    private TextBlock[] _tempTicks = [];
 
     // Cap polyline points to roughly one per pixel of chart width.
     // Drawing 18 000 points on an 800 px canvas wastes memory and GPU
@@ -48,11 +51,6 @@ public sealed partial class DashboardPage : Page
     }
 
     // ── Temperature sensor polylines (10 sensors) ──────────────────────────
-    private const int TempSensorCount = 10;
-    private readonly Polyline[] _tempLines = new Polyline[TempSensorCount];
-    private readonly Border[] _tempLegendItems = new Border[TempSensorCount];
-    private int? _selectedTempSensor;  // null = none, int = spotlighted sensor
-
     // ── Time-range filter (used only during export) ────────────────────────
     // When set, RedrawSocChart/RedrawVIChart trim data to this range.
     // Cleared automatically after the snapshot is written.
@@ -63,132 +61,76 @@ public sealed partial class DashboardPage : Page
     {
         InitializeComponent();
         InitializeTickPools();
-        InitializeTempLegend();
         ApplyChartColors();
+        RefreshUnitLabels();
         UpdateXAxisLabels();
 
         Loaded   += (_, _) =>
         {
             ViewModel.HistoryUpdated += OnHistoryUpdated;
             ViewModel.HistoryReset   += OnHistoryReset;
+            App.Notifications.AlertFired += OnDashboardAlertFired;
+            RefreshDashboardAlerts();
         };
         Unloaded += (_, _) =>
         {
             ViewModel.HistoryUpdated -= OnHistoryUpdated;
             ViewModel.HistoryReset   -= OnHistoryReset;
+            App.Notifications.AlertFired -= OnDashboardAlertFired;
         };
+    }
+
+    private void RefreshDashboardAlerts()
+    {
+        DashboardAlerts.Clear();
+        foreach (var rec in App.Notifications.GetHistory()
+                     .Where(IsDashboardAlert)
+                     .Reverse()
+                     .Take(8))
+        {
+            DashboardAlerts.Add(rec);
+        }
+
+        UpdateDashboardAlertState();
+    }
+
+    private void OnDashboardAlertFired(AlertRecord rec)
+    {
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (!IsDashboardAlert(rec)) return;
+
+            DashboardAlerts.Insert(0, rec);
+            while (DashboardAlerts.Count > 8)
+                DashboardAlerts.RemoveAt(DashboardAlerts.Count - 1);
+
+            UpdateDashboardAlertState();
+        });
+    }
+
+    private static bool IsDashboardAlert(AlertRecord rec)
+        => rec.Severity is AlertSeverity.Alert or AlertSeverity.Warning or AlertSeverity.Error;
+
+    private void UpdateDashboardAlertState()
+    {
+        DashboardNoAlertsState.Visibility = DashboardAlerts.Count == 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        DashboardAlertListView.Visibility = DashboardAlerts.Count == 0
+            ? Visibility.Collapsed
+            : Visibility.Visible;
     }
 
     private void InitializeTickPools()
     {
         _socTicks = new TextBlock[MaxTicks];
         _viTicks  = new TextBlock[MaxTicks];
-        _tempTicks = new TextBlock[MaxTicks];
         for (int i = 0; i < MaxTicks; i++)
         {
             _socTicks[i] = MakeTickLabel();
             SocChartCanvas.Children.Add(_socTicks[i]);
             _viTicks[i] = MakeTickLabel();
             VIChartCanvas.Children.Add(_viTicks[i]);
-            _tempTicks[i] = MakeTickLabel();
-            TempChartCanvas.Children.Add(_tempTicks[i]);
-        }
-
-        // Create 10 polylines for temperature sensors
-        for (int s = 0; s < TempSensorCount; s++)
-        {
-            var line = new Polyline
-            {
-                StrokeThickness = 1.5,
-                StrokeLineJoin  = PenLineJoin.Round,
-                Fill            = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0)),
-                Stroke          = new SolidColorBrush(TempSensorColor(s)),
-                Tag             = s
-            };
-            int sensor = s; // capture for lambda
-            line.PointerEntered  += (_, _) => { _selectedTempSensor = sensor; UpdateTempSpotlight(); };
-            line.PointerExited   += (_, _) => { if (_selectedTempSensor == sensor) _selectedTempSensor = null; UpdateTempSpotlight(); };
-            line.Tapped          += (_, _) => { _selectedTempSensor = _selectedTempSensor == sensor ? null : sensor; UpdateTempSpotlight(); };
-            _tempLines[s] = line;
-            TempChartCanvas.Children.Add(line);
-        }
-    }
-
-    private static Color TempSensorColor(int index) => index switch
-    {
-        0 => Color.FromArgb(255, 244,  67,  54),   // red
-        1 => Color.FromArgb(255,  33, 150, 243),   // blue
-        2 => Color.FromArgb(255,  76, 175,  80),   // green
-        3 => Color.FromArgb(255, 255, 152,   0),   // orange
-        4 => Color.FromArgb(255, 156,  39, 176),   // purple
-        5 => Color.FromArgb(255,   0, 188, 212),   // cyan
-        6 => Color.FromArgb(255, 205, 220,  57),   // lime
-        7 => Color.FromArgb(255, 255,  87,  34),   // deep orange
-        8 => Color.FromArgb(255, 121,  85,  72),   // brown
-        9 => Color.FromArgb(255, 158, 158, 158),   // grey
-        _ => Color.FromArgb(255, 128, 128, 128),
-    };
-
-    private void InitializeTempLegend()
-    {
-        for (int s = 0; s < TempSensorCount; s++)
-        {
-            int sensor = s;
-            var color = TempSensorColor(s);
-
-            var dot = new Rectangle
-            {
-                Width = 12, Height = 12, RadiusX = 2, RadiusY = 2,
-                Fill = new SolidColorBrush(color),
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            var label = new TextBlock
-            {
-                Text = $"NTC {s + 1}",
-                FontSize = 10, Opacity = 0.7,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-
-            var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
-
-            var border = new Border
-            {
-                Padding = new Thickness(4, 2, 4, 2),
-                CornerRadius = new CornerRadius(3),
-                Child = panel,
-                Tag = sensor
-            };
-
-            border.PointerEntered += (_, _) => { _selectedTempSensor = sensor; UpdateTempSpotlight(); };
-            border.PointerExited  += (_, _) => { if (_selectedTempSensor == sensor) _selectedTempSensor = null; UpdateTempSpotlight(); };
-            border.Tapped         += (_, _) => { _selectedTempSensor = _selectedTempSensor == sensor ? null : sensor; UpdateTempSpotlight(); };
-
-            panel.Children.Add(dot);
-            panel.Children.Add(label);
-            _tempLegendItems[s] = border;
-            TempLegendPanel.Children.Add(border);
-        }
-    }
-
-    private void UpdateTempSpotlight()
-    {
-        for (int s = 0; s < TempSensorCount; s++)
-        {
-            bool spotlight = _selectedTempSensor == null || _selectedTempSensor == s;
-            double opacity = spotlight ? 1.0 : 0.15;
-            double thickness = spotlight ? 2.5 : 0.8;
-
-            _tempLines[s].Opacity = opacity;
-            _tempLines[s].StrokeThickness = thickness;
-
-            if (_tempLegendItems[s].Child is StackPanel sp)
-            {
-                sp.Opacity = spotlight ? 1.0 : 0.25;
-                _tempLegendItems[s].Background = spotlight
-                    ? new SolidColorBrush(Color.FromArgb(30, TempSensorColor(s).R, TempSensorColor(s).G, TempSensorColor(s).B))
-                    : null;
-            }
         }
     }
 
@@ -201,7 +143,7 @@ public sealed partial class DashboardPage : Page
         Visibility      = Visibility.Collapsed
     };
 
-    private void UpdateXAxisLabels(string socUnit = "", string viUnit = "", string tempUnit = "")
+    private void UpdateXAxisLabels(string socUnit = "", string viUnit = "")
     {
         string rate = GetSampleRateLabel();
 
@@ -209,8 +151,6 @@ public sealed partial class DashboardPage : Page
         SocNowLabel.Text      = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
         VITimeAgoLabel.Text   = rate;
         VINowLabel.Text       = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
-        TempTimeAgoLabel.Text = rate;
-        TempNowLabel.Text     = string.IsNullOrEmpty(tempUnit) ? "" : $"time ({tempUnit})";
     }
 
     // Real sample rate computed from the actual elapsed time between the
@@ -258,6 +198,11 @@ public sealed partial class DashboardPage : Page
     }
 
     // ── Chart drawing ─────────────────────────────────────────────────────
+    private void RefreshUnitLabels()
+    {
+        VLegendText.Text = Lang.Dash_VoltageV.Replace("(V)", $"({ViewModel.VoltageSymbol})");
+    }
+
     // Cached once per redraw cycle so the three Redraw* methods don't each
     // re-snapshot the Queue<DateTime>. Significantly cuts allocations during
     // the high-frequency HistoryUpdated path.
@@ -265,11 +210,11 @@ public sealed partial class DashboardPage : Page
 
     private void OnHistoryUpdated()
     {
+        RefreshUnitLabels();
         _tsCache = ViewModel.GetTimestamps();
         string socUnit  = RedrawSocChart();
         string viUnit   = RedrawVIChart();
-        string tempUnit = RedrawTempChart();
-        UpdateXAxisLabels(socUnit, viUnit, tempUnit);
+        UpdateXAxisLabels(socUnit, viUnit);
         UpdateTrimBar();
         _tsCache = null;
     }
@@ -295,13 +240,6 @@ public sealed partial class DashboardPage : Page
         string u = RedrawVIChart();
         if (!string.IsNullOrEmpty(u))
             VINowLabel.Text = $"time ({u})";
-    }
-
-    private void TempChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
-    {
-        string u = RedrawTempChart();
-        if (!string.IsNullOrEmpty(u))
-            TempNowLabel.Text = $"time ({u})";
     }
 
     /// <summary>
@@ -431,6 +369,7 @@ public sealed partial class DashboardPage : Page
         UpdateGridLine(VIGridH3, w, h * 0.75);
 
         var (fullV, fullI) = ViewModel.GetViHistory();
+        string voltageUnit = ViewModel.VoltageUnit;
         var (rangeStart, rangeEnd, _) = GetActiveRange(fullV.Length);
         int n = Math.Max(0, rangeEnd - rangeStart);
 
@@ -448,12 +387,13 @@ public sealed partial class DashboardPage : Page
         double iMin = double.MaxValue, iMax = double.MinValue;
         for (int i = rangeStart; i < rangeEnd; i++)
         {
-            double v = fullV[i]; if (v < vMin) vMin = v; if (v > vMax) vMax = v;
+            double v = UnitFormatter.ToDisplayVoltage(fullV[i], voltageUnit); if (v < vMin) vMin = v; if (v > vMax) vMax = v;
             double c = fullI[i]; if (c < iMin) iMin = c; if (c > iMax) iMax = c;
         }
-        double vRawMin = Math.Floor(vMin   / 5.0) * 5.0;
-        double vRawMax = Math.Ceiling(vMax / 5.0) * 5.0;
-        if (vRawMax <= vRawMin) vRawMax = vRawMin + 5.0;
+        double voltageStep = voltageUnit == "mV" ? 5000.0 : 5.0;
+        double vRawMin = Math.Floor(vMin   / voltageStep) * voltageStep;
+        double vRawMax = Math.Ceiling(vMax / voltageStep) * voltageStep;
+        if (vRawMax <= vRawMin) vRawMax = vRawMin + voltageStep;
         double vRange  = vRawMax - vRawMin;
 
         double iRawMin = Math.Floor(iMin   / 5.0) * 5.0;
@@ -490,7 +430,7 @@ public sealed partial class DashboardPage : Page
         {
             int idx = rangeStart + j;
             double x  = w * (timestamps[idx] - tStart).TotalSeconds / totalSec;
-            double vy = h * (1.0 - (fullV[idx] - vRawMin) / vRange);
+            double vy = h * (1.0 - (UnitFormatter.ToDisplayVoltage(fullV[idx], voltageUnit) - vRawMin) / vRange);
             double iy = h * (1.0 - (fullI[idx] - iRawMin) / iRange);
             vPoints.Add(new Point(x, vy));
             iPoints.Add(new Point(x, iy));
@@ -500,7 +440,7 @@ public sealed partial class DashboardPage : Page
         {
             int idx = rangeStart + n - 1;
             double x  = w * (timestamps[idx] - tStart).TotalSeconds / totalSec;
-            double vy = h * (1.0 - (fullV[idx] - vRawMin) / vRange);
+            double vy = h * (1.0 - (UnitFormatter.ToDisplayVoltage(fullV[idx], voltageUnit) - vRawMin) / vRange);
             double iy = h * (1.0 - (fullI[idx] - iRawMin) / iRange);
             vPoints.Add(new Point(x, vy));
             iPoints.Add(new Point(x, iy));
@@ -512,6 +452,7 @@ public sealed partial class DashboardPage : Page
         return UpdateTimeTicks(w, h, totalSec, _viTicks);
     }
 
+#if false
     /// <returns>The x-axis unit ("seconds" / "minutes" / "hours") or empty if no data.</returns>
     private string RedrawTempChart()
     {
@@ -614,6 +555,7 @@ public sealed partial class DashboardPage : Page
 
     // ── Tick rendering ────────────────────────────────────────────────────
 
+#endif
     private static void UpdateGridLine(Line line, double width, double y)
     {
         line.X1 = 0;
@@ -719,16 +661,6 @@ public sealed partial class DashboardPage : Page
             mainCanvas:    VIChartCanvas,
             heightSyncs:   new FrameworkElement[] { VAxisCanvas, IAxisCanvas },
             defaultName:   "BMS_VI_Chart");
-    }
-
-    private async void SaveTempChart_Click(object sender, RoutedEventArgs e)
-    {
-        await SaveChartFlow(
-            renderElement: TempChartArea,
-            card:          TempChartCard,
-            mainCanvas:    TempChartCanvas,
-            heightSyncs:   new FrameworkElement[] { CAxisCanvas, FAxisCanvas },
-            defaultName:   "BMS_Temp_Chart");
     }
 
     private async Task SaveChartFlow(

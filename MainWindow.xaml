@@ -6,7 +6,7 @@
     xmlns:models="using:BMSMonitor.Models"
     Title="BMS Monitor">
 
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>   <!-- playback bar -->
@@ -152,6 +152,82 @@
                                               IsChecked="True"
                                               Click="ViewNavToggle_Click"/>
                     </MenuFlyoutSubItem>
+                    <MenuFlyoutSubItem x:Name="MenuUnit"
+                                       FontSize="12"
+                                       Text="{x:Bind Lang.Ui_Menu_Unit, Mode=OneWay}">
+                        <MenuFlyoutSubItem x:Name="MenuUnitTemperature"
+                                           FontSize="12"
+                                           Text="{x:Bind Lang.Ui_Menu_Temperature, Mode=OneWay}">
+                            <RadioMenuFlyoutItem x:Name="UnitTempC"
+                                                 FontSize="12"
+                                                 Text="°C"
+                                                 Tag="C"
+                                                 GroupName="TemperatureUnitGroup"
+                                                 Click="UnitTemperature_Click"/>
+                            <RadioMenuFlyoutItem x:Name="UnitTempF"
+                                                 FontSize="12"
+                                                 Text="°F"
+                                                 Tag="F"
+                                                 GroupName="TemperatureUnitGroup"
+                                                 Click="UnitTemperature_Click"/>
+                        </MenuFlyoutSubItem>
+                        <MenuFlyoutSubItem x:Name="MenuUnitVoltage"
+                                           FontSize="12"
+                                           Text="{x:Bind Lang.Ui_Menu_Voltage, Mode=OneWay}">
+                            <RadioMenuFlyoutItem x:Name="UnitVoltageV"
+                                                 FontSize="12"
+                                                 Text="V"
+                                                 Tag="V"
+                                                 GroupName="VoltageUnitGroup"
+                                                 Click="UnitVoltage_Click"/>
+                            <RadioMenuFlyoutItem x:Name="UnitVoltageMv"
+                                                 FontSize="12"
+                                                 Text="mV"
+                                                 Tag="mV"
+                                                 GroupName="VoltageUnitGroup"
+                                                 Click="UnitVoltage_Click"/>
+                        </MenuFlyoutSubItem>
+                        <MenuFlyoutSubItem x:Name="MenuUnitCapacity"
+                                           FontSize="12"
+                                           Text="{x:Bind Lang.Ui_Menu_Capacity, Mode=OneWay}">
+                            <RadioMenuFlyoutItem x:Name="UnitCapacityMah"
+                                                 FontSize="12"
+                                                 Text="mAh"
+                                                 Tag="mAh"
+                                                 GroupName="CapacityUnitGroup"
+                                                 Click="UnitCapacity_Click"/>
+                            <RadioMenuFlyoutItem x:Name="UnitCapacityAh"
+                                                 FontSize="12"
+                                                 Text="Ah"
+                                                 Tag="Ah"
+                                                 GroupName="CapacityUnitGroup"
+                                                 Click="UnitCapacity_Click"/>
+                        </MenuFlyoutSubItem>
+                    </MenuFlyoutSubItem>
+                    <MenuFlyoutSubItem x:Name="MenuAbout"
+                                       FontSize="12"
+                                       Text="{x:Bind Lang.Ui_Menu_About, Mode=OneWay}">
+                        <MenuFlyoutItem FontSize="12"
+                                        Text="{x:Bind AboutProductText, Mode=OneWay}"/>
+                        <MenuFlyoutItem FontSize="12"
+                                        Text="{x:Bind AboutVersionText, Mode=OneWay}"/>
+                        <MenuFlyoutItem FontSize="12"
+                                        Text="{x:Bind AboutLicenseText, Mode=OneWay}"/>
+                        <MenuFlyoutItem FontSize="12"
+                                        Text="{x:Bind AboutCopyrightText, Mode=OneWay}"/>
+                        <MenuFlyoutSeparator/>
+                        <MenuFlyoutItem FontSize="12"
+                                        Text="{x:Bind AboutDescriptionText, Mode=OneWay}"/>
+                    </MenuFlyoutSubItem>
+                    <MenuFlyoutSeparator/>
+                    <MenuFlyoutItem x:Name="MenuTour"
+                                    FontSize="12"
+                                    Text="{x:Bind Lang.Ui_Menu_Tour, Mode=OneWay}"
+                                    Click="MenuTour_Click">
+                        <MenuFlyoutItem.Icon>
+                            <SymbolIcon Symbol="Help"/>
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
                     <MenuFlyoutSeparator/>
                     <MenuFlyoutItem x:Name="MenuRefreshApp"
                                     FontSize="12"
@@ -459,5 +535,69 @@
                            VerticalAlignment="Center"/>
             </Grid>
         </Border>
+
+        <Grid x:Name="TourOverlay"
+              Grid.RowSpan="3"
+              Visibility="Collapsed"
+              Canvas.ZIndex="20">
+            <Grid.Background>
+                <AcrylicBrush TintColor="Black"
+                              TintOpacity="0.55"
+                              TintLuminosityOpacity="0.0"
+                              AlwaysUseFallback="True"
+                              FallbackColor="#8D000000"/>
+            </Grid.Background>
+            <Border x:Name="TourDialogCard"
+                    Width="620"
+                    MaxHeight="760"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock x:Name="TourDialogTitle"
+                               Grid.Row="0"
+                               Margin="30,28,30,12"
+                               FontSize="24"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"/>
+
+                    <ContentControl x:Name="TourContentHost"
+                                    Grid.Row="1"
+                                    Margin="30,0,30,0"
+                                    HorizontalContentAlignment="Center"/>
+
+                    <Border Grid.Row="2"
+                            Padding="30,18"
+                            BorderThickness="0,1,0,0"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                            Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="TourOpenControlPanelButton"
+                                    Grid.Column="0"
+                                    HorizontalAlignment="Stretch"
+                                    Style="{ThemeResource AccentButtonStyle}"
+                                    Click="TourOpenControlPanel_Click"/>
+                            <Button x:Name="TourCloseButton"
+                                    Grid.Column="1"
+                                    HorizontalAlignment="Stretch"
+                                    Click="TourClose_Click"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

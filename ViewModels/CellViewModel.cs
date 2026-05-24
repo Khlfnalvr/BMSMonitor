@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using BMSMonitor.Models;
+using BMSMonitor.Services;
 
 namespace BMSMonitor.ViewModels;
 
@@ -15,7 +16,25 @@ public partial class CellViewModel : ObservableObject
     [ObservableProperty] private CellState _state;
     [ObservableProperty] private bool _isBalancing;
 
-    public string VoltageText => $"{Voltage:F3} V";
+    private string _voltageUnit = "V";
+
+    public string VoltageUnit
+    {
+        get => _voltageUnit;
+        set
+        {
+            var normalized = UnitFormatter.NormalizeVoltageUnit(value);
+            if (!SetProperty(ref _voltageUnit, normalized)) return;
+
+            OnPropertyChanged(nameof(VoltageText));
+            OnPropertyChanged(nameof(StatMinText));
+            OnPropertyChanged(nameof(StatMaxText));
+            OnPropertyChanged(nameof(StatAvgText));
+            OnPropertyChanged(nameof(StatDriftText));
+        }
+    }
+
+    public string VoltageText => UnitFormatter.FormatVoltage(Voltage, VoltageUnit);
 
     // ── Session statistics ───────────────────────────────────────────────
 
@@ -33,11 +52,11 @@ public partial class CellViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(StatAvgText))]
     private double _statAvg;
 
-    public string StatMinText   => _statMin > 0 ? $"{_statMin:F3}" : "—";
-    public string StatMaxText   => _statMax > 0 ? $"{_statMax:F3}" : "—";
-    public string StatAvgText   => _statAvg > 0 ? $"{_statAvg:F3}" : "—";
-    public string StatDriftText => (_statMax > 0 && _statMin > 0)
-        ? $"{(_statMax - _statMin) * 1000:F1}" : "—";
+    public string StatMinText   => StatMin > 0 ? UnitFormatter.FormatVoltageValue(StatMin, VoltageUnit) : UnitFormatter.Missing;
+    public string StatMaxText   => StatMax > 0 ? UnitFormatter.FormatVoltageValue(StatMax, VoltageUnit) : UnitFormatter.Missing;
+    public string StatAvgText   => StatAvg > 0 ? UnitFormatter.FormatVoltageValue(StatAvg, VoltageUnit) : UnitFormatter.Missing;
+    public string StatDriftText => (StatMax > 0 && StatMin > 0)
+        ? UnitFormatter.FormatVoltageValue(StatMax - StatMin, VoltageUnit) : UnitFormatter.Missing;
 
     public void ResetStats() { StatMin = 0; StatMax = 0; StatAvg = 0; }
 }

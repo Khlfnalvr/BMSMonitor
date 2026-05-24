@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using BMSMonitor.Services;
 
 namespace BMSMonitor.ViewModels;
 
@@ -11,6 +12,19 @@ public partial class TempViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(TempText), nameof(TempRaw))]
     private double _temperature;
 
-    public string TempText => $"{Temperature:F1} °C";
+    private string _temperatureUnit = "C";
+
+    public string TemperatureUnit
+    {
+        get => _temperatureUnit;
+        set
+        {
+            var normalized = UnitFormatter.NormalizeTemperatureUnit(value);
+            if (SetProperty(ref _temperatureUnit, normalized))
+                OnPropertyChanged(nameof(TempText));
+        }
+    }
+
+    public string TempText => UnitFormatter.FormatTemperature(Temperature, TemperatureUnit);
     public double TempRaw => Temperature;
 }

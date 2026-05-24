@@ -111,6 +111,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     // ── Logo / customize menu ─────────────────────────────────────────────
     public string Ui_Menu_Customize  => T(nameof(Ui_Menu_Customize));
     public string Ui_Menu_View       => T(nameof(Ui_Menu_View));
+    public string Ui_Menu_Unit       => T(nameof(Ui_Menu_Unit));
+    public string Ui_Menu_Temperature => T(nameof(Ui_Menu_Temperature));
+    public string Ui_Menu_Voltage    => T(nameof(Ui_Menu_Voltage));
+    public string Ui_Menu_Capacity   => T(nameof(Ui_Menu_Capacity));
+    public string Ui_Menu_About      => T(nameof(Ui_Menu_About));
+    public string Ui_About_Product   => T(nameof(Ui_About_Product));
+    public string Ui_About_Version   => T(nameof(Ui_About_Version));
+    public string Ui_About_License   => T(nameof(Ui_About_License));
+    public string Ui_About_Copyright => T(nameof(Ui_About_Copyright));
+    public string Ui_Menu_Tour       => T(nameof(Ui_Menu_Tour));
     public string Ui_Menu_RefreshApp => T(nameof(Ui_Menu_RefreshApp));
 
     // ── Common ────────────────────────────────────────────────────────────
@@ -148,6 +158,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Dash_CellDelta        => T(nameof(Dash_CellDelta));
     public string Dash_Method           => T(nameof(Dash_Method));
     public string Dash_ActiveMethod     => T(nameof(Dash_ActiveMethod));
+    public string Dash_SecAlertsWarnings => T(nameof(Dash_SecAlertsWarnings));
 
     // ── Cell statistics ───────────────────────────────────────────────────
     public string Cell_ResetStats        => T(nameof(Cell_ResetStats));
@@ -296,6 +307,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ClearAlerts)]    = "Clear",
             [nameof(Ui_Menu_Customize)]  = "Customize",
             [nameof(Ui_Menu_View)]       = "View",
+            [nameof(Ui_Menu_Unit)]       = "Unit",
+            [nameof(Ui_Menu_Temperature)] = "Temperature",
+            [nameof(Ui_Menu_Voltage)]    = "Voltage",
+            [nameof(Ui_Menu_Capacity)]   = "Capacity",
+            [nameof(Ui_Menu_About)]      = "About",
+            [nameof(Ui_About_Product)]   = "Product",
+            [nameof(Ui_About_Version)]   = "Version",
+            [nameof(Ui_About_License)]   = "License",
+            [nameof(Ui_About_Copyright)] = "Copyright",
+            [nameof(Ui_Menu_Tour)]       = "Tour",
             [nameof(Ui_Menu_RefreshApp)] = "Refresh App",
 
             [nameof(Com_Min)]    = "MIN",
@@ -327,6 +348,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Cell Delta",
             [nameof(Dash_Method)]           = "Method",
             [nameof(Dash_ActiveMethod)]     = "Active (LTC8584)",
+            [nameof(Dash_SecAlertsWarnings)] = "ALERT & WARNING",
             [nameof(Dash_SaveChart)]        = "Save chart as PNG",
             [nameof(Dash_SecTempHistory)]   = "TEMPERATURE HISTORY",
             [nameof(Dash_TempC)]            = "°C",
@@ -467,6 +489,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ClearAlerts)]    = "Hapus",
             [nameof(Ui_Menu_Customize)]  = "Kustomisasi",
             [nameof(Ui_Menu_View)]       = "Tampilan",
+            [nameof(Ui_Menu_Unit)]       = "Unit",
+            [nameof(Ui_Menu_Temperature)] = "Temperatur",
+            [nameof(Ui_Menu_Voltage)]    = "Tegangan",
+            [nameof(Ui_Menu_Capacity)]   = "Kapasitas",
+            [nameof(Ui_Menu_About)]      = "Tentang",
+            [nameof(Ui_About_Product)]   = "Produk",
+            [nameof(Ui_About_Version)]   = "Versi",
+            [nameof(Ui_About_License)]   = "Lisensi",
+            [nameof(Ui_About_Copyright)] = "Hak cipta",
+            [nameof(Ui_Menu_Tour)]       = "Tour",
             [nameof(Ui_Menu_RefreshApp)] = "Muat Ulang Aplikasi",
 
             [nameof(Com_Min)]    = "MIN",
@@ -498,6 +530,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Delta Sel",
             [nameof(Dash_Method)]           = "Metode",
             [nameof(Dash_ActiveMethod)]     = "Aktif (LTC8584)",
+            [nameof(Dash_SecAlertsWarnings)] = "ALERT & PERINGATAN",
             [nameof(Dash_SaveChart)]        = "Simpan grafik sebagai PNG",
             [nameof(Dash_SecTempHistory)]   = "RIWAYAT SUHU",
             [nameof(Dash_TempC)]            = "°C",
@@ -638,6 +671,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ClearAlerts)]    = "Hapus",
             [nameof(Ui_Menu_Customize)]  = "Sesuaikan",
             [nameof(Ui_Menu_View)]       = "Paparan",
+            [nameof(Ui_Menu_Unit)]       = "Unit",
+            [nameof(Ui_Menu_Temperature)] = "Suhu",
+            [nameof(Ui_Menu_Voltage)]    = "Voltan",
+            [nameof(Ui_Menu_Capacity)]   = "Kapasiti",
+            [nameof(Ui_Menu_About)]      = "Perihal",
+            [nameof(Ui_About_Product)]   = "Produk",
+            [nameof(Ui_About_Version)]   = "Versi",
+            [nameof(Ui_About_License)]   = "Lesen",
+            [nameof(Ui_About_Copyright)] = "Hak cipta",
+            [nameof(Ui_Menu_Tour)]       = "Tour",
             [nameof(Ui_Menu_RefreshApp)] = "Muat Semula Aplikasi",
 
             [nameof(Com_Min)]    = "MIN",
@@ -669,6 +712,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Delta Sel",
             [nameof(Dash_Method)]           = "Kaedah",
             [nameof(Dash_ActiveMethod)]     = "Aktif (LTC8584)",
+            [nameof(Dash_SecAlertsWarnings)] = "AMARAN & PERINGATAN",
             [nameof(Dash_SaveChart)]        = "Simpan graf sebagai PNG",
             [nameof(Dash_SecTempHistory)]   = "SEJARAH SUHU",
             [nameof(Dash_TempC)]            = "°C",
@@ -809,6 +853,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ClearAlerts)]    = "Wissen",
             [nameof(Ui_Menu_Customize)]  = "Aanpassen",
             [nameof(Ui_Menu_View)]       = "Weergave",
+            [nameof(Ui_Menu_Unit)]       = "Eenheden",
+            [nameof(Ui_Menu_Temperature)] = "Temperatuur",
+            [nameof(Ui_Menu_Voltage)]    = "Spanning",
+            [nameof(Ui_Menu_Capacity)]   = "Capaciteit",
+            [nameof(Ui_Menu_About)]      = "Info",
+            [nameof(Ui_About_Product)]   = "Product",
+            [nameof(Ui_About_Version)]   = "Versie",
+            [nameof(Ui_About_License)]   = "Licentie",
+            [nameof(Ui_About_Copyright)] = "Copyright",
+            [nameof(Ui_Menu_Tour)]       = "Rondleiding",
             [nameof(Ui_Menu_RefreshApp)] = "App vernieuwen",
 
             [nameof(Com_Min)]    = "MIN",
@@ -840,6 +894,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_CellDelta)]        = "Cel Delta",
             [nameof(Dash_Method)]           = "Methode",
             [nameof(Dash_ActiveMethod)]     = "Actief (LTC8584)",
+            [nameof(Dash_SecAlertsWarnings)] = "ALARMEN & WAARSCHUWINGEN",
             [nameof(Dash_SaveChart)]        = "Grafiek opslaan als PNG",
             [nameof(Dash_SecTempHistory)]   = "TEMPERATUUR GESCHIEDENIS",
             [nameof(Dash_TempC)]            = "°C",
@@ -980,6 +1035,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ClearAlerts)]    = "清除",
             [nameof(Ui_Menu_Customize)]  = "自定义",
             [nameof(Ui_Menu_View)]       = "视图",
+            [nameof(Ui_Menu_Unit)]       = "单位",
+            [nameof(Ui_Menu_Temperature)] = "温度",
+            [nameof(Ui_Menu_Voltage)]    = "电压",
+            [nameof(Ui_Menu_Capacity)]   = "容量",
+            [nameof(Ui_Menu_About)]      = "关于",
+            [nameof(Ui_About_Product)]   = "产品",
+            [nameof(Ui_About_Version)]   = "版本",
+            [nameof(Ui_About_License)]   = "许可",
+            [nameof(Ui_About_Copyright)] = "版权",
+            [nameof(Ui_Menu_Tour)]       = "导览",
             [nameof(Ui_Menu_RefreshApp)] = "刷新应用",
 
             [nameof(Com_Min)]    = "最低",
