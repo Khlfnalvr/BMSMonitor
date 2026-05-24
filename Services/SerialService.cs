@@ -144,13 +144,13 @@ public class SerialService : IDisposable
         }
         catch (UnauthorizedAccessException)
         {
-            ErrorOccurred?.Invoke($"Port {channel.PortName} sedang dipakai aplikasi lain.");
+            ErrorOccurred?.Invoke(LocalizationManager.Instance.Format("Serial_PortInUse", channel.PortName));
             _port?.Dispose(); _port = null;
             return false;
         }
         catch (Exception ex)
         {
-            ErrorOccurred?.Invoke($"Gagal membuka {channel.PortName}: {ex.Message}");
+            ErrorOccurred?.Invoke(LocalizationManager.Instance.Format("Serial_OpenFailed", channel.PortName, ex.Message));
             _port?.Dispose(); _port = null;
             return false;
         }
@@ -166,7 +166,10 @@ public class SerialService : IDisposable
         _cts      = new CancellationTokenSource();
         _readTask = Task.Run(() => ReadLoop(_cts.Token));
 
-        StatusChanged?.Invoke($"Connected — {channel.DisplayName} @ {bitrate.Baud} baud");
+        StatusChanged?.Invoke(LocalizationManager.Instance.Format(
+            "Serial_StatusConnected",
+            channel.DisplayName,
+            bitrate.Baud));
         return true;
     }
 
@@ -184,7 +187,7 @@ public class SerialService : IDisposable
         _cts?.Dispose();
         _cts       = null;
         _readTask  = null;
-        StatusChanged?.Invoke("Disconnected");
+        StatusChanged?.Invoke(LocalizationManager.Instance.Get("Serial_StatusDisconnected"));
     }
 
     public void Dispose() => Disconnect();
@@ -204,8 +207,8 @@ public class SerialService : IDisposable
             catch (OperationCanceledException) { break; }
             catch (Exception ex) when (!ct.IsCancellationRequested)
             {
-                ErrorOccurred?.Invoke($"Serial read error: {ex.Message}");
-                StatusChanged?.Invoke("Disconnected");
+                ErrorOccurred?.Invoke(LocalizationManager.Instance.Format("Serial_ReadError", ex.Message));
+                StatusChanged?.Invoke(LocalizationManager.Instance.Get("Serial_StatusDisconnected"));
                 break;
             }
             catch { break; }
@@ -240,8 +243,10 @@ public class SerialService : IDisposable
             {
                 _lastParseErrorFired = now;
                 string preview = line.Length > 60 ? line[..60] + "…" : line;
-                ErrorOccurred?.Invoke(
-                    $"ESP JSON parse error (total: {ParseErrors}) — data: \"{preview}\"");
+                ErrorOccurred?.Invoke(LocalizationManager.Instance.Format(
+                    "Serial_ParseError",
+                    ParseErrors,
+                    preview));
             }
             return;
         }

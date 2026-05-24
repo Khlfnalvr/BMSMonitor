@@ -29,8 +29,28 @@ public sealed partial class ControlPanelPage : Page
         _counterTimer.Interval = TimeSpan.FromMilliseconds(500);
         _counterTimer.Tick += (_, _) => UpdateCounters();
 
-        Loaded   += (_, _) => _counterTimer.Start();
-        Unloaded += (_, _) => _counterTimer.Stop();
+        Loaded   += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Lang.PropertyChanged += OnLanguageChanged;
+        _counterTimer.Start();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        Lang.PropertyChanged -= OnLanguageChanged;
+        _counterTimer.Stop();
+    }
+
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Bindings.Update();
+        RefreshChannels();
+        SyncConnectButton();
+        AutoConnectStatusText.Text = Lang.Ctrl_AutoConnectStatus;
     }
 
     // ── Serial controls ───────────────────────────────────────────────────
@@ -57,7 +77,9 @@ public sealed partial class ControlPanelPage : Page
         ConnectBtn.Content        = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
         ComboSerialPort.IsEnabled = !connected;
         ComboSerialBaud.IsEnabled = !connected;
-        if (!connected) ConnStatusText.Text = Lang.Ctrl_NotConnected;
+        ConnStatusText.Text = connected
+            ? Lang.Format("Serial_StatusConnected", ViewModel.Serial.ChannelName, ViewModel.Serial.Bitrate)
+            : Lang.Ctrl_NotConnected;
 
         // Auto-connect toggle reflects the service's suspended flag.
         _initializingParams = true;

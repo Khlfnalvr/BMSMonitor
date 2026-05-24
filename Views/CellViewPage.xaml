@@ -102,7 +102,7 @@
                                                FontWeight="SemiBold" CharacterSpacing="60"/>
                                     <TextBlock Text="{x:Bind VoltageText, Mode=OneWay}"
                                                FontSize="14" FontWeight="SemiBold"/>
-                                    <TextBlock Text="⚡ BAL"
+                                    <TextBlock Text="{x:Bind BalancingLabel, Mode=OneWay}"
                                                FontSize="9" FontWeight="SemiBold"
                                                Foreground="#FFFF8C00"
                                                Visibility="{x:Bind IsBalancing, Converter={StaticResource BoolToVisConverter}, Mode=OneWay}"/>
@@ -117,17 +117,17 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Grid.Column="0" Spacing="1">
-                                                <TextBlock Text="MIN" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
+                                                <TextBlock Text="{x:Bind MinLabel, Mode=OneWay}" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
                                                 <TextBlock Text="{x:Bind StatMinText, Mode=OneWay}"
                                                            FontSize="9" FontFamily="Consolas"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Spacing="1">
-                                                <TextBlock Text="AVG" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
+                                                <TextBlock Text="{x:Bind AvgLabel, Mode=OneWay}" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
                                                 <TextBlock Text="{x:Bind StatAvgText, Mode=OneWay}"
                                                            FontSize="9" FontFamily="Consolas"/>
                                             </StackPanel>
                                             <StackPanel Grid.Column="2" Spacing="1">
-                                                <TextBlock Text="MAX" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
+                                                <TextBlock Text="{x:Bind MaxLabel, Mode=OneWay}" FontSize="7" Opacity="0.45" CharacterSpacing="60"/>
                                                 <TextBlock Text="{x:Bind StatMaxText, Mode=OneWay}"
                                                            FontSize="9" FontFamily="Consolas"/>
                                             </StackPanel>
@@ -200,7 +200,7 @@
                                     <ProgressBar Value="{x:Bind TempRaw, Mode=OneWay}"
                                                  Minimum="0" Maximum="80"
                                                  Height="5" CornerRadius="2.5"/>
-                                    <TextBlock Text="10kΩ NTC thermistor" FontSize="11" Opacity="0.4"/>
+                                    <TextBlock Text="{x:Bind ThermistorLabel, Mode=OneWay}" FontSize="11" Opacity="0.4"/>
                                 </StackPanel>
                             </Border>
                         </Button>
@@ -322,7 +322,7 @@
             </Border>
 
             <!-- ── TIME RANGE TRIM (drives the Temperature History chart) ── -->
-            <TextBlock Text="Time Range (trim)" Style="{StaticResource SectionHeaderStyle}"/>
+            <TextBlock Text="{x:Bind Lang.Cell_TimeRangeTrim, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
             <Border Style="{StaticResource CardStyle}">
                 <StackPanel Spacing="6">
                     <Grid>
@@ -331,11 +331,11 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock x:Name="TrimRangeText"
-                                   Text="No data captured yet"
+                                   Text="{x:Bind Lang.Cell_TrimNoData, Mode=OneWay}"
                                    FontFamily="Consolas" FontSize="12" Opacity="0.75"
                                    VerticalAlignment="Center"/>
                         <Button Grid.Column="1" x:Name="ResetTrimBtn"
-                                Content="Reset"
+                                Content="{x:Bind Lang.Cell_TrimReset, Mode=OneWay}"
                                 Click="ResetTrim_Click"
                                 FontSize="11" Padding="10,4"
                                 IsEnabled="False"/>
@@ -393,7 +393,7 @@
                     </Grid>
 
                     <TextBlock FontSize="10" Opacity="0.45" TextWrapping="Wrap"
-                               Text="Drag the handles to select a time range. The temperature chart updates live to the selected window. Reset to return to the rolling view."/>
+                               Text="{x:Bind Lang.Cell_TrimHint, Mode=OneWay}"/>
                 </StackPanel>
             </Border>
 

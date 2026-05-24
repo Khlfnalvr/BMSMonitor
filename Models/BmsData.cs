@@ -1,3 +1,6 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using BMSMonitor.Services;
 using Microsoft.UI.Xaml.Media;
 using Windows.UI;
 
@@ -7,12 +10,23 @@ public enum LogFormat { Csv, Tsv, Excel, Json }
 
 public enum AlertSeverity { Info, Warning, Error, Alert }
 
-public class AlertRecord
+public class AlertRecord : INotifyPropertyChanged
 {
     public DateTime     Timestamp { get; }
-    public string       Title     { get; }
-    public string       Body      { get; }
     public AlertSeverity Severity { get; }
+    private readonly string _title;
+    private readonly string _body;
+    private readonly string? _titleKey;
+    private readonly string? _bodyKey;
+    private readonly object[] _bodyArgs;
+
+    public string Title => _titleKey is null
+        ? _title
+        : LocalizationManager.Instance.Get(_titleKey);
+
+    public string Body => _bodyKey is null
+        ? _body
+        : LocalizationManager.Instance.Format(_bodyKey, _bodyArgs);
 
     public string TimeText => Timestamp.ToString("HH:mm:ss  dd/MM");
 
@@ -35,14 +49,46 @@ public class AlertRecord
         _                     => Color.FromArgb(0xFF, 0x80, 0x80, 0x80),
     });
 
+    public event PropertyChangedEventHandler? PropertyChanged;
+
     public AlertRecord(DateTime ts, string title, string body,
                        AlertSeverity severity = AlertSeverity.Alert)
     {
         Timestamp = ts;
-        Title     = title;
-        Body      = body;
+        _title    = title;
+        _body     = body;
         Severity  = severity;
+        _bodyArgs = [];
     }
+
+    private AlertRecord(DateTime ts, string titleKey, string bodyKey,
+                        object[] bodyArgs, AlertSeverity severity)
+    {
+        Timestamp = ts;
+        _title = "";
+        _body = "";
+        _titleKey = titleKey;
+        _bodyKey = bodyKey;
+        _bodyArgs = bodyArgs;
+        Severity = severity;
+    }
+
+    public static AlertRecord Localized(
+        DateTime ts,
+        string titleKey,
+        string bodyKey,
+        object[] bodyArgs,
+        AlertSeverity severity = AlertSeverity.Alert) =>
+        new(ts, titleKey, bodyKey, bodyArgs, severity);
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(Body));
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }
 
 

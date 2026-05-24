@@ -48,9 +48,9 @@ public partial class App : Application
     {
         var dialog = new ContentDialog
         {
-            Title = "Startup Error",
+            Title = Lang.Get("Ui_StartupError"),
             Content = $"{ex.GetType().Name}\n\n{ex.Message}\n\n{ex.StackTrace}",
-            CloseButtonText = "OK",
+            CloseButtonText = Lang.Get("Ui_Ok"),
             XamlRoot = CurrentWindow?.Content?.XamlRoot
         };
         try { await dialog.ShowAsync(); } catch { }

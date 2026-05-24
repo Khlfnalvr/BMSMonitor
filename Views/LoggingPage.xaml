@@ -73,10 +73,10 @@
                                           Grid.Column="1"
                                           HorizontalAlignment="Left" MinWidth="200"
                                           SelectionChanged="FormatBox_SelectionChanged">
-                                    <ComboBoxItem Content="CSV — comma-separated (.csv)"    IsSelected="True"/>
-                                    <ComboBoxItem Content="TSV — tab-separated (.tsv)"/>
-                                    <ComboBoxItem Content="Excel — workbook (.xlsx)"/>
-                                    <ComboBoxItem Content="JSON — array of objects (.json)"/>
+                                    <ComboBoxItem Content="{x:Bind Lang.Log_FormatCsv, Mode=OneWay}" IsSelected="True"/>
+                                    <ComboBoxItem Content="{x:Bind Lang.Log_FormatTsv, Mode=OneWay}"/>
+                                    <ComboBoxItem Content="{x:Bind Lang.Log_FormatExcel, Mode=OneWay}"/>
+                                    <ComboBoxItem Content="{x:Bind Lang.Log_FormatJson, Mode=OneWay}"/>
                                 </ComboBox>
                             </Grid>
 

@@ -58,6 +58,11 @@ public sealed partial class MainWindow : Window
     private IntPtr _oldWndProc;
     private WndProcDelegate? _newWndProc;
 
+    private const double ZoomMin  = 0.5;
+    private const double ZoomMax  = 2.5;
+    private const double ZoomStep = 0.1;
+    private double _zoomLevel = 1.0;
+
     public MainWindow()
     {
         ViewModel = new MainViewModel(DispatcherQueue);
@@ -69,6 +74,7 @@ public sealed partial class MainWindow : Window
         SetAppIcon();
         InstallMinimumWindowSizeHook();
         InitializeTheme();
+        InitializeZoom();
 
         _clock = DispatcherQueue.CreateTimer();
         _clock.Interval = TimeSpan.FromSeconds(1);
@@ -87,11 +93,16 @@ public sealed partial class MainWindow : Window
         // Same for the language button's tooltip and checked-state.
         Lang.PropertyChanged += (_, _) =>
         {
+            ViewModel.RefreshLocalizedText();
             RefreshThemeButtonTooltip();
             UpdateLangMenuState();
             RefreshSerialButtonTooltip();
             SyncCapConnectButton();
             UpdateUnitMenuState();
+            RefreshAlertLocalization();
+            if (TourOverlay.Visibility == Visibility.Visible)
+                ShowTourOverlay();
+            OnPlaybackStateChanged();
             Bindings.Update();
         };
         UpdateLangMenuState();
@@ -280,6 +291,19 @@ public sealed partial class MainWindow : Window
             fe.RequestedTheme = theme;
         UpdateTitleBarColors(theme);
         UpdateThemeButton(theme);
+        UpdateLogo(theme);
+    }
+
+    private void UpdateLogo(ElementTheme theme)
+    {
+        bool dark = theme == ElementTheme.Dark;
+        string fileName = dark ? "logowhite.png" : "logoblack.png";
+        string path = Path.Combine(AppContext.BaseDirectory, fileName);
+        if (!File.Exists(path)) return;
+        var source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(path));
+        LogoImage.Source = source;
+        if (TourLogoImage is not null)
+            TourLogoImage.Source = source;
     }
 
     // Caption-style theme button: shows the icon for the mode the user would
@@ -310,6 +334,122 @@ public sealed partial class MainWindow : Window
         bool currentlyDark = current == ElementTheme.Dark;
         ApplyTheme(currentlyDark ? ElementTheme.Light : ElementTheme.Dark);
     }
+
+    // ── Zoom ──────────────────────────────────────────────────────────────
+    //
+    // Font-only zoom: scaling RenderTransform on RootGrid distorted the
+    // layout and clipped content at the window edges. Instead we walk the
+    // visual tree of the page content + playback / status bars and multiply
+    // each FontSize (and FontIcon glyph size) by the zoom level. Layout
+    // reflows naturally; nothing gets cut off.
+    //
+    // The title-bar nav strip is intentionally excluded — its 32-px height
+    // is fixed and larger fonts would clip the nav labels.
+    private readonly Dictionary<DependencyObject, double> _baseFontSizes = new();
+
+    private void InitializeZoom()
+    {
+        var s = AppSettingsService.Load();
+        _zoomLevel = Math.Clamp(s.ZoomLevel, ZoomMin, ZoomMax);
+
+        // Re-apply zoom after each page navigation — the new page's visual
+        // tree only exists after Loaded fires.
+        ContentFrame.Navigated += (_, _) =>
+        {
+            if (ContentFrame.Content is FrameworkElement page)
+                page.Loaded += OnPageLoadedApplyZoom;
+        };
+
+        // Apply once the root visual tree (playback bar + status bar) is built.
+        RootGrid.Loaded += (_, _) => ApplyZoom();
+
+        // Main-keyboard +/- (top row) — Add/Subtract in the XAML only cover
+        // the numpad. OEM_PLUS (187) and OEM_MINUS (189) cover the top row.
+        AddOemZoomAccelerator((Windows.System.VirtualKey)187, ZoomIn_Click);
+        AddOemZoomAccelerator((Windows.System.VirtualKey)189, ZoomOut_Click);
+    }
+
+    private void OnPageLoadedApplyZoom(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe)
+            fe.Loaded -= OnPageLoadedApplyZoom;
+        ApplyZoom();
+    }
+
+    private void AddOemZoomAccelerator(Windows.System.VirtualKey key, Action<object, RoutedEventArgs> handler)
+    {
+        var acc = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
+        {
+            Modifiers = Windows.System.VirtualKeyModifiers.Control,
+            Key = key
+        };
+        acc.Invoked += (s, e) =>
+        {
+            handler(s, new RoutedEventArgs());
+            e.Handled = true;
+        };
+        if (Content is UIElement root)
+            root.KeyboardAccelerators.Add(acc);
+    }
+
+    private void ApplyZoom()
+    {
+        if (ContentFrame?.Content is FrameworkElement page)
+            ScaleFontsInTree(page, _zoomLevel);
+        if (PlaybackBar is not null)
+            ScaleFontsInTree(PlaybackBar, _zoomLevel);
+        if (StatusBar is not null)
+            ScaleFontsInTree(StatusBar, _zoomLevel);
+    }
+
+    private void ScaleFontsInTree(DependencyObject? node, double scale)
+    {
+        if (node is null) return;
+
+        // TextBlock is not a Control — it inherits FrameworkElement directly,
+        // so it needs its own branch. Same story for FontIcon.
+        if (node is TextBlock tb)
+            ScaleFontSize(tb, () => tb.FontSize, v => tb.FontSize = v, scale);
+        else if (node is FontIcon fi)
+            ScaleFontSize(fi, () => fi.FontSize, v => fi.FontSize = v, scale);
+        else if (node is Control ctrl)
+            ScaleFontSize(ctrl, () => ctrl.FontSize, v => ctrl.FontSize = v, scale);
+
+        int count = Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChildrenCount(node);
+        for (int i = 0; i < count; i++)
+            ScaleFontsInTree(Microsoft.UI.Xaml.Media.VisualTreeHelper.GetChild(node, i), scale);
+    }
+
+    private void ScaleFontSize(
+        DependencyObject element,
+        Func<double> getter,
+        Action<double> setter,
+        double scale)
+    {
+        if (!_baseFontSizes.TryGetValue(element, out var baseSize))
+        {
+            baseSize = getter();
+            _baseFontSizes[element] = baseSize;
+        }
+        setter(baseSize * scale);
+    }
+
+    private void SetZoom(double zoom)
+    {
+        double clamped = Math.Round(Math.Clamp(zoom, ZoomMin, ZoomMax), 2);
+        if (Math.Abs(clamped - _zoomLevel) < 0.001) return;
+
+        _zoomLevel = clamped;
+        ApplyZoom();
+
+        var s = AppSettingsService.Load();
+        s.ZoomLevel = _zoomLevel;
+        AppSettingsService.Save(s);
+    }
+
+    private void ZoomActualSize_Click(object sender, RoutedEventArgs e) => SetZoom(1.0);
+    private void ZoomIn_Click(object sender, RoutedEventArgs e)         => SetZoom(_zoomLevel + ZoomStep);
+    private void ZoomOut_Click(object sender, RoutedEventArgs e)        => SetZoom(_zoomLevel - ZoomStep);
 
     // ── Language picker ───────────────────────────────────────────────────
     private void UpdateLangMenuState()
@@ -486,6 +626,56 @@ public sealed partial class MainWindow : Window
     private void MenuTour_Click(object sender, RoutedEventArgs e)
     {
         ShowTourOverlay();
+    }
+
+    private async void MenuGithub_Click(object sender, RoutedEventArgs e)
+    {
+        await Windows.System.Launcher.LaunchUriAsync(
+            new Uri("https://github.com/Khlfnalvr/BMSMonitor/"));
+    }
+
+    private void MenuOpenLogFolder_Click(object sender, RoutedEventArgs e)
+    {
+        Directory.CreateDirectory(AppSettingsService.FolderPath);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = AppSettingsService.FolderPath,
+            UseShellExecute = true
+        });
+    }
+
+    private void MenuOpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        // Materialize the file with current values if it doesn't exist yet —
+        // otherwise Explorer/Notepad has nothing to open.
+        if (!File.Exists(AppSettingsService.FilePath))
+            AppSettingsService.Save(AppSettingsService.Load());
+
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = AppSettingsService.FilePath,
+            UseShellExecute = true
+        });
+    }
+
+    private async void MenuReportBug_Click(object sender, RoutedEventArgs e)
+    {
+        string title = "[Bug] ";
+        string body =
+            $"**App version:** {AppVersion}\n" +
+            $"**OS:** {Environment.OSVersion.VersionString}\n" +
+            $"**Language:** {Lang.CurrentLanguage}\n\n" +
+            "## Description\n\n" +
+            "_What went wrong?_\n\n" +
+            "## Steps to reproduce\n\n" +
+            "1. \n2. \n3. \n\n" +
+            "## Expected vs actual\n\n";
+
+        string url = "https://github.com/Khlfnalvr/BMSMonitor/issues/new" +
+                     $"?title={Uri.EscapeDataString(title)}" +
+                     $"&body={Uri.EscapeDataString(body)}";
+
+        await Windows.System.Launcher.LaunchUriAsync(new Uri(url));
     }
 
     private void ShowTourOverlay()
@@ -850,8 +1040,57 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private static readonly Dictionary<string, (string Ms, string Nl, string Zh)> TourTranslations = new()
+    {
+        ["BMS Monitor Tour"] = ("Tour BMS Monitor", "BMS Monitor rondleiding", "BMS Monitor 导览"),
+        ["Open Control Panel"] = ("Buka Panel Kawalan", "Configuratiescherm openen", "打开控制面板"),
+        ["Close"] = ("Tutup", "Sluiten", "关闭"),
+        ["MAIN PAGES"] = ("HALAMAN UTAMA", "HOOFDPAGINA'S", "主要页面"),
+        ["Monitor pack voltage, SOC, current, pack status, cell summaries, and the main history charts."] = ("Pantau voltan pek, SOC, arus, status pek, ringkasan sel, dan carta sejarah utama.", "Bewaak pakketspanning, SOC, stroom, pakketstatus, celoverzichten en de belangrijkste geschiedenisgrafieken.", "监控电池组电压、SOC、电流、电池组状态、电芯摘要和主要历史图表。"),
+        ["Inspect 20 cells and 10 NTC sensors. Click a cell or sensor to open its history chart."] = ("Periksa 20 sel dan 10 sensor NTC. Klik sel atau sensor untuk membuka carta sejarahnya.", "Inspecteer 20 cellen en 10 NTC-sensoren. Klik op een cel of sensor om de geschiedenisgrafiek te openen.", "查看 20 个电芯和 10 个 NTC 传感器。点击电芯或传感器可打开其历史图表。"),
+        ["Configure COM port, baud rate, auto-connect, battery capacity, protection thresholds, current limits, and balancing."] = ("Konfigurasikan port COM, kadar baud, auto-sambung, kapasiti bateri, ambang perlindungan, had arus, dan pengimbangan.", "Configureer COM-poort, baudrate, automatisch verbinden, batterijcapaciteit, beveiligingsdrempels, stroomlimieten en balanceren.", "配置 COM 端口、波特率、自动连接、电池容量、保护阈值、电流限制和均衡。"),
+        ["Record live data to CSV, TSV, Excel, or JSON, choose the output folder, and watch the latest 20 frames."] = ("Rakam data langsung ke CSV, TSV, Excel, atau JSON, pilih folder output, dan pantau 20 bingkai terkini.", "Neem live data op naar CSV, TSV, Excel of JSON, kies de uitvoermap en bekijk de nieuwste 20 frames.", "将实时数据记录为 CSV、TSV、Excel 或 JSON，选择输出文件夹，并查看最新 20 帧。"),
+        ["Load a CSV log and replay it. Every page updates as if live data were coming in."] = ("Muat log CSV dan mainkan semula. Semua halaman dikemas kini seolah-olah data langsung sedang masuk.", "Laad een CSV-log en speel deze af. Elke pagina werkt bij alsof er live data binnenkomt.", "加载 CSV 日志并回放。所有页面都会像接收实时数据一样更新。"),
+        ["TITLE BAR QUICK BUTTONS"] = ("BUTANG PANTAS BAR TAJUK", "SNELKNOPPEN IN TITELBALK", "标题栏快捷按钮"),
+        ["Alerts"] = ("Amaran", "Meldingen", "警报"),
+        ["The bell opens alert history, and the red badge shows the number of unread alerts."] = ("Ikon loceng membuka sejarah amaran, dan lencana merah menunjukkan bilangan amaran belum dibaca.", "De bel opent de meldingengeschiedenis en de rode badge toont het aantal ongelezen meldingen.", "铃铛会打开警报历史，红色徽标显示未读警报数量。"),
+        ["Serial"] = ("Siri", "Serieel", "串口"),
+        ["Quick access to refresh ports, choose COM and baud rate, then connect or disconnect without changing pages."] = ("Akses pantas untuk menyegar semula port, memilih COM dan kadar baud, kemudian sambung atau putuskan tanpa menukar halaman.", "Snelle toegang om poorten te vernieuwen, COM en baudrate te kiezen en te verbinden of los te koppelen zonder van pagina te wisselen.", "快速刷新端口、选择 COM 和波特率，然后无需切换页面即可连接或断开。"),
+        ["Language"] = ("Bahasa", "Taal", "语言"),
+        ["Switch the application language directly from the title bar."] = ("Tukar bahasa aplikasi terus dari bar tajuk.", "Wijzig de applicatietaal direct vanuit de titelbalk.", "直接从标题栏切换应用语言。"),
+        ["Theme"] = ("Tema", "Thema", "主题"),
+        ["Switch between light and dark mode for the current workspace."] = ("Beralih antara mod cerah dan gelap untuk ruang kerja semasa.", "Schakel tussen lichte en donkere modus voor de huidige werkruimte.", "为当前工作区切换浅色和深色模式。"),
+        ["MENUS, PLAYBACK, AND STATUS"] = ("MENU, MAIN BALIK, DAN STATUS", "MENU'S, AFSPELEN EN STATUS", "菜单、回放和状态"),
+        ["Show or hide pages in the navigation bar to keep the workspace focused."] = ("Tunjuk atau sembunyikan halaman dalam bar navigasi supaya ruang kerja kekal ringkas.", "Toon of verberg pagina's in de navigatiebalk om de werkruimte overzichtelijk te houden.", "在导航栏中显示或隐藏页面，让工作区更聚焦。"),
+        ["Choose the temperature, voltage, and capacity units that are easiest to read."] = ("Pilih unit suhu, voltan, dan kapasiti yang paling mudah dibaca.", "Kies de temperatuur-, spannings- en capaciteitseenheden die het prettigst leesbaar zijn.", "选择最便于读取的温度、电压和容量单位。"),
+        ["View product name, app version, license, and other basic information."] = ("Lihat nama produk, versi aplikasi, lesen, dan maklumat asas lain.", "Bekijk productnaam, appversie, licentie en andere basisinformatie.", "查看产品名称、应用版本、许可证和其他基本信息。"),
+        ["Open this feature guide anytime from the title bar menu."] = ("Buka panduan fitur ini bila-bila masa dari menu bar tajuk.", "Open deze functiegids op elk moment vanuit het titelbalkmenu.", "可随时从标题栏菜单打开此功能指南。"),
+        ["Reload the active page when charts, dropdowns, or visual state need a refresh."] = ("Muat semula halaman aktif apabila carta, senarai dropdown, atau keadaan visual perlu disegarkan.", "Herlaad de actieve pagina wanneer grafieken, keuzelijsten of visuele status moeten worden vernieuwd.", "当图表、下拉框或视觉状态需要刷新时，重新加载当前页面。"),
+        ["Playback bar"] = ("Bar main balik", "Afspeelbalk", "回放栏"),
+        ["When a log is loaded, use first, play or pause, last, the frame slider, and unload to return to live mode."] = ("Apabila log dimuat, gunakan pertama, main atau jeda, terakhir, slider bingkai, dan nyahmuat untuk kembali ke mod langsung.", "Wanneer een log is geladen, gebruik je eerste, afspelen of pauzeren, laatste, de frameschuif en ontladen om terug te keren naar live modus.", "加载日志后，可使用首帧、播放或暂停、末帧、帧滑块和卸载返回实时模式。"),
+        ["Status bar"] = ("Bar status", "Statusbalk", "状态栏"),
+        ["The bottom bar shows data source, connection status, and the app clock."] = ("Bar bawah memaparkan sumber data, status sambungan, dan jam aplikasi.", "De onderste balk toont gegevensbron, verbindingsstatus en de appklok.", "底部栏显示数据源、连接状态和应用时钟。"),
+        ["Get familiar with the workspace"] = ("Kenali ruang kerja utama", "Maak kennis met de werkruimte", "熟悉工作区"),
+        ["This guide summarizes pages, buttons, menus, playback, and the status bar so new users know where to start."] = ("Panduan ini merangkum halaman, butang, menu, main balik, dan bar status supaya pengguna baharu tahu tempat untuk bermula.", "Deze gids vat pagina's, knoppen, menu's, afspelen en de statusbalk samen zodat nieuwe gebruikers weten waar ze moeten beginnen.", "本指南概述页面、按钮、菜单、回放和状态栏，帮助新用户快速上手。"),
+        ["RECOMMENDED FLOW"] = ("ALIRAN DISARANKAN", "AANBEVOLEN WERKWIJZE", "推荐流程"),
+        ["Connect ESP32 from the Serial button or Control Panel."] = ("Sambungkan ESP32 melalui butang Siri atau Panel Kawalan.", "Verbind de ESP32 via de knop Serieel of het Configuratiescherm.", "通过串口按钮或控制面板连接 ESP32。"),
+        ["Watch pack condition on Dashboard, then open Cell View for per-cell detail."] = ("Pantau keadaan pek pada Dashboard, kemudian buka Paparan Sel untuk butiran setiap sel.", "Bekijk de pakketconditie op het Dashboard en open daarna Celweergave voor details per cel.", "在仪表盘查看电池组状态，然后打开电芯视图查看每个电芯的详情。"),
+        ["Use Logging to record test sessions and Playback for later analysis."] = ("Gunakan Logging untuk merakam sesi ujian dan Main Balik untuk analisis kemudian.", "Gebruik Logging om testsessies op te nemen en Afspelen voor latere analyse.", "使用日志记录测试会话，并通过回放进行后续分析。")
+    };
+
     private string TourText(string id, string en)
-        => Lang.CurrentLanguage is "id" or "ms" ? id : en;
+    {
+        if (Lang.CurrentLanguage == "id") return id;
+        if (!TourTranslations.TryGetValue(en, out var translated)) return en;
+
+        return Lang.CurrentLanguage switch
+        {
+            "ms" => translated.Ms,
+            "nl" => translated.Nl,
+            "zh" => translated.Zh,
+            _    => en
+        };
+    }
 
     private bool IsDarkTheme()
         => Content is FrameworkElement fe && fe.RequestedTheme == ElementTheme.Dark;
@@ -935,16 +1174,19 @@ public sealed partial class MainWindow : Window
 
         // Route serial errors (parse failures, port errors) to the alert history.
         ViewModel.Serial.ErrorOccurred += msg =>
-            App.Notifications.LogDiagnostic(AlertSeverity.Error, "Serial Error", msg);
+            App.Notifications.LogDiagnostic(
+                AlertSeverity.Error,
+                Lang.Get("Alert_SerialErrorTitle"),
+                msg);
 
         // Log meaningful connection state changes — skip intermediate status strings.
         ViewModel.Serial.StatusChanged += msg =>
         {
             AlertSeverity sev;
-            if (msg.StartsWith("Connected"))             sev = AlertSeverity.Info;
-            else if (msg == "Disconnected")              sev = AlertSeverity.Warning;
+            if (ViewModel.Serial.IsConnected) sev = AlertSeverity.Info;
+            else if (msg == Lang.Get("Serial_StatusDisconnected")) sev = AlertSeverity.Warning;
             else return;   // skip "Mendeteksi…" and other intermediate strings
-            App.Notifications.LogDiagnostic(sev, "Connection", msg);
+            App.Notifications.LogDiagnostic(sev, Lang.Get("Alert_ConnectionTitle"), msg);
         };
 
         // Note: auto-connect probe notifications are intentionally NOT piped
@@ -975,6 +1217,12 @@ public sealed partial class MainWindow : Window
         {
             AlertBadge.Visibility = Visibility.Collapsed;
         }
+    }
+
+    private void RefreshAlertLocalization()
+    {
+        foreach (var rec in AlertHistory)
+            rec.RefreshLocalization();
     }
 
     private void AlertFlyout_Opening(object sender, object e)
@@ -1097,7 +1345,9 @@ public sealed partial class MainWindow : Window
         CapConnectBtn.Content   = connected ? Lang.Ctrl_Disconnect : Lang.Ctrl_Connect;
         CapSerialPort.IsEnabled = !connected;
         CapSerialBaud.IsEnabled = !connected;
-        if (!connected) CapConnStatus.Text = Lang.Ctrl_NotConnected;
+        CapConnStatus.Text = connected
+            ? Lang.Format("Serial_StatusConnected", ViewModel.Serial.ChannelName, ViewModel.Serial.Bitrate)
+            : Lang.Ctrl_NotConnected;
     }
 
     private void CapRefresh_Click(object sender, RoutedEventArgs e) => RefreshCapChannels();

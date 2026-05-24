@@ -51,6 +51,7 @@ public sealed partial class LoggingPage : Page
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        Lang.PropertyChanged += OnLanguageChanged;
         Logging.StateChanged += OnStateChanged;
         RefreshUi();
 
@@ -68,10 +69,19 @@ public sealed partial class LoggingPage : Page
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        Lang.PropertyChanged -= OnLanguageChanged;
         Logging.StateChanged -= OnStateChanged;
         ViewModel.DataStream.CollectionChanged -= OnDataStreamChanged;
         _durationTimer?.Stop();
         _durationTimer = null;
+    }
+
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Bindings.Update();
+        RefreshUi();
+        BuildStreamStructure();
+        RefreshStreamData();
     }
 
     // ── Stream table event handlers ───────────────────────────────────────
@@ -132,7 +142,7 @@ public sealed partial class LoggingPage : Page
         {
             var tb = new TextBlock
             {
-                Text = enabled[i].Label,
+                Text = enabled[i].DisplayLabel,
                 FontSize = 11,
                 FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
                 Opacity = 0.6,

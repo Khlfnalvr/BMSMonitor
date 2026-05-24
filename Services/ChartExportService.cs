@@ -57,9 +57,9 @@ internal static class ChartExportService
 
             switch (opts.Format)
             {
-                case "png": picker.FileTypeChoices.Add("PNG image", new[] { ".png" }); break;
-                case "jpg": picker.FileTypeChoices.Add("JPEG image", new[] { ".jpg" }); break;
-                case "svg": picker.FileTypeChoices.Add("SVG vector", new[] { ".svg" }); break;
+                case "png": picker.FileTypeChoices.Add(LocalizationManager.Instance.Get("Export_FileTypePng"), new[] { ".png" }); break;
+                case "jpg": picker.FileTypeChoices.Add(LocalizationManager.Instance.Get("Export_FileTypeJpeg"), new[] { ".jpg" }); break;
+                case "svg": picker.FileTypeChoices.Add(LocalizationManager.Instance.Get("Export_FileTypeSvg"), new[] { ".svg" }); break;
             }
 
             InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
@@ -78,9 +78,9 @@ internal static class ChartExportService
                 System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
                 var err = new ContentDialog
                 {
-                    Title = "Save failed",
+                    Title = LocalizationManager.Instance.Get("Ui_SaveFailed"),
                     Content = ex.Message,
-                    CloseButtonText = "OK",
+                    CloseButtonText = LocalizationManager.Instance.Get("Ui_Ok"),
                     XamlRoot = root
                 };
                 try { await err.ShowAsync(); } catch { }
@@ -100,6 +100,7 @@ internal static class ChartExportService
         Action<Action> unsubscribeHistoryUpdated,
         DispatcherQueue dispatcherQueue)
     {
+        var lang = LocalizationManager.Instance;
         var totalSec = timestamps.Length > 1
             ? (int)(timestamps[^1] - timestamps[0]).TotalSeconds
             : 0;
@@ -114,12 +115,12 @@ internal static class ChartExportService
             HorizontalAlignment = HorizontalAlignment.Stretch,
             SelectedIndex = 0
         };
-        aspect.Items.Add(new ComboBoxItem { Content = "4:3 - paper / Origin default", Tag = "1.3333" });
-        aspect.Items.Add(new ComboBoxItem { Content = "3:2 - photo / wide paper", Tag = "1.5" });
-        aspect.Items.Add(new ComboBoxItem { Content = "16:9 - slide / video", Tag = "1.7778" });
-        aspect.Items.Add(new ComboBoxItem { Content = "Golden 1.618:1", Tag = "1.6180" });
-        aspect.Items.Add(new ComboBoxItem { Content = "1:1 - square (correlation)", Tag = "1.0" });
-        aspect.Items.Add(new ComboBoxItem { Content = "Custom - set height manually", Tag = "0" });
+        aspect.Items.Add(new ComboBoxItem { Content = lang.Get("Export_Aspect43"), Tag = "1.3333" });
+        aspect.Items.Add(new ComboBoxItem { Content = lang.Get("Export_Aspect32"), Tag = "1.5" });
+        aspect.Items.Add(new ComboBoxItem { Content = lang.Get("Export_Aspect169"), Tag = "1.7778" });
+        aspect.Items.Add(new ComboBoxItem { Content = lang.Get("Export_AspectGolden"), Tag = "1.6180" });
+        aspect.Items.Add(new ComboBoxItem { Content = lang.Get("Export_Aspect11"), Tag = "1.0" });
+        aspect.Items.Add(new ComboBoxItem { Content = lang.Get("Export_AspectCustom"), Tag = "0" });
 
         var widthBox = new NumberBox
         {
@@ -148,9 +149,9 @@ internal static class ChartExportService
             HorizontalAlignment = HorizontalAlignment.Stretch,
             SelectedIndex = 0
         };
-        format.Items.Add(new ComboBoxItem { Content = "PNG - raster, lossless", Tag = "png" });
-        format.Items.Add(new ComboBoxItem { Content = "JPG - raster, smaller", Tag = "jpg" });
-        format.Items.Add(new ComboBoxItem { Content = "SVG - vector, editable", Tag = "svg" });
+        format.Items.Add(new ComboBoxItem { Content = lang.Get("Export_FormatPng"), Tag = "png" });
+        format.Items.Add(new ComboBoxItem { Content = lang.Get("Export_FormatJpg"), Tag = "jpg" });
+        format.Items.Add(new ComboBoxItem { Content = lang.Get("Export_FormatSvg"), Tag = "svg" });
 
         var previewImage = new Image
         {
@@ -384,14 +385,14 @@ internal static class ChartExportService
 
         var panel = new StackPanel { Spacing = 0, MinWidth = 500 };
 
-        panel.Children.Add(SectionHeader("Preview (live)"));
+        panel.Children.Add(SectionHeader(lang.Get("Export_PreviewLive")));
         panel.Children.Add(previewImage);
 
         panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("Time range"));
+        panel.Children.Add(SectionHeader(lang.Get("Export_TimeRange")));
         panel.Children.Add(new TextBlock
         {
-            Text = $"Drag the handles to select a segment. Full range: 0 - {totalSec} s ({totalSec / 60.0:F1} min)",
+            Text = lang.Format("Export_TimeRangeHint", totalSec, totalSec / 60.0),
             FontSize = 11,
             Opacity = 0.5,
             TextWrapping = TextWrapping.Wrap,
@@ -401,8 +402,8 @@ internal static class ChartExportService
         panel.Children.Add(trimLabel);
 
         panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("Dimensions"));
-        panel.Children.Add(FieldLabel("Aspect ratio"));
+        panel.Children.Add(SectionHeader(lang.Get("Export_Dimensions")));
+        panel.Children.Add(FieldLabel(lang.Get("Export_AspectRatio")));
         panel.Children.Add(aspect);
 
         var sizeGrid = new Grid { ColumnSpacing = 12, Margin = new Thickness(0, 10, 0, 0) };
@@ -411,10 +412,10 @@ internal static class ChartExportService
         sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var wLab = FieldLabel("Width (px)");
+        var wLab = FieldLabel(lang.Get("Export_WidthPx"));
         Grid.SetColumn(wLab, 0);
         Grid.SetRow(wLab, 0);
-        var hLab = FieldLabel("Height (px)");
+        var hLab = FieldLabel(lang.Get("Export_HeightPx"));
         Grid.SetColumn(hLab, 1);
         Grid.SetRow(hLab, 0);
         Grid.SetColumn(widthBox, 0);
@@ -428,15 +429,15 @@ internal static class ChartExportService
         panel.Children.Add(sizeGrid);
 
         panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("File format"));
+        panel.Children.Add(SectionHeader(lang.Get("Export_FileFormat")));
         panel.Children.Add(format);
 
         var dialog = new ContentDialog
         {
-            Title = "Export chart",
+            Title = lang.Get("Export_Title"),
             Content = panel,
-            PrimaryButtonText = "Save...",
-            CloseButtonText = "Cancel",
+            PrimaryButtonText = lang.Get("Ui_SaveEllipsis"),
+            CloseButtonText = lang.Get("Ui_Cancel"),
             DefaultButton = ContentDialogButton.Primary,
             XamlRoot = root
         };

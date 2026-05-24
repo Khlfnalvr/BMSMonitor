@@ -23,13 +23,21 @@ public sealed partial class PlaybackPage : Page
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        Lang.PropertyChanged += OnLanguageChanged;
         Playback.StateChanged += OnPlaybackStateChanged;
         RefreshUi();
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        Lang.PropertyChanged -= OnLanguageChanged;
         Playback.StateChanged -= OnPlaybackStateChanged;
+    }
+
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Bindings.Update();
+        RefreshUi();
     }
 
     private void OnPlaybackStateChanged() => DispatcherQueue.TryEnqueue(RefreshUi);
@@ -50,7 +58,7 @@ public sealed partial class PlaybackPage : Page
                 ? $"{(int)dur.TotalHours:D2}:{dur.Minutes:D2}:{dur.Seconds:D2}"
                 : $"{dur.Minutes:D2}:{dur.Seconds:D2}";
 
-            LoadStatusText.Text = $"Loaded {Playback.TotalFrames:N0} frames from \"{Playback.FileName}\".";
+            LoadStatusText.Text = Lang.Format("Pb_LoadedFramesFromFile", Playback.TotalFrames, Playback.FileName);
             HintText.Text = Lang.Pb_HowToUse1;
         }
         else
@@ -77,10 +85,10 @@ public sealed partial class PlaybackPage : Page
         var file = await picker.PickSingleFileAsync();
         if (file is null) return;
 
-        LoadStatusText.Text = "Loading…"; // brief status, no translation needed
+        LoadStatusText.Text = Lang.Get("Pb_Loading");
         var err = Playback.LoadFile(file.Path);
         if (err is not null)
-            LoadStatusText.Text = $"Error: {err}";
+            LoadStatusText.Text = Lang.Format("Pb_Error", err);
     }
 
     private void Unload_Click(object sender, RoutedEventArgs e) => Playback.Unload();

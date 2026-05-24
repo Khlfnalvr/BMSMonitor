@@ -8,6 +8,10 @@ public partial class CellViewModel : ObservableObject
 {
     public int Index { get; init; }
     public string Label => $"C{Index:D2}";
+    public string MinLabel => LocalizationManager.Instance.Com_Min;
+    public string AvgLabel => LocalizationManager.Instance.Com_Avg;
+    public string MaxLabel => LocalizationManager.Instance.Com_Max;
+    public string BalancingLabel => LocalizationManager.Instance.Cell_Balancing;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VoltageText))]
@@ -59,4 +63,12 @@ public partial class CellViewModel : ObservableObject
         ? UnitFormatter.FormatVoltageValue(StatMax - StatMin, VoltageUnit) : UnitFormatter.Missing;
 
     public void ResetStats() { StatMin = 0; StatMax = 0; StatAvg = 0; }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(MinLabel));
+        OnPropertyChanged(nameof(AvgLabel));
+        OnPropertyChanged(nameof(MaxLabel));
+        OnPropertyChanged(nameof(BalancingLabel));
+    }
 }

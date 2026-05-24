@@ -75,22 +75,41 @@ public sealed partial class DashboardPage : Page
         // time the viewport or top section resizes.
         DashboardScroller.SizeChanged += (_, _) => SyncChartRowHeight();
         DashboardScroller.ViewChanged += (_, _) => SyncChartRowHeight();
-        LayoutUpdated += (_, _) => SyncChartRowHeight();
-
-        Loaded   += (_, _) =>
+        LayoutUpdated += (_, _) =>
         {
-            ViewModel.HistoryUpdated += OnHistoryUpdated;
-            ViewModel.HistoryReset   += OnHistoryReset;
-            App.Notifications.AlertFired += OnDashboardAlertFired;
-            RefreshDashboardAlerts();
             SyncChartRowHeight();
+            SyncAlertListMaxHeight();
         };
-        Unloaded += (_, _) =>
-        {
-            ViewModel.HistoryUpdated -= OnHistoryUpdated;
-            ViewModel.HistoryReset   -= OnHistoryReset;
-            App.Notifications.AlertFired -= OnDashboardAlertFired;
-        };
+
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Lang.PropertyChanged += OnLanguageChanged;
+        ViewModel.HistoryUpdated += OnHistoryUpdated;
+        ViewModel.HistoryReset += OnHistoryReset;
+        App.Notifications.AlertFired += OnDashboardAlertFired;
+        RefreshDashboardAlerts();
+        SyncChartRowHeight();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        Lang.PropertyChanged -= OnLanguageChanged;
+        ViewModel.HistoryUpdated -= OnHistoryUpdated;
+        ViewModel.HistoryReset -= OnHistoryReset;
+        App.Notifications.AlertFired -= OnDashboardAlertFired;
+    }
+
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Bindings.Update();
+        foreach (var rec in DashboardAlerts)
+            rec.RefreshLocalization();
+        OnHistoryUpdated();
+        SyncChartRowHeight();
     }
 
     // Floor for each chart card, in pixels. Below this we keep the natural
@@ -132,6 +151,33 @@ public sealed partial class DashboardPage : Page
             SocChartCard.MinHeight = target;
         if (Math.Abs(VIChartCard.MinHeight - target) > 0.5)
             VIChartCard.MinHeight = target;
+    }
+
+    // Caps the alert list at the natural height of the left column's content
+    // rows so it can't push the shared Grid rows wider than they'd be on their
+    // own. Without this, a full alert list grows AlertCardBorder beyond the
+    // left content and distorts the dashboard layout. Once capped, the
+    // ListView's internal ScrollViewer takes over for overflow.
+    //
+    // Sum is content-only (no inter-row spacing) so Border.DesiredSize stays at
+    // or below the non-spanning row totals — the Grid then doesn't grow any row
+    // for the spanned Border, and the card lands at sum(leftRows)+spacings,
+    // matching the Balancing Status card's bottom edge.
+    private void SyncAlertListMaxHeight()
+    {
+        if (DashboardAlertListView is null) return;
+        if (PackOverviewCards is null || CellSummaryHeader is null || CellSummaryCard is null
+            || BalancingHeader is null || BalancingCard is null) return;
+
+        double sum = PackOverviewCards.DesiredSize.Height
+                   + CellSummaryHeader.DesiredSize.Height
+                   + CellSummaryCard.DesiredSize.Height
+                   + BalancingHeader.DesiredSize.Height
+                   + BalancingCard.DesiredSize.Height;
+        if (sum <= 0) return;
+
+        if (Math.Abs(DashboardAlertListView.MaxHeight - sum) > 0.5)
+            DashboardAlertListView.MaxHeight = sum;
     }
 
     private double GetPageViewportHeight()
@@ -216,9 +262,9 @@ public sealed partial class DashboardPage : Page
         string rate = GetSampleRateLabel();
 
         SocTimeAgoLabel.Text  = rate;
-        SocNowLabel.Text      = string.IsNullOrEmpty(socUnit) ? "" : $"time ({socUnit})";
+        SocNowLabel.Text      = string.IsNullOrEmpty(socUnit) ? "" : Lang.Format("Chart_TimeAxis", socUnit);
         VITimeAgoLabel.Text   = rate;
-        VINowLabel.Text       = string.IsNullOrEmpty(viUnit)  ? "" : $"time ({viUnit})";
+        VINowLabel.Text       = string.IsNullOrEmpty(viUnit)  ? "" : Lang.Format("Chart_TimeAxis", viUnit);
     }
 
     // Real sample rate computed from the actual elapsed time between the
@@ -230,15 +276,15 @@ public sealed partial class DashboardPage : Page
         var latest   = ViewModel.LatestTimestamp;
         int count    = ViewModel.HistorySampleCount;
 
-        if (count < 2 || !earliest.HasValue || !latest.HasValue) return "— sample/s";
+        if (count < 2 || !earliest.HasValue || !latest.HasValue) return Lang.Get("Chart_SampleRateUnknown");
 
         double sec = (latest.Value - earliest.Value).TotalSeconds;
-        if (sec <= 0) return "— sample/s";
+        if (sec <= 0) return Lang.Get("Chart_SampleRateUnknown");
 
         double rate = (count - 1) / sec;
-        if (rate >= 10) return $"{rate:F0} samples/s";
-        if (rate >= 1)  return $"{rate:F1} samples/s";
-        return $"{1.0 / rate:F1} s/sample";
+        if (rate >= 10) return Lang.Format("Chart_SamplesPerSecond", rate.ToString("F0", CultureInfo.CurrentCulture));
+        if (rate >= 1)  return Lang.Format("Chart_SamplesPerSecond", rate.ToString("F1", CultureInfo.CurrentCulture));
+        return Lang.Format("Chart_SecondsPerSample", (1.0 / rate).ToString("F1", CultureInfo.CurrentCulture));
     }
 
     // ── Chart colors ──────────────────────────────────────────────────────
@@ -299,14 +345,14 @@ public sealed partial class DashboardPage : Page
     {
         string u = RedrawSocChart();
         if (!string.IsNullOrEmpty(u))
-            SocNowLabel.Text = $"time ({u})";
+            SocNowLabel.Text = Lang.Format("Chart_TimeAxis", u);
     }
 
     private void VIChartCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
     {
         string u = RedrawVIChart();
         if (!string.IsNullOrEmpty(u))
-            VINowLabel.Text = $"time ({u})";
+            VINowLabel.Text = Lang.Format("Chart_TimeAxis", u);
     }
 
     /// <summary>
@@ -681,9 +727,10 @@ public sealed partial class DashboardPage : Page
         string unit;
         double divisor;
 
-        if (totalSeconds < 90)        { unit = "seconds"; divisor = 1.0;    }
-        else if (totalSeconds < 5400) { unit = "minutes"; divisor = 60.0;   }
-        else                          { unit = "hours";   divisor = 3600.0; }
+        var lang = LocalizationManager.Instance;
+        if (totalSeconds < 90)        { unit = lang.Get("Chart_Seconds"); divisor = 1.0;    }
+        else if (totalSeconds < 5400) { unit = lang.Get("Chart_Minutes"); divisor = 60.0;   }
+        else                          { unit = lang.Get("Chart_Hours");   divisor = 3600.0; }
 
         double totalInUnit = totalSeconds / divisor;
         double rawStep     = totalInUnit / Math.Max(1, targetTicks - 1);
@@ -772,9 +819,9 @@ public sealed partial class DashboardPage : Page
 
             switch (opts.Format)
             {
-                case "png": picker.FileTypeChoices.Add("PNG image",   new[] { ".png" }); break;
-                case "jpg": picker.FileTypeChoices.Add("JPEG image",  new[] { ".jpg" }); break;
-                case "svg": picker.FileTypeChoices.Add("SVG vector",  new[] { ".svg" }); break;
+                case "png": picker.FileTypeChoices.Add(Lang.Get("Export_FileTypePng"),  new[] { ".png" }); break;
+                case "jpg": picker.FileTypeChoices.Add(Lang.Get("Export_FileTypeJpeg"), new[] { ".jpg" }); break;
+                case "svg": picker.FileTypeChoices.Add(Lang.Get("Export_FileTypeSvg"),  new[] { ".svg" }); break;
             }
 
             InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
@@ -794,9 +841,9 @@ public sealed partial class DashboardPage : Page
                 System.Diagnostics.Debug.WriteLine($"Save failed: {ex}");
                 var err = new ContentDialog
                 {
-                    Title           = "Save failed",
+                    Title           = Lang.Get("Ui_SaveFailed"),
                     Content         = ex.Message,
-                    CloseButtonText = "OK",
+                    CloseButtonText = Lang.Get("Ui_Ok"),
                     XamlRoot        = root
                 };
                 try { await err.ShowAsync(); } catch { }
@@ -832,12 +879,12 @@ public sealed partial class DashboardPage : Page
         {
             HorizontalAlignment = HorizontalAlignment.Stretch, SelectedIndex = 0
         };
-        aspect.Items.Add(new ComboBoxItem { Content = "4:3 — paper / Origin default",    Tag = "1.3333" });
-        aspect.Items.Add(new ComboBoxItem { Content = "3:2 — photo / wide paper",        Tag = "1.5"    });
-        aspect.Items.Add(new ComboBoxItem { Content = "16:9 — slide / video",            Tag = "1.7778" });
-        aspect.Items.Add(new ComboBoxItem { Content = "φ — golden 1.618:1",              Tag = "1.6180" });
-        aspect.Items.Add(new ComboBoxItem { Content = "1:1 — square (correlation)",      Tag = "1.0"    });
-        aspect.Items.Add(new ComboBoxItem { Content = "Custom — set height manually",    Tag = "0"      });
+        aspect.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_Aspect43"),     Tag = "1.3333" });
+        aspect.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_Aspect32"),     Tag = "1.5"    });
+        aspect.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_Aspect169"),    Tag = "1.7778" });
+        aspect.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_AspectGolden"), Tag = "1.6180" });
+        aspect.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_Aspect11"),     Tag = "1.0"    });
+        aspect.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_AspectCustom"), Tag = "0"      });
 
         var widthBox = new NumberBox
         {
@@ -859,9 +906,9 @@ public sealed partial class DashboardPage : Page
         {
             HorizontalAlignment = HorizontalAlignment.Stretch, SelectedIndex = 0
         };
-        format.Items.Add(new ComboBoxItem { Content = "PNG — raster, lossless", Tag = "png" });
-        format.Items.Add(new ComboBoxItem { Content = "JPG — raster, smaller",  Tag = "jpg" });
-        format.Items.Add(new ComboBoxItem { Content = "SVG — vector, editable", Tag = "svg" });
+        format.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_FormatPng"), Tag = "png" });
+        format.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_FormatJpg"), Tag = "jpg" });
+        format.Items.Add(new ComboBoxItem { Content = Lang.Get("Export_FormatSvg"), Tag = "svg" });
 
         // Preview image
         var previewImage = new Image
@@ -1063,15 +1110,15 @@ public sealed partial class DashboardPage : Page
         var panel = new StackPanel { Spacing = 0, MinWidth = 500 };
 
         // — Preview —
-        panel.Children.Add(SectionHeader("Preview (live)"));
+        panel.Children.Add(SectionHeader(Lang.Get("Export_PreviewLive")));
         panel.Children.Add(previewImage);
 
         // — Time range with trim bar —
         panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("Time range"));
+        panel.Children.Add(SectionHeader(Lang.Get("Export_TimeRange")));
         panel.Children.Add(new TextBlock
         {
-            Text = $"Drag the handles to select a segment. Full range: 0 – {totalSec} s ({totalSec / 60.0:F1} min)",
+            Text = Lang.Format("Export_TimeRangeHint", totalSec, totalSec / 60.0),
             FontSize = 11, Opacity = 0.5, TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(0, 0, 0, 6)
         });
@@ -1080,8 +1127,8 @@ public sealed partial class DashboardPage : Page
 
         // — Dimensions —
         panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("Dimensions"));
-        panel.Children.Add(FieldLabel("Aspect ratio"));
+        panel.Children.Add(SectionHeader(Lang.Get("Export_Dimensions")));
+        panel.Children.Add(FieldLabel(Lang.Get("Export_AspectRatio")));
         panel.Children.Add(aspect);
 
         var sizeGrid = new Grid { ColumnSpacing = 12, Margin = new Thickness(0, 10, 0, 0) };
@@ -1090,8 +1137,8 @@ public sealed partial class DashboardPage : Page
         sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         sizeGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
-        var wLab = FieldLabel("Width (px)");  Grid.SetColumn(wLab, 0); Grid.SetRow(wLab, 0);
-        var hLab = FieldLabel("Height (px)"); Grid.SetColumn(hLab, 1); Grid.SetRow(hLab, 0);
+        var wLab = FieldLabel(Lang.Get("Export_WidthPx"));  Grid.SetColumn(wLab, 0); Grid.SetRow(wLab, 0);
+        var hLab = FieldLabel(Lang.Get("Export_HeightPx")); Grid.SetColumn(hLab, 1); Grid.SetRow(hLab, 0);
         Grid.SetColumn(widthBox,  0); Grid.SetRow(widthBox,  1);
         Grid.SetColumn(heightBox, 1); Grid.SetRow(heightBox, 1);
         sizeGrid.Children.Add(wLab); sizeGrid.Children.Add(hLab);
@@ -1100,14 +1147,14 @@ public sealed partial class DashboardPage : Page
 
         // — Format —
         panel.Children.Add(Divider());
-        panel.Children.Add(SectionHeader("File format"));
+        panel.Children.Add(SectionHeader(Lang.Get("Export_FileFormat")));
         panel.Children.Add(format);
 
         // ── Show dialog ─────────────────────────────────────────────────────
         var dialog = new ContentDialog
         {
-            Title = "Export chart", Content = panel,
-            PrimaryButtonText = "Save…", CloseButtonText = "Cancel",
+            Title = Lang.Get("Export_Title"), Content = panel,
+            PrimaryButtonText = Lang.Get("Ui_SaveEllipsis"), CloseButtonText = Lang.Get("Ui_Cancel"),
             DefaultButton = ContentDialogButton.Primary, XamlRoot = root
         };
 

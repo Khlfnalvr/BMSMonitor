@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using BMSMonitor.Services;
 
 namespace BMSMonitor.Models;
 
@@ -15,6 +16,26 @@ public sealed class LogColumn : INotifyPropertyChanged
     public string Key   { get; init; } = "";
     public string Label { get; init; } = "";
     public string Group { get; init; } = "";
+    public string DisplayLabel
+    {
+        get
+        {
+            EnsureParsed();
+            var lang = LocalizationManager.Instance;
+            return _kind switch
+            {
+                ColKind.Timestamp   => lang.Log_HdrTimestamp,
+                ColKind.PackVoltage => lang.Get("Log_ColPackVoltage"),
+                ColKind.Soc         => lang.Log_HdrSoc,
+                ColKind.Current     => lang.Get("Log_ColCurrent"),
+                ColKind.Status      => lang.Log_HdrStatus,
+                ColKind.Cell        => lang.Format("Log_ColCell", _idx + 1),
+                ColKind.Bal         => lang.Format("Log_ColBalancing", _idx + 1),
+                ColKind.Temp        => lang.Format("Log_ColTemp", _idx + 1),
+                _                   => Label,
+            };
+        }
+    }
 
     private bool _isEnabled = true;
     public bool IsEnabled
@@ -31,6 +52,8 @@ public sealed class LogColumn : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? n = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+    public void RefreshLocalization() => OnPropertyChanged(nameof(DisplayLabel));
 
     // ── Cached key metadata (parsed once on first use) ────────────────────
 

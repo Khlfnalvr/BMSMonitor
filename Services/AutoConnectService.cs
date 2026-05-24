@@ -76,7 +76,7 @@ public sealed class AutoConnectService : IDisposable
     public void SuspendReconnect()
     {
         lock (_lock) { _suspended = true; }
-        Notification?.Invoke("Auto-connect ditangguhkan — klik Connect untuk menghubungkan kembali.");
+        Notification?.Invoke(LocalizationManager.Instance.Get("AutoConnect_Suspended"));
     }
 
     public void ResumeReconnect()
@@ -137,7 +137,10 @@ public sealed class AutoConnectService : IDisposable
 
         if (candidate is null || _serial.IsConnected) return;
 
-        Notification?.Invoke($"Mendeteksi {candidate.DisplayName} @ {bitrate.DisplayName} — menunggu data BMS…");
+        Notification?.Invoke(LocalizationManager.Instance.Format(
+            "AutoConnect_Probing",
+            candidate.DisplayName,
+            bitrate.DisplayName));
         bool verified;
         try { verified = _serial.Probe(candidate, bitrate, timeoutMs: ProbeTimeoutMs); }
         catch { verified = false; }
@@ -148,18 +151,24 @@ public sealed class AutoConnectService : IDisposable
             if (!verified)
             {
                 _failedPorts.Add(candidate.PortName);
-                Notification?.Invoke($"{candidate.DisplayName} — tidak ada data BMS, dilewati.");
+                Notification?.Invoke(LocalizationManager.Instance.Format(
+                    "AutoConnect_NoData",
+                    candidate.DisplayName));
                 return;
             }
         }
 
-        Notification?.Invoke($"{candidate.DisplayName} terverifikasi — menghubungkan…");
+        Notification?.Invoke(LocalizationManager.Instance.Format(
+            "AutoConnect_Verified",
+            candidate.DisplayName));
         bool ok = _serial.Connect(candidate, bitrate);
 
         if (!ok)
         {
             lock (_lock) { _failedPorts.Add(candidate.PortName); }
-            Notification?.Invoke($"{candidate.DisplayName} — gagal terhubung setelah verifikasi.");
+            Notification?.Invoke(LocalizationManager.Instance.Format(
+                "AutoConnect_ConnectFailed",
+                candidate.DisplayName));
         }
     }
 }

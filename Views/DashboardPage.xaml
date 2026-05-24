@@ -27,228 +27,238 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Grid x:Name="DashboardTopGrid" Grid.Row="0" ColumnSpacing="10">
+            <!--
+                Flat 2-col / 6-row Grid. Each left section gets its own row; the
+                alert card spans rows 1-5 on the right. Sharing rows makes the
+                alert card's bottom edge align with the Balancing Status card's
+                bottom edge by construction — no code-behind sync needed.
+            -->
+            <Grid x:Name="DashboardTopGrid" Grid.Row="0" ColumnSpacing="10" RowSpacing="8">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
 
-                <StackPanel Grid.Column="0" Spacing="8">
-
-            <!-- ── PACK OVERVIEW ─────────────────────────────────────── -->
-            <TextBlock Text="{x:Bind Lang.Dash_SecPackOverview, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-            <Grid ColumnSpacing="10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Pack Voltage -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="0">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_PackVoltage, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind ViewModel.PackVoltageText, Mode=OneWay}"
-                                   Style="{StaticResource CardValueStyle}"/>
-                        <TextBlock Text="{x:Bind Lang.Dash_PackNominal, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- SOC -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="1">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_StateOfCharge, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind ViewModel.SocText, Mode=OneWay}"
-                                   Style="{StaticResource CardValueStyle}"/>
-                        <ProgressBar Value="{x:Bind ViewModel.Soc, Mode=OneWay}"
-                                     Maximum="100" Height="4" CornerRadius="2"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Remaining Capacity -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="2">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_Remaining, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind ViewModel.RemainingCapacityText, Mode=OneWay}"
-                                   Style="{StaticResource CardValueStyle}"/>
-                        <TextBlock Text="{x:Bind ViewModel.TimeToEmptyText, Mode=OneWay}" FontSize="11" Opacity="0.55"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Current -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="3">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_Current, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind ViewModel.CurrentText, Mode=OneWay}"
-                                   Style="{StaticResource CardValueStyle}"/>
-                        <TextBlock Text="{x:Bind Lang.Dash_CurrentSub, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Status -->
-                <Border Style="{StaticResource CardStyle}" Grid.Column="4">
-                    <StackPanel Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Status, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind ViewModel.PackStatus, Mode=OneWay}"
-                                   Style="{StaticResource CardValueStyle}"
-                                   Foreground="{x:Bind ViewModel.PackStatus, Converter={StaticResource StatusToFgConverter}, Mode=OneWay}"/>
-                        <TextBlock Text="{x:Bind Lang.Dash_PackConfig, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
-                    </StackPanel>
-                </Border>
-            </Grid>
-
-            <!-- ── CELL VOLTAGE SUMMARY (moved above charts) ──────────── -->
-            <TextBlock Text="{x:Bind Lang.Dash_SecCellSummary, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-            <Border Style="{StaticResource CardStyle}">
-                <Grid ColumnSpacing="0">
+                <!-- ── PACK OVERVIEW ─────────────────────────────────────── -->
+                <TextBlock Grid.Row="0" Grid.Column="0"
+                           Text="{x:Bind Lang.Dash_SecPackOverview, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"/>
+                <Grid x:Name="PackOverviewCards" Grid.Row="1" Grid.Column="0" ColumnSpacing="10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="1"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Min, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.MinCellText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
-
-                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Max, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.MaxCellText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="3" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
-
-                    <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Avg, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.AvgCellText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="5" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
-
-                    <StackPanel Grid.Column="6" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Com_Delta, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
-                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
-                                   Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
-            <!-- ── BALANCING STATUS (moved above charts) ──────────────── -->
-            <TextBlock Text="{x:Bind Lang.Dash_BalancingStatus, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-            <Border Style="{StaticResource CardStyle}">
-                <Grid ColumnSpacing="10">
-                    <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_ActiveCells, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                        <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
-                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource CardStyle}" Grid.Column="0">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_PackVoltage, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.PackVoltageText, Mode=OneWay}"
+                                       Style="{StaticResource CardValueStyle}"/>
+                            <TextBlock Text="{x:Bind Lang.Dash_PackNominal, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
+                        </StackPanel>
+                    </Border>
 
-                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_CellDelta, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                        <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
-                                   FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
-                    </StackPanel>
+                    <Border Style="{StaticResource CardStyle}" Grid.Column="1">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_StateOfCharge, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.SocText, Mode=OneWay}"
+                                       Style="{StaticResource CardValueStyle}"/>
+                            <ProgressBar Value="{x:Bind ViewModel.Soc, Mode=OneWay}"
+                                         Maximum="100" Height="4" CornerRadius="2"/>
+                        </StackPanel>
+                    </Border>
 
-                    <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Dash_Method, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
-                        <TextBlock Text="{x:Bind Lang.Dash_ActiveMethod, Mode=OneWay}" FontSize="14" HorizontalAlignment="Center"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
+                    <Border Style="{StaticResource CardStyle}" Grid.Column="2">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_Remaining, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.RemainingCapacityText, Mode=OneWay}"
+                                       Style="{StaticResource CardValueStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.TimeToEmptyText, Mode=OneWay}" FontSize="11" Opacity="0.55"/>
+                        </StackPanel>
+                    </Border>
 
-            <!-- ── SOC + V/I CHARTS (responsive: side-by-side wide, stacked narrow) -->
-                </StackPanel>
+                    <Border Style="{StaticResource CardStyle}" Grid.Column="3">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_Current, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.CurrentText, Mode=OneWay}"
+                                       Style="{StaticResource CardValueStyle}"/>
+                            <TextBlock Text="{x:Bind Lang.Dash_CurrentSub, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
+                        </StackPanel>
+                    </Border>
 
-                <Grid Grid.Column="1" RowSpacing="8">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0"
-                               Text="{x:Bind Lang.Dash_SecAlertsWarnings, Mode=OneWay}"
-                               Style="{StaticResource SectionHeaderStyle}"/>
-                    <Border Grid.Row="1"
-                            Style="{StaticResource CardStyle}"
-                            Padding="0"
-                            MinHeight="300"
-                            VerticalAlignment="Stretch">
-                        <Grid>
-                            <ListView x:Name="DashboardAlertListView"
-                                      ItemsSource="{x:Bind DashboardAlerts}"
-                                      SelectionMode="None"
-                                      Padding="10"
-                                      MaxHeight="360">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate x:DataType="models:AlertRecord">
-                                        <Grid ColumnSpacing="8" Padding="0,6,0,6">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="24"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-
-                                            <FontIcon Grid.Column="0"
-                                                      FontFamily="Segoe MDL2 Assets"
-                                                      Glyph="{x:Bind SeverityIcon}"
-                                                      FontSize="14"
-                                                      Foreground="{x:Bind SeverityColorBrush}"
-                                                      Margin="0,2,0,0"
-                                                      VerticalAlignment="Top"/>
-
-                                            <StackPanel Grid.Column="1" Spacing="2">
-                                                <TextBlock Text="{x:Bind Title}"
-                                                           FontSize="12"
-                                                           FontWeight="SemiBold"
-                                                           TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{x:Bind Body}"
-                                                           FontSize="11"
-                                                           Opacity="0.68"
-                                                           TextWrapping="WrapWholeWords"
-                                                           MaxLines="3"/>
-                                                <TextBlock Text="{x:Bind TimeText}"
-                                                           FontSize="10"
-                                                           Opacity="0.48"
-                                                           FontFamily="Consolas"/>
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-
-                            <StackPanel x:Name="DashboardNoAlertsState"
-                                        HorizontalAlignment="Center"
-                                        VerticalAlignment="Center"
-                                        Spacing="8">
-                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
-                                          Glyph="&#xE930;"
-                                          FontSize="28"
-                                          Opacity="0.4"/>
-                                <TextBlock Text="{x:Bind Lang.Ui_NoAlerts, Mode=OneWay}"
-                                           FontSize="12"
-                                           Opacity="0.56"
-                                           TextAlignment="Center"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Grid>
+                    <Border Style="{StaticResource CardStyle}" Grid.Column="4">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Com_Status, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                            <TextBlock Text="{x:Bind ViewModel.PackStatusText, Mode=OneWay}"
+                                       Style="{StaticResource CardValueStyle}"
+                                       Foreground="{x:Bind ViewModel.PackStatus, Converter={StaticResource StatusToFgConverter}, Mode=OneWay}"/>
+                            <TextBlock Text="{x:Bind Lang.Dash_PackConfig, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
+                        </StackPanel>
                     </Border>
                 </Grid>
+
+                <!-- ── CELL VOLTAGE SUMMARY ───────────────────────────────── -->
+                <TextBlock x:Name="CellSummaryHeader"
+                           Grid.Row="2" Grid.Column="0"
+                           Text="{x:Bind Lang.Dash_SecCellSummary, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"/>
+                <Border x:Name="CellSummaryCard"
+                        Grid.Row="3" Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="1"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Com_Min, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind ViewModel.MinCellText, Mode=OneWay}"
+                                       Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Border Grid.Column="1" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Com_Max, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind ViewModel.MaxCellText, Mode=OneWay}"
+                                       Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Border Grid.Column="3" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                        <StackPanel Grid.Column="4" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Com_Avg, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind ViewModel.AvgCellText, Mode=OneWay}"
+                                       Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Border Grid.Column="5" Width="1" Background="{ThemeResource CardStrokeColorDefaultBrush}" Margin="0,4"/>
+
+                        <StackPanel Grid.Column="6" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Com_Delta, Mode=OneWay}" Style="{StaticResource CardLabelStyle}" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                       Style="{StaticResource MetricValueStyle}" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ── BALANCING STATUS ───────────────────────────────────── -->
+                <TextBlock x:Name="BalancingHeader"
+                           Grid.Row="4" Grid.Column="0"
+                           Text="{x:Bind Lang.Dash_BalancingStatus, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"/>
+                <Border x:Name="BalancingCard"
+                        Grid.Row="5" Grid.Column="0" Style="{StaticResource CardStyle}">
+                    <Grid ColumnSpacing="10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_ActiveCells, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                            <TextBlock Text="{x:Bind ViewModel.BalancingText, Mode=OneWay}"
+                                       FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_CellDelta, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                            <TextBlock Text="{x:Bind ViewModel.DeltaText, Mode=OneWay}"
+                                       FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Center" Spacing="4">
+                            <TextBlock Text="{x:Bind Lang.Dash_Method, Mode=OneWay}" FontSize="12" Opacity="0.6"/>
+                            <TextBlock Text="{x:Bind Lang.Dash_ActiveMethod, Mode=OneWay}" FontSize="14" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- ── ALERT & WARNING ────────────────────────────────────── -->
+                <TextBlock x:Name="AlertSectionHeader"
+                           Grid.Row="0" Grid.Column="1"
+                           Text="{x:Bind Lang.Dash_SecAlertsWarnings, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"/>
+                <Border x:Name="AlertCardBorder"
+                        Grid.Row="1" Grid.RowSpan="5" Grid.Column="1"
+                        Style="{StaticResource CardStyle}"
+                        Padding="0"
+                        VerticalAlignment="Stretch">
+                    <Grid>
+                        <ListView x:Name="DashboardAlertListView"
+                                  ItemsSource="{x:Bind DashboardAlerts}"
+                                  SelectionMode="None"
+                                  Padding="10"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListView.ItemTemplate>
+                                <DataTemplate x:DataType="models:AlertRecord">
+                                    <Grid ColumnSpacing="8" Padding="0,6,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="24"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <FontIcon Grid.Column="0"
+                                                  FontFamily="Segoe MDL2 Assets"
+                                                  Glyph="{x:Bind SeverityIcon}"
+                                                  FontSize="14"
+                                                  Foreground="{x:Bind SeverityColorBrush}"
+                                                  Margin="0,2,0,0"
+                                                  VerticalAlignment="Top"/>
+
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="{x:Bind Title}"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{x:Bind Body}"
+                                                       FontSize="11"
+                                                       Opacity="0.68"
+                                                       TextWrapping="WrapWholeWords"
+                                                       MaxLines="3"/>
+                                            <TextBlock Text="{x:Bind TimeText}"
+                                                       FontSize="10"
+                                                       Opacity="0.48"
+                                                       FontFamily="Consolas"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <StackPanel x:Name="DashboardNoAlertsState"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Spacing="8">
+                            <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                      Glyph="&#xE930;"
+                                      FontSize="28"
+                                      Opacity="0.4"/>
+                            <TextBlock Text="{x:Bind Lang.Ui_NoAlerts, Mode=OneWay}"
+                                       FontSize="12"
+                                       Opacity="0.56"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
             </Grid>
 
             <Grid x:Name="ChartsGrid" Grid.Row="1" ColumnSpacing="10" RowSpacing="8"
@@ -310,10 +320,10 @@
                                    Style="{StaticResource SectionHeaderStyle}"
                                    VerticalAlignment="Center"/>
                         <Button Grid.Column="1" x:Name="SaveSocBtn"
-                                Width="36" Height="28" Padding="0"
+                                Height="22" Padding="5,2" MinWidth="0"
                                 Click="SaveSocChart_Click"
                                 ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
-                            <SymbolIcon Symbol="Save"/>
+                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE74E;" FontSize="12"/>
                         </Button>
                     </Grid>
                     <Border x:Name="SocChartCard" Grid.Row="1"
@@ -391,10 +401,10 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="{x:Bind Lang.Dash_SecViHistory, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
                         <Button Grid.Column="1" x:Name="SaveViBtn"
-                                Width="36" Height="28" Padding="0"
+                                Height="22" Padding="5,2" MinWidth="0"
                                 Click="SaveVIChart_Click"
                                 ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
-                            <SymbolIcon Symbol="Save"/>
+                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE74E;" FontSize="12"/>
                         </Button>
                     </Grid>
                     <Border x:Name="VIChartCard" Grid.Row="1"

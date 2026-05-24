@@ -38,17 +38,30 @@ public sealed partial class CellViewPage : Page
         ApplyTempChartColors();
         UpdateTempXAxisLabels();
 
-        Loaded += (_, _) =>
-        {
-            ViewModel.HistoryUpdated += OnHistoryUpdated;
-            ViewModel.HistoryReset += OnHistoryReset;
-            OnHistoryUpdated();
-        };
-        Unloaded += (_, _) =>
-        {
-            ViewModel.HistoryUpdated -= OnHistoryUpdated;
-            ViewModel.HistoryReset -= OnHistoryReset;
-        };
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Lang.PropertyChanged += OnLanguageChanged;
+        ViewModel.HistoryUpdated += OnHistoryUpdated;
+        ViewModel.HistoryReset += OnHistoryReset;
+        OnHistoryUpdated();
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        Lang.PropertyChanged -= OnLanguageChanged;
+        ViewModel.HistoryUpdated -= OnHistoryUpdated;
+        ViewModel.HistoryReset -= OnHistoryReset;
+    }
+
+    private void OnLanguageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Bindings.Update();
+        OnHistoryUpdated();
+        UpdateTrimBar();
     }
 
     private void InitializeTempChart()
@@ -224,13 +237,13 @@ public sealed partial class CellViewPage : Page
     {
         string unit = RedrawTempChart();
         if (!string.IsNullOrEmpty(unit))
-            TempNowLabel.Text = $"time ({unit})";
+            TempNowLabel.Text = Lang.Format("Chart_TimeAxis", unit);
     }
 
     private void UpdateTempXAxisLabels(string tempUnit = "")
     {
         TempTimeAgoLabel.Text = GetSampleRateLabel();
-        TempNowLabel.Text = string.IsNullOrEmpty(tempUnit) ? "" : $"time ({tempUnit})";
+        TempNowLabel.Text = string.IsNullOrEmpty(tempUnit) ? "" : Lang.Format("Chart_TimeAxis", tempUnit);
     }
 
     private string GetSampleRateLabel()
@@ -239,15 +252,15 @@ public sealed partial class CellViewPage : Page
         var latest = ViewModel.LatestTimestamp;
         int count = ViewModel.HistorySampleCount;
 
-        if (count < 2 || !earliest.HasValue || !latest.HasValue) return "— sample/s";
+        if (count < 2 || !earliest.HasValue || !latest.HasValue) return Lang.Get("Chart_SampleRateUnknown");
 
         double sec = (latest.Value - earliest.Value).TotalSeconds;
-        if (sec <= 0) return "— sample/s";
+        if (sec <= 0) return Lang.Get("Chart_SampleRateUnknown");
 
         double rate = (count - 1) / sec;
-        if (rate >= 10) return $"{rate:F0} samples/s";
-        if (rate >= 1) return $"{rate:F1} samples/s";
-        return $"{1.0 / rate:F1} s/sample";
+        if (rate >= 10) return Lang.Format("Chart_SamplesPerSecond", rate.ToString("F0", System.Globalization.CultureInfo.CurrentCulture));
+        if (rate >= 1) return Lang.Format("Chart_SamplesPerSecond", rate.ToString("F1", System.Globalization.CultureInfo.CurrentCulture));
+        return Lang.Format("Chart_SecondsPerSample", (1.0 / rate).ToString("F1", System.Globalization.CultureInfo.CurrentCulture));
     }
 
     private (int start, int end) GetActiveRange(int fullLength)
@@ -447,9 +460,10 @@ public sealed partial class CellViewPage : Page
         string unit;
         double divisor;
 
-        if (totalSeconds < 90) { unit = "seconds"; divisor = 1.0; }
-        else if (totalSeconds < 5400) { unit = "minutes"; divisor = 60.0; }
-        else { unit = "hours"; divisor = 3600.0; }
+        var lang = LocalizationManager.Instance;
+        if (totalSeconds < 90) { unit = lang.Get("Chart_Seconds"); divisor = 1.0; }
+        else if (totalSeconds < 5400) { unit = lang.Get("Chart_Minutes"); divisor = 60.0; }
+        else { unit = lang.Get("Chart_Hours"); divisor = 3600.0; }
 
         double totalInUnit = totalSeconds / divisor;
         double rawStep = totalInUnit / Math.Max(1, targetTicks - 1);
@@ -607,14 +621,14 @@ public sealed partial class CellViewPage : Page
 
         var title = new TextBlock
         {
-            Text = $"NTC {sensorNum} Temperature History",
+            Text = Lang.Format("Cell_TempHistoryTitle", sensorNum),
             FontSize = 16,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
         };
         var closeButton = new Button
         {
-            Content = "Close",
+            Content = Lang.Get("Ui_Close"),
             HorizontalAlignment = HorizontalAlignment.Right,
             Padding = new Thickness(10, 3, 10, 3)
         };
@@ -628,7 +642,7 @@ public sealed partial class CellViewPage : Page
 
         var currentLabel = new TextBlock
         {
-            Text = $"Current: {ViewModel.Temperatures[sensorIndex].TempText}",
+            Text = Lang.Format("Cell_CurrentValue", ViewModel.Temperatures[sensorIndex].TempText),
             FontSize = 12,
             Opacity = 0.7,
             Margin = new Thickness(0, 0, 0, 6)
@@ -677,7 +691,7 @@ public sealed partial class CellViewPage : Page
                 .ToArray();
             var timestamps = ViewModel.GetTimestamps();
             int n = hist.Length;
-            currentLabel.Text = $"Current: {ViewModel.Temperatures[sensorIndex].TempText}";
+            currentLabel.Text = Lang.Format("Cell_CurrentValue", ViewModel.Temperatures[sensorIndex].TempText);
 
             int gi = 0;
             foreach (var c in canvas.Children)
@@ -713,7 +727,7 @@ public sealed partial class CellViewPage : Page
 
             yAxisCanvas.Children.Clear();
             xAxisCanvas.Children.Clear();
-            AddCanvasLabel(yAxisCanvas, "Temp", 0, 0, yAxisWidth - 4, TextAlignment.Right, 0.85);
+            AddCanvasLabel(yAxisCanvas, Lang.Get("Cell_TempAxis"), 0, 0, yAxisWidth - 4, TextAlignment.Right, 0.85);
             AddCanvasLabel(yAxisCanvas, $"({ViewModel.TemperatureSymbol})", 0, 12, yAxisWidth - 4, TextAlignment.Right, 0.85);
             AddCanvasLabel(yAxisCanvas, $"{tMax:F1}", 0, 29, yAxisWidth - 4, TextAlignment.Right);
             AddCanvasLabel(yAxisCanvas, $"{(tMin + tR / 2):F1}", 0, h / 2 - 7, yAxisWidth - 4, TextAlignment.Right);
@@ -722,7 +736,7 @@ public sealed partial class CellViewPage : Page
             var leftTick = "0s";
             var midTick = n > 1 ? $"{(n - 1) / 2}" : "0";
             var rightTick = n > 1 ? $"{n - 1}" : "0";
-            var xAxisTitle = "Sample #";
+            var xAxisTitle = Lang.Get("Cell_SampleNumber");
             if (timestamps.Length == n && n > 1)
             {
                 double totalSec = Math.Max(0, (timestamps[^1] - timestamps[0]).TotalSeconds);
@@ -730,8 +744,8 @@ public sealed partial class CellViewPage : Page
                 midTick = FormatElapsed(totalSec / 2.0);
                 rightTick = FormatElapsed(totalSec);
                 xAxisTitle = totalSec < 60
-                    ? "Elapsed time (s)"
-                    : totalSec < 3600 ? "Elapsed time (mm:ss)" : "Elapsed time (h:mm:ss)";
+                    ? Lang.Get("Cell_ElapsedSeconds")
+                    : Lang.Format("Cell_ElapsedClock", totalSec < 3600 ? "mm:ss" : "h:mm:ss");
             }
             AddCanvasLabel(xAxisCanvas, leftTick, 0, 0, 70, TextAlignment.Left);
             AddCanvasLabel(xAxisCanvas, midTick, chartWidth / 2 - 35, 0, 70, TextAlignment.Center);
@@ -742,8 +756,8 @@ public sealed partial class CellViewPage : Page
             {
                 polyline.Points = [];
                 rangeLabel.Text = n == 1
-                    ? "1 sample collected. Waiting for more samples to draw a line."
-                    : "No temperature history yet. Waiting for live/playback samples.";
+                    ? Lang.Get("Cell_OneSample")
+                    : Lang.Get("Cell_NoTempHistory");
                 return;
             }
 
@@ -775,7 +789,13 @@ public sealed partial class CellViewPage : Page
                 pts.Add(new Point(x, h * (1.0 - (hist[j] - tMin) / tR)));
             }
             polyline.Points = pts;
-            rangeLabel.Text = $"{n} samples  ·  {hist.Min():F1}-{hist.Max():F1} {ViewModel.TemperatureSymbol}  ·  Range {hist.Max() - hist.Min():F1} {ViewModel.TemperatureSymbol}";
+            rangeLabel.Text = Lang.Format(
+                "Cell_RangeSummary",
+                n,
+                hist.Min().ToString("F1", System.Globalization.CultureInfo.CurrentCulture),
+                hist.Max().ToString("F1", System.Globalization.CultureInfo.CurrentCulture),
+                ViewModel.TemperatureSymbol,
+                (hist.Max() - hist.Min()).ToString("F1", System.Globalization.CultureInfo.CurrentCulture));
         }
 
         canvas.SizeChanged += (_, _) => Redraw();
@@ -791,6 +811,8 @@ public sealed partial class CellViewPage : Page
         presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, popupWidth + 20));
         presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, 320d));
         presenterStyle.Setters.Add(new Setter(Control.CornerRadiusProperty, new CornerRadius(12)));
+        presenterStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled));
+        presenterStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollModeProperty, ScrollMode.Disabled));
 
         var flyout = new Flyout
         {
@@ -912,14 +934,14 @@ public sealed partial class CellViewPage : Page
 
         var title = new TextBlock
         {
-            Text = $"Cell C{cellNum:D2} Voltage History",
+            Text = Lang.Format("Cell_VoltageHistoryTitle", cellNum),
             FontSize = 16,
             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
             VerticalAlignment = VerticalAlignment.Center
         };
         var closeButton = new Button
         {
-            Content = "Close",
+            Content = Lang.Get("Ui_Close"),
             HorizontalAlignment = HorizontalAlignment.Right,
             Padding = new Thickness(10, 3, 10, 3)
         };
@@ -933,7 +955,7 @@ public sealed partial class CellViewPage : Page
 
         var currentLabel = new TextBlock
         {
-            Text = $"Current: {ViewModel.Cells[cellIndex].VoltageText}",
+            Text = Lang.Format("Cell_CurrentValue", ViewModel.Cells[cellIndex].VoltageText),
             FontSize = 12,
             Opacity = 0.7,
             Margin = new Thickness(0, 0, 0, 6)
@@ -984,7 +1006,7 @@ public sealed partial class CellViewPage : Page
                 .ToArray();
             var timestamps = ViewModel.GetTimestamps();
             int n = hist.Length;
-            currentLabel.Text = $"Current: {ViewModel.Cells[cellIndex].VoltageText}";
+            currentLabel.Text = Lang.Format("Cell_CurrentValue", ViewModel.Cells[cellIndex].VoltageText);
             string valueFormat = ViewModel.VoltageUnit == "mV" ? "F1" : "F3";
             double minPadding = ViewModel.VoltageUnit == "mV" ? 10.0 : 0.01;
             double fallbackPadding = ViewModel.VoltageUnit == "mV" ? 50.0 : 0.05;
@@ -1026,7 +1048,7 @@ public sealed partial class CellViewPage : Page
 
             yAxisCanvas.Children.Clear();
             xAxisCanvas.Children.Clear();
-            AddCanvasLabel(yAxisCanvas, "Voltage", 0, 0, yAxisWidth - 4, TextAlignment.Right, 0.85);
+            AddCanvasLabel(yAxisCanvas, Lang.Get("Cell_VoltageAxis"), 0, 0, yAxisWidth - 4, TextAlignment.Right, 0.85);
             AddCanvasLabel(yAxisCanvas, $"({ViewModel.VoltageSymbol})", 0, 12, yAxisWidth - 4, TextAlignment.Right, 0.85);
             AddCanvasLabel(yAxisCanvas, vMax.ToString(valueFormat), 0, 29, yAxisWidth - 4, TextAlignment.Right);
             AddCanvasLabel(yAxisCanvas, (vMin + vR / 2).ToString(valueFormat), 0, h / 2 - 7, yAxisWidth - 4, TextAlignment.Right);
@@ -1035,7 +1057,7 @@ public sealed partial class CellViewPage : Page
             var leftTick = "0s";
             var midTick = n > 1 ? $"{(n - 1) / 2}" : "0";
             var rightTick = n > 1 ? $"{n - 1}" : "0";
-            var xAxisTitle = "Sample #";
+            var xAxisTitle = Lang.Get("Cell_SampleNumber");
             if (timestamps.Length == n && n > 1)
             {
                 double totalSec = Math.Max(0, (timestamps[^1] - timestamps[0]).TotalSeconds);
@@ -1043,8 +1065,8 @@ public sealed partial class CellViewPage : Page
                 midTick = FormatElapsed(totalSec / 2.0);
                 rightTick = FormatElapsed(totalSec);
                 xAxisTitle = totalSec < 60
-                    ? "Elapsed time (s)"
-                    : totalSec < 3600 ? "Elapsed time (mm:ss)" : "Elapsed time (h:mm:ss)";
+                    ? Lang.Get("Cell_ElapsedSeconds")
+                    : Lang.Format("Cell_ElapsedClock", totalSec < 3600 ? "mm:ss" : "h:mm:ss");
             }
             AddCanvasLabel(xAxisCanvas, leftTick, 0, 0, 70, TextAlignment.Left);
             AddCanvasLabel(xAxisCanvas, midTick, chartWidth / 2 - 35, 0, 70, TextAlignment.Center);
@@ -1055,8 +1077,8 @@ public sealed partial class CellViewPage : Page
             {
                 polyline.Points = [];
                 rangeLabel.Text = n == 1
-                    ? "1 sample collected. Waiting for more samples to draw a line."
-                    : "No voltage history yet. Waiting for live/playback samples.";
+                    ? Lang.Get("Cell_OneSample")
+                    : Lang.Get("Cell_NoVoltageHistory");
                 return;
             }
 
@@ -1076,7 +1098,13 @@ public sealed partial class CellViewPage : Page
             if (lastEmitted != n - 1)
                 pts.Add(new Point((n - 1) * xs, h * (1.0 - (hist[n - 1] - vMin) / vR)));
             polyline.Points = pts;
-            rangeLabel.Text = $"{n} samples  ·  {hist.Min().ToString(valueFormat)}-{hist.Max().ToString(valueFormat)} {ViewModel.VoltageSymbol}  ·  Delta {(hist.Max() - hist.Min()).ToString(valueFormat)} {ViewModel.VoltageSymbol}";
+            rangeLabel.Text = Lang.Format(
+                "Cell_DeltaSummary",
+                n,
+                hist.Min().ToString(valueFormat, System.Globalization.CultureInfo.CurrentCulture),
+                hist.Max().ToString(valueFormat, System.Globalization.CultureInfo.CurrentCulture),
+                ViewModel.VoltageSymbol,
+                (hist.Max() - hist.Min()).ToString(valueFormat, System.Globalization.CultureInfo.CurrentCulture));
         }
 
         canvas.SizeChanged += (_, _) => Redraw();
@@ -1092,6 +1120,8 @@ public sealed partial class CellViewPage : Page
         presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxWidthProperty, popupWidth + 20));
         presenterStyle.Setters.Add(new Setter(FrameworkElement.MaxHeightProperty, 320d));
         presenterStyle.Setters.Add(new Setter(Control.CornerRadiusProperty, new CornerRadius(12)));
+        presenterStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollBarVisibilityProperty, ScrollBarVisibility.Disabled));
+        presenterStyle.Setters.Add(new Setter(ScrollViewer.HorizontalScrollModeProperty, ScrollMode.Disabled));
 
         var flyout = new Flyout
         {
@@ -1234,7 +1264,7 @@ public sealed partial class CellViewPage : Page
         {
             DataStartLabel.Text = "—";
             DataEndLabel.Text   = "—";
-            TrimRangeText.Text  = "No data captured yet";
+            TrimRangeText.Text  = Lang.Cell_TrimNoData;
             Canvas.SetLeft(StartThumb, 0);
             Canvas.SetLeft(EndThumb,   Math.Max(0, w - EndThumb.Width));
             Canvas.SetLeft(TrimSelection, 0);
@@ -1269,8 +1299,8 @@ public sealed partial class CellViewPage : Page
         string endStr   = FormatElapsedSpan(trimEndElapsed);
 
         TrimRangeText.Text = (_filterStart.HasValue || _filterEnd.HasValue)
-            ? $"Trim: {startStr} → {endStr}  ·  {durStr}"
-            : $"Full range: {startStr} → {endStr}  ·  {durStr}  (drag a handle to trim)";
+            ? Lang.Format("Cell_TrimTrimmedRange", startStr, endStr, durStr)
+            : Lang.Format("Cell_TrimFullRange", startStr, endStr, durStr);
     }
 
     private static string FormatElapsedSpan(TimeSpan ts)

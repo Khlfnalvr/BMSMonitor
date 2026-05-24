@@ -111,7 +111,7 @@ public sealed class PlaybackService
     private string? LoadDelimited(string path, char delimiter)
     {
         var lines = File.ReadAllLines(path, Encoding.UTF8);
-        if (lines.Length < 2) return "File has no data rows.";
+        if (lines.Length < 2) return LocalizationManager.Instance.Get("Pb_FileNoDataRows");
 
         var frames     = new List<BmsData>();
         var timestamps = new List<string>();
@@ -148,7 +148,7 @@ public sealed class PlaybackService
         var excelRows = MiniExcel.Query(path, useHeaderRow: true)
                                  .Cast<IDictionary<string, object>>()
                                  .ToList();
-        if (excelRows.Count == 0) return "Excel file has no data rows.";
+        if (excelRows.Count == 0) return LocalizationManager.Instance.Get("Pb_ExcelNoDataRows");
 
         var frames     = new List<BmsData>(excelRows.Count);
         var timestamps = new List<string>(excelRows.Count);
@@ -194,7 +194,7 @@ public sealed class PlaybackService
         var rows = JsonSerializer.Deserialize<JsonRow[]>(json,
                        new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        if (rows == null || rows.Length == 0) return "JSON file contains no rows.";
+        if (rows == null || rows.Length == 0) return LocalizationManager.Instance.Get("Pb_JsonNoRows");
 
         var frames     = new List<BmsData>(rows.Length);
         var timestamps = new List<string>(rows.Length);
@@ -235,7 +235,7 @@ public sealed class PlaybackService
     /// <summary>Commits loaded data atomically; returns null on success.</summary>
     private string? Commit(List<BmsData> frames, List<string> timestamps, string fileName)
     {
-        if (frames.Count == 0) return "No valid data rows found.";
+        if (frames.Count == 0) return LocalizationManager.Instance.Get("Pb_NoValidDataRows");
 
         StopTimer();
         _frames       = [.. frames];

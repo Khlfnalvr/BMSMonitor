@@ -48,7 +48,8 @@
             </NavigationView.Resources>
 
             <NavigationView.PaneHeader>
-                <Image Source="logo.png"
+                <Image x:Name="LogoImage"
+                       Source="logo.png"
                        Height="22"
                        Margin="12,0,8,0"
                        VerticalAlignment="Center"
@@ -204,6 +205,38 @@
                                                  Click="UnitCapacity_Click"/>
                         </MenuFlyoutSubItem>
                     </MenuFlyoutSubItem>
+                    <MenuFlyoutSubItem x:Name="MenuZoom"
+                                       FontSize="12"
+                                       Text="{x:Bind Lang.Ui_Menu_Zoom, Mode=OneWay}">
+                        <MenuFlyoutItem x:Name="ZoomActualSize"
+                                        FontSize="12"
+                                        Text="{x:Bind Lang.Ui_Menu_ActualSize, Mode=OneWay}"
+                                        KeyboardAcceleratorTextOverride="Ctrl+0"
+                                        Click="ZoomActualSize_Click">
+                            <MenuFlyoutItem.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control" Key="Number0"/>
+                                <KeyboardAccelerator Modifiers="Control" Key="NumberPad0"/>
+                            </MenuFlyoutItem.KeyboardAccelerators>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="ZoomIn"
+                                        FontSize="12"
+                                        Text="{x:Bind Lang.Ui_Menu_ZoomIn, Mode=OneWay}"
+                                        KeyboardAcceleratorTextOverride="Ctrl++"
+                                        Click="ZoomIn_Click">
+                            <MenuFlyoutItem.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control" Key="Add"/>
+                            </MenuFlyoutItem.KeyboardAccelerators>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="ZoomOut"
+                                        FontSize="12"
+                                        Text="{x:Bind Lang.Ui_Menu_ZoomOut, Mode=OneWay}"
+                                        KeyboardAcceleratorTextOverride="Ctrl+-"
+                                        Click="ZoomOut_Click">
+                            <MenuFlyoutItem.KeyboardAccelerators>
+                                <KeyboardAccelerator Modifiers="Control" Key="Subtract"/>
+                            </MenuFlyoutItem.KeyboardAccelerators>
+                        </MenuFlyoutItem>
+                    </MenuFlyoutSubItem>
                     <MenuFlyoutSubItem x:Name="MenuAbout"
                                        FontSize="12"
                                        Text="{x:Bind Lang.Ui_Menu_About, Mode=OneWay}">
@@ -223,6 +256,48 @@
                                         IsHitTestVisible="False"
                                         Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind AboutCopyrightText, Mode=OneWay}"/>
+                    </MenuFlyoutSubItem>
+                    <MenuFlyoutSubItem x:Name="MenuDeveloper"
+                                       FontSize="12"
+                                       Text="{x:Bind Lang.Ui_Menu_Developer, Mode=OneWay}">
+                        <MenuFlyoutItem x:Name="MenuGithub"
+                                        FontSize="12"
+                                        Text="Github"
+                                        Click="MenuGithub_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                          Glyph="&#xE8A7;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator/>
+                        <MenuFlyoutItem x:Name="MenuOpenLogFolder"
+                                        FontSize="12"
+                                        Text="{x:Bind Lang.Ui_Menu_OpenLogFolder, Mode=OneWay}"
+                                        Click="MenuOpenLogFolder_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                          Glyph="&#xE838;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutItem x:Name="MenuOpenSettings"
+                                        FontSize="12"
+                                        Text="{x:Bind Lang.Ui_Menu_OpenSettings, Mode=OneWay}"
+                                        Click="MenuOpenSettings_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                          Glyph="&#xE7C3;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
+                        <MenuFlyoutSeparator/>
+                        <MenuFlyoutItem x:Name="MenuReportBug"
+                                        FontSize="12"
+                                        Text="{x:Bind Lang.Ui_Menu_ReportBug, Mode=OneWay}"
+                                        Click="MenuReportBug_Click">
+                            <MenuFlyoutItem.Icon>
+                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                          Glyph="&#xEBE8;"/>
+                            </MenuFlyoutItem.Icon>
+                        </MenuFlyoutItem>
                     </MenuFlyoutSubItem>
                     <MenuFlyoutSeparator/>
                     <MenuFlyoutItem x:Name="MenuTour"
@@ -505,7 +580,8 @@
         </Border>
 
         <!-- ── Status bar (Row 2) ─────────────────────────────────────── -->
-        <Border Grid.Row="2"
+        <Border x:Name="StatusBar"
+                Grid.Row="2"
                 Padding="16,5"
                 BorderThickness="0,1,0,0"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -559,12 +635,21 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock x:Name="TourDialogTitle"
-                               Grid.Row="0"
-                               Margin="30,28,30,12"
-                               FontSize="24"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"/>
+                    <StackPanel Grid.Row="0"
+                                Orientation="Horizontal"
+                                Margin="30,28,30,12"
+                                Spacing="12"
+                                VerticalAlignment="Center">
+                        <Image x:Name="TourLogoImage"
+                               Height="30"
+                               VerticalAlignment="Center"
+                               Stretch="Uniform"/>
+                        <TextBlock x:Name="TourDialogTitle"
+                                   FontSize="24"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
 
                     <ContentControl x:Name="TourContentHost"
                                     Grid.Row="1"

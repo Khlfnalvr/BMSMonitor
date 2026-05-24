@@ -84,31 +84,31 @@ public class NotificationService
             if (v > cellMax) cellMax = v;
 
             if (v >= config.OvervoltageThreshold)
-                Fire($"ov_{i}", "BMS - Overvoltage",
-                    $"Cell {i + 1} at {v:F3}V — exceeds {config.OvervoltageThreshold:F2}V cutoff",
+                Fire($"ov_{i}", "Alert_OvervoltageTitle", "Alert_CellOvervoltageBody",
+                    [i + 1, v, config.OvervoltageThreshold],
                     AlertSeverity.Alert);
             else if (v >= config.HighVoltageWarning)
-                Fire($"ovw_{i}", "BMS - High Voltage Warning",
-                    $"Cell {i + 1} at {v:F3}V — exceeds {config.HighVoltageWarning:F2}V warning",
+                Fire($"ovw_{i}", "Alert_HighVoltageTitle", "Alert_CellHighVoltageBody",
+                    [i + 1, v, config.HighVoltageWarning],
                     AlertSeverity.Warning);
             else if (v <= config.UndervoltageThreshold)
-                Fire($"uv_{i}", "BMS - Undervoltage",
-                    $"Cell {i + 1} at {v:F3}V — below {config.UndervoltageThreshold:F2}V cutoff",
+                Fire($"uv_{i}", "Alert_UndervoltageTitle", "Alert_CellUndervoltageBody",
+                    [i + 1, v, config.UndervoltageThreshold],
                     AlertSeverity.Alert);
             else if (v > 0 && v <= config.LowVoltageWarning)
-                Fire($"uvw_{i}", "BMS - Low Voltage Warning",
-                    $"Cell {i + 1} at {v:F3}V — below {config.LowVoltageWarning:F2}V warning",
+                Fire($"uvw_{i}", "Alert_LowVoltageTitle", "Alert_CellLowVoltageBody",
+                    [i + 1, v, config.LowVoltageWarning],
                     AlertSeverity.Warning);
         }
 
         // Current
         if (data.Current >= config.MaxChargeCurrent)
-            Fire("oc_chg", "BMS - Overcurrent",
-                $"Charge current {data.Current:F1}A — exceeds {config.MaxChargeCurrent:F0}A limit",
+            Fire("oc_chg", "Alert_OvercurrentTitle", "Alert_ChargeCurrentBody",
+                [data.Current, config.MaxChargeCurrent],
                 AlertSeverity.Alert);
         if (Math.Abs(data.Current) >= config.MaxDischargeCurrent)
-            Fire("oc_dsg", "BMS - Overcurrent",
-                $"Discharge current {Math.Abs(data.Current):F1}A — exceeds {config.MaxDischargeCurrent:F0}A limit",
+            Fire("oc_dsg", "Alert_OvercurrentTitle", "Alert_DischargeCurrentBody",
+                [Math.Abs(data.Current), config.MaxDischargeCurrent],
                 AlertSeverity.Alert);
 
         // Temperatures
@@ -116,29 +116,29 @@ public class NotificationService
         {
             double t = temps[i];
             if (t >= config.OverTempCutoff)
-                Fire($"otc_{i}", "BMS - Temperature Critical",
-                    $"Sensor {i + 1} at {t:F0}°C — exceeds {config.OverTempCutoff:F0}°C cutoff",
+                Fire($"otc_{i}", "Alert_TempCriticalTitle", "Alert_TempCriticalBody",
+                    [i + 1, t, config.OverTempCutoff],
                     AlertSeverity.Alert);
             else if (t >= config.OverTempWarning)
-                Fire($"otw_{i}", "BMS - Temperature Warning",
-                    $"Sensor {i + 1} at {t:F0}°C — exceeds {config.OverTempWarning:F0}°C warning",
+                Fire($"otw_{i}", "Alert_TempWarningTitle", "Alert_TempWarningBody",
+                    [i + 1, t, config.OverTempWarning],
                     AlertSeverity.Warning);
         }
 
         // Cell imbalance — uses the min/max we already computed above
         double delta = cellMax - cellMin;
         if (delta >= config.BalancingStartDelta)
-            Fire("imb", "BMS - Cell Imbalance",
-                $"Delta {delta * 1000:F1}mV — exceeds {config.BalancingStartDelta * 1000:F0}mV threshold",
+            Fire("imb", "Alert_ImbalanceTitle", "Alert_ImbalanceBody",
+                [delta * 1000, config.BalancingStartDelta * 1000],
                 AlertSeverity.Warning);
     }
 
-    private void Fire(string key, string title, string body,
+    private void Fire(string key, string titleKey, string bodyKey, object[] bodyArgs,
                       AlertSeverity severity = AlertSeverity.Alert)
     {
         if (!CanNotify(key)) return;
 
-        var rec = new AlertRecord(DateTime.Now, title, body, severity);
+        var rec = AlertRecord.Localized(DateTime.Now, titleKey, bodyKey, bodyArgs, severity);
         lock (_histLock)
         {
             if (_history.Count >= MaxHistory) _history.RemoveAt(0);
@@ -158,8 +158,8 @@ public class NotificationService
             string xml =
                 $"<toast{scenarioAttr}>" +
                   $"<visual><binding template='ToastGeneric'>" +
-                    $"<text>{Escape(title)}</text>" +
-                    $"<text>{Escape(body)}</text>" +
+                    $"<text>{Escape(rec.Title)}</text>" +
+                    $"<text>{Escape(rec.Body)}</text>" +
                   $"</binding></visual>" +
                 $"</toast>";
             AppNotificationManager.Default.Show(new AppNotification(xml));

@@ -27,7 +27,9 @@ public partial class MainViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(CurrentText))]
     [NotifyPropertyChangedFor(nameof(TimeToEmptyText))]
     private double _current;
-    [ObservableProperty] private string _packStatus = "—";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PackStatusText))]
+    private string _packStatus = "—";
 
     // --- Voltage summary ---
     [ObservableProperty][NotifyPropertyChangedFor(nameof(MinCellText))] private double _minCellVoltage;
@@ -39,9 +41,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty][NotifyPropertyChangedFor(nameof(BalancingText))] private int _balancingCount;
 
     // --- Connection ---
-    [ObservableProperty] private string _connectionStatus = "Not connected — open Control Panel to connect to the ESP32";
+    [ObservableProperty] private string _connectionStatus = LocalizationManager.Instance.Get("Ui_InitialConnectionHint");
     [ObservableProperty] private bool   _isConnected;
-    [ObservableProperty] private string _dataSourceText = "SOURCE: NOT CONNECTED";
+    [ObservableProperty] private string _dataSourceText = LocalizationManager.Instance.Get("Ui_SourceNotConnected");
 
     // --- Live data indicator ---
     [ObservableProperty] private bool _hasData;
@@ -218,13 +220,28 @@ public partial class MainViewModel : ObservableObject
         return h <= 0 ? $"{m}m" : $"{h}h {m}m";
     }
 
+    private static string LocalizePackStatus(string status)
+    {
+        var lang = LocalizationManager.Instance;
+        return status.Trim().ToLowerInvariant() switch
+        {
+            "idle" => lang.Get("PackStatus_Idle"),
+            "charging" or "charge" => lang.Get("PackStatus_Charging"),
+            "discharging" or "discharge" => lang.Get("PackStatus_Discharging"),
+            "full" => lang.Get("PackStatus_Full"),
+            "error" or "fault" => lang.Get("PackStatus_Error"),
+            _ => status,
+        };
+    }
+
     public string MinCellText     => HasData ? UnitFormatter.FormatVoltage(MinCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string MaxCellText     => HasData ? UnitFormatter.FormatVoltage(MaxCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string AvgCellText     => HasData ? UnitFormatter.FormatVoltage(AvgCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string DeltaText       => HasData ? UnitFormatter.FormatVoltageDelta(DeltaVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
+    public string PackStatusText  => LocalizePackStatus(PackStatus);
     public string BalancingText   => !HasData      ? "—"
-                                   : BalancingCount > 0 ? $"{BalancingCount} cells balancing"
-                                                        : "Not balancing";
+                                   : BalancingCount > 0 ? LocalizationManager.Instance.Format("Dash_BalancingCells", BalancingCount)
+                                                        : LocalizationManager.Instance.Get("Dash_NotBalancing");
 
     // --- Collections ---
     public ObservableCollection<CellViewModel> Cells        { get; } = new();
@@ -263,6 +280,7 @@ public partial class MainViewModel : ObservableObject
         ApplySettings(savedSettings);
         var savedBaud = Serial.Bitrates.FirstOrDefault(b => b.Baud == savedSettings.SerialBaud);
         AutoConnect.Start(savedBaud?.Baud ?? Serial.DefaultBitrate);
+        LocalizationManager.Instance.PropertyChanged += (_, _) => RefreshLocalizedText();
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1, VoltageUnit = VoltageUnit });
         for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit });
@@ -270,7 +288,8 @@ public partial class MainViewModel : ObservableObject
         // Live data — skip if a playback file is loaded (don't overwrite review data).
         Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
         Serial.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnSerialStatus(msg));
-        Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() => ConnectionStatus = "Error: " + msg);
+        Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() =>
+            ConnectionStatus = LocalizationManager.Instance.Format("Ui_ErrorWithMessage", msg));
 
         // Playback frames feed through the same pipeline as live data
         // (the chart history is pre-populated by FileLoaded, so ApplyData
@@ -304,6 +323,38 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(MaxCellText));
         OnPropertyChanged(nameof(AvgCellText));
         OnPropertyChanged(nameof(DeltaText));
+    }
+
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(TimeToEmptyText));
+        OnPropertyChanged(nameof(BalancingText));
+        OnPropertyChanged(nameof(PackStatusText));
+
+        DataSourceText = Serial.IsConnected
+            ? LocalizationManager.Instance.Format("Ui_SourceConnected", Serial.ChannelName, Serial.BitrateText)
+            : LocalizationManager.Instance.Get("Ui_SourceNotConnected");
+
+        if (Serial.IsConnected)
+        {
+            ConnectionStatus = LocalizationManager.Instance.Format(
+                "Serial_StatusConnected",
+                Serial.ChannelName,
+                Serial.Bitrate);
+        }
+        else if (!IsConnected)
+        {
+            ConnectionStatus = LocalizationManager.Instance.Get("Ui_InitialConnectionHint");
+        }
+
+        foreach (var column in LogColumns)
+            column.RefreshLocalization();
+
+        foreach (var cell in Cells)
+            cell.RefreshLocalization();
+
+        foreach (var temp in Temperatures)
+            temp.RefreshLocalization();
     }
 
     public void SetTemperatureUnit(string unit)
@@ -343,11 +394,11 @@ public partial class MainViewModel : ObservableObject
 
         if (Serial.IsConnected)
         {
-            DataSourceText = $"SOURCE: {Serial.ChannelName} @ {Serial.BitrateText}";
+            DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Serial.ChannelName, Serial.BitrateText);
         }
         else
         {
-            DataSourceText = "SOURCE: NOT CONNECTED";
+            DataSourceText = LocalizationManager.Instance.Get("Ui_SourceNotConnected");
             HasData        = false;   // last frame stays in fields, but UI shows "—"
         }
     }

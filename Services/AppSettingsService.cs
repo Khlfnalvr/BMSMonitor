@@ -36,6 +36,9 @@ public class AppSettings
     public bool   ShowNav_ControlPanel   { get; set; } = true;
     public bool   ShowNav_Logging        { get; set; } = true;
     public bool   ShowNav_Playback       { get; set; } = true;
+
+    // UI zoom level (1.0 = 100%). Adjusted via the Zoom menu / Ctrl +/-/0.
+    public double ZoomLevel              { get; set; } = 1.0;
 }
 
 public static class AppSettingsService
@@ -43,6 +46,9 @@ public static class AppSettingsService
     private static readonly string _path = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "BMSMonitor", "settings.json");
+
+    public static string FilePath   => _path;
+    public static string FolderPath => Path.GetDirectoryName(_path)!;
 
     private static readonly JsonSerializerOptions _opts =
         new() { WriteIndented = true };
