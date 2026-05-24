@@ -207,6 +207,7 @@ public sealed partial class CellViewPage : Page
         _tsCache = ViewModel.GetTimestamps();
         string unit = RedrawTempChart();
         UpdateTempXAxisLabels(unit);
+        UpdateTrimBar();
         _tsCache = null;
     }
 
@@ -214,6 +215,7 @@ public sealed partial class CellViewPage : Page
     {
         _filterStart = null;
         _filterEnd = null;
+        UpdateTrimBar();
     }
 
     private DateTime[] GetCachedTimestamps() => _tsCache ?? ViewModel.GetTimestamps();
@@ -1122,5 +1124,175 @@ public sealed partial class CellViewPage : Page
             _cellPopupOpen = false;
             System.Diagnostics.Debug.WriteLine($"Cell chart flyout failed: {ex}");
         }
+    }
+
+    // ── Trim bar (drives the Temperature History chart's _filterStart/_filterEnd) ──
+    private bool _draggingStart;
+    private bool _draggingEnd;
+
+    private void TrimCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
+        => UpdateTrimBar();
+
+    private void StartThumb_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        _draggingStart = true;
+        StartThumb.CapturePointer(e.Pointer);
+    }
+
+    private void EndThumb_PointerPressed(object sender, PointerRoutedEventArgs e)
+    {
+        _draggingEnd = true;
+        EndThumb.CapturePointer(e.Pointer);
+    }
+
+    private void Thumb_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (!_draggingStart && !_draggingEnd) return;
+
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest   = ViewModel.LatestTimestamp;
+        if (earliest is null || latest is null || earliest == latest) return;
+
+        double w = TrimCanvas.ActualWidth;
+        if (w <= 0) return;
+
+        double xCanvas = e.GetCurrentPoint(TrimCanvas).Position.X;
+        xCanvas = Math.Clamp(xCanvas, 0, w);
+
+        var ts = XToTimestamp(xCanvas, earliest.Value, latest.Value, w);
+
+        if (_draggingStart)
+        {
+            var endTs = _filterEnd ?? latest.Value;
+            if (ts >= endTs) ts = endTs.AddSeconds(-1);
+            _filterStart = ts;
+        }
+        else if (_draggingEnd)
+        {
+            var startTs = _filterStart ?? earliest.Value;
+            if (ts <= startTs) ts = startTs.AddSeconds(1);
+            _filterEnd = ts;
+        }
+
+        UpdateTrimBar();
+        RedrawTempChart();
+    }
+
+    private void Thumb_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (_draggingStart)
+        {
+            var earliest = ViewModel.EarliestTimestamp;
+            if (earliest is not null && _filterStart is not null &&
+                (_filterStart.Value - earliest.Value).TotalSeconds < 1)
+                _filterStart = null;
+            StartThumb.ReleasePointerCapture(e.Pointer);
+        }
+        if (_draggingEnd)
+        {
+            var latest = ViewModel.LatestTimestamp;
+            if (latest is not null && _filterEnd is not null &&
+                (latest.Value - _filterEnd.Value).TotalSeconds < 1)
+                _filterEnd = null;
+            EndThumb.ReleasePointerCapture(e.Pointer);
+        }
+        _draggingStart = false;
+        _draggingEnd   = false;
+
+        UpdateTrimBar();
+        RedrawTempChart();
+    }
+
+    private void ResetTrim_Click(object sender, RoutedEventArgs e)
+    {
+        _filterStart = null;
+        _filterEnd   = null;
+        UpdateTrimBar();
+        RedrawTempChart();
+    }
+
+    private void UpdateTrimBar()
+    {
+        if (TrimCanvas is null) return;
+
+        double w = TrimCanvas.ActualWidth;
+        if (w <= 0) return;
+
+        TrimTrack.Width = w;
+        Canvas.SetLeft(TrimTrack, 0);
+
+        var earliest = ViewModel.EarliestTimestamp;
+        var latest   = ViewModel.LatestTimestamp;
+
+        bool noData = earliest is null || latest is null || earliest == latest;
+
+        StartThumb.IsHitTestVisible = !noData;
+        EndThumb.IsHitTestVisible   = !noData;
+        ResetTrimBtn.IsEnabled      = _filterStart.HasValue || _filterEnd.HasValue;
+
+        if (noData)
+        {
+            DataStartLabel.Text = "—";
+            DataEndLabel.Text   = "—";
+            TrimRangeText.Text  = "No data captured yet";
+            Canvas.SetLeft(StartThumb, 0);
+            Canvas.SetLeft(EndThumb,   Math.Max(0, w - EndThumb.Width));
+            Canvas.SetLeft(TrimSelection, 0);
+            TrimSelection.Width = 0;
+            return;
+        }
+
+        DataStartLabel.Text = "00:00:00";
+        DataEndLabel.Text   = FormatElapsedSpan(latest!.Value - earliest!.Value);
+
+        var trimStart = _filterStart ?? earliest.Value;
+        var trimEnd   = _filterEnd   ?? latest.Value;
+
+        double startX = TimestampToX(trimStart, earliest.Value, latest.Value, w);
+        double endX   = TimestampToX(trimEnd,   earliest.Value, latest.Value, w);
+
+        Canvas.SetLeft(StartThumb, startX - StartThumb.Width / 2);
+        Canvas.SetLeft(EndThumb,   endX   - EndThumb.Width   / 2);
+
+        Canvas.SetLeft(TrimSelection, startX);
+        TrimSelection.Width = Math.Max(0, endX - startX);
+
+        TimeSpan trimStartElapsed = trimStart - earliest.Value;
+        TimeSpan trimEndElapsed   = trimEnd   - earliest.Value;
+        TimeSpan duration         = trimEnd   - trimStart;
+
+        string durStr = duration.TotalHours    >= 1 ? $"{duration.TotalHours:0.#} h"
+                      : duration.TotalMinutes  >= 1 ? $"{duration.TotalMinutes:0.#} min"
+                      :                                $"{duration.TotalSeconds:0} s";
+
+        string startStr = FormatElapsedSpan(trimStartElapsed);
+        string endStr   = FormatElapsedSpan(trimEndElapsed);
+
+        TrimRangeText.Text = (_filterStart.HasValue || _filterEnd.HasValue)
+            ? $"Trim: {startStr} → {endStr}  ·  {durStr}"
+            : $"Full range: {startStr} → {endStr}  ·  {durStr}  (drag a handle to trim)";
+    }
+
+    private static string FormatElapsedSpan(TimeSpan ts)
+    {
+        if (ts.Ticks < 0) ts = TimeSpan.Zero;
+        int hours = (int)Math.Floor(ts.TotalHours);
+        return $"{hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
+    }
+
+    private static double TimestampToX(DateTime t, DateTime earliest, DateTime latest, double w)
+    {
+        double totalSec = (latest - earliest).TotalSeconds;
+        if (totalSec <= 0) return 0;
+        double frac = (t - earliest).TotalSeconds / totalSec;
+        return Math.Clamp(frac, 0, 1) * w;
+    }
+
+    private static DateTime XToTimestamp(double x, DateTime earliest, DateTime latest, double w)
+    {
+        if (w <= 0) return earliest;
+        double frac = Math.Clamp(x / w, 0, 1);
+        double totalSec = (latest - earliest).TotalSeconds;
+        return earliest.AddSeconds(frac * totalSec);
     }
 }

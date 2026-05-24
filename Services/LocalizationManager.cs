@@ -137,6 +137,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Dash_StateOfCharge    => T(nameof(Dash_StateOfCharge));
     public string Dash_Remaining        => T(nameof(Dash_Remaining));
     public string Dash_RemainingSub     => T(nameof(Dash_RemainingSub));
+    public string Dash_SubToEmpty       => T(nameof(Dash_SubToEmpty));
+    public string Dash_SubToFull        => T(nameof(Dash_SubToFull));
+    public string Dash_SubIdle          => T(nameof(Dash_SubIdle));
     public string Dash_Current          => T(nameof(Dash_Current));
     public string Dash_CurrentSub       => T(nameof(Dash_CurrentSub));
     public string Dash_PackConfig       => T(nameof(Dash_PackConfig));
@@ -331,6 +334,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_StateOfCharge)]    = "STATE OF CHARGE",
             [nameof(Dash_Remaining)]        = "REMAINING",
             [nameof(Dash_RemainingSub)]     = "based on SOC × capacity",
+            [nameof(Dash_SubToEmpty)]       = "{0} to empty",
+            [nameof(Dash_SubToFull)]        = "{0} to full",
+            [nameof(Dash_SubIdle)]          = "idle",
             [nameof(Dash_Current)]          = "CURRENT",
             [nameof(Dash_CurrentSub)]       = "+ = charging  − = discharging",
             [nameof(Dash_PackConfig)]       = "20S4P NMC",
@@ -513,6 +519,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_StateOfCharge)]    = "STATUS PENGISIAN",
             [nameof(Dash_Remaining)]        = "SISA",
             [nameof(Dash_RemainingSub)]     = "berdasarkan SOC × kapasitas",
+            [nameof(Dash_SubToEmpty)]       = "{0} menuju habis",
+            [nameof(Dash_SubToFull)]        = "{0} menuju penuh",
+            [nameof(Dash_SubIdle)]          = "siaga",
             [nameof(Dash_Current)]          = "ARUS",
             [nameof(Dash_CurrentSub)]       = "+ = mengisi  − = mengosongkan",
             [nameof(Dash_PackConfig)]       = "20S4P NMC",
@@ -695,6 +704,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_StateOfCharge)]    = "STATUS CAS",
             [nameof(Dash_Remaining)]        = "SISA",
             [nameof(Dash_RemainingSub)]     = "berdasarkan SOC × kapasiti",
+            [nameof(Dash_SubToEmpty)]       = "{0} hingga kosong",
+            [nameof(Dash_SubToFull)]        = "{0} hingga penuh",
+            [nameof(Dash_SubIdle)]          = "siaga",
             [nameof(Dash_Current)]          = "ARUS",
             [nameof(Dash_CurrentSub)]       = "+ = mengecas  − = nyahcas",
             [nameof(Dash_PackConfig)]       = "20S4P NMC",
@@ -877,6 +889,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_StateOfCharge)]    = "LAADTOESTAND",
             [nameof(Dash_Remaining)]        = "RESTEREND",
             [nameof(Dash_RemainingSub)]     = "gebaseerd op SOC × capaciteit",
+            [nameof(Dash_SubToEmpty)]       = "nog {0} tot leeg",
+            [nameof(Dash_SubToFull)]        = "nog {0} tot vol",
+            [nameof(Dash_SubIdle)]          = "inactief",
             [nameof(Dash_Current)]          = "STROOM",
             [nameof(Dash_CurrentSub)]       = "+ = laden  − = ontladen",
             [nameof(Dash_PackConfig)]       = "20S4P NMC",
@@ -1059,6 +1074,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Dash_StateOfCharge)]    = "电量状态",
             [nameof(Dash_Remaining)]        = "剩余",
             [nameof(Dash_RemainingSub)]     = "基于 SOC × 容量",
+            [nameof(Dash_SubToEmpty)]       = "剩余 {0}",
+            [nameof(Dash_SubToFull)]        = "充满需 {0}",
+            [nameof(Dash_SubIdle)]          = "空闲",
             [nameof(Dash_Current)]          = "电流",
             [nameof(Dash_CurrentSub)]       = "+ = 充电  − = 放电",
             [nameof(Dash_PackConfig)]       = "20S4P NMC",

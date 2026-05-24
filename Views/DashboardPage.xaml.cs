@@ -65,12 +65,25 @@ public sealed partial class DashboardPage : Page
         RefreshUnitLabels();
         UpdateXAxisLabels();
 
+        // Stretch the chart row to fill the viewport.
+        //
+        // Star sizing (RowDefinition Height="*") does NOT work inside a
+        // ScrollViewer because the viewport hands the child infinite
+        // available height — star rows then degenerate to auto-sized
+        // content, leaving dead space below. The fix is to compute the
+        // remaining height explicitly and push it onto the chart cards every
+        // time the viewport or top section resizes.
+        DashboardScroller.SizeChanged += (_, _) => SyncChartRowHeight();
+        DashboardScroller.ViewChanged += (_, _) => SyncChartRowHeight();
+        LayoutUpdated += (_, _) => SyncChartRowHeight();
+
         Loaded   += (_, _) =>
         {
             ViewModel.HistoryUpdated += OnHistoryUpdated;
             ViewModel.HistoryReset   += OnHistoryReset;
             App.Notifications.AlertFired += OnDashboardAlertFired;
             RefreshDashboardAlerts();
+            SyncChartRowHeight();
         };
         Unloaded += (_, _) =>
         {
@@ -78,6 +91,61 @@ public sealed partial class DashboardPage : Page
             ViewModel.HistoryReset   -= OnHistoryReset;
             App.Notifications.AlertFired -= OnDashboardAlertFired;
         };
+    }
+
+    // Floor for each chart card, in pixels. Below this we keep the natural
+    // chart size and let the dashboard scroll.
+    private const double ChartCardMinFloor = 280;
+    // DashboardRoot padding + row gap + chart section header gap.
+    private const double ChartViewportChromeHeight = 16 + 16 + 8 + 6;
+    // A little breathing room avoids a 1-2 px overflow from layout rounding,
+    // which otherwise makes the ScrollViewer show a bar on maximized windows.
+    private const double ChartScrollbarSlack = 10;
+
+    private void SyncChartRowHeight()
+    {
+        if (DashboardTopGrid is null || SocChartCard is null || VIChartCard is null) return;
+        bool sideBySide = ChartsGrid?.ActualWidth >= 1100;
+        ChartsRow0.Height = new GridLength(1, GridUnitType.Star);
+        ChartsRow1.Height = sideBySide
+            ? new GridLength(0)
+            : new GridLength(1, GridUnitType.Star);
+
+        double pageHeight = GetPageViewportHeight();
+        if (pageHeight <= 0) return;
+
+        double topH = DashboardTopGrid.ActualHeight;
+        if (topH <= 0) return;
+
+        double headerH = Math.Max(SaveSocBtn?.ActualHeight ?? 0, SaveViBtn?.ActualHeight ?? 0);
+        if (headerH <= 0) headerH = 28;
+
+        double available = pageHeight - topH - headerH - ChartViewportChromeHeight;
+        bool needsScroll = !sideBySide || available < ChartCardMinFloor;
+        double target = needsScroll
+            ? ChartCardMinFloor
+            : Math.Max(ChartCardMinFloor, available - ChartScrollbarSlack);
+
+        DashboardScroller.VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
+
+        if (Math.Abs(SocChartCard.MinHeight - target) > 0.5)
+            SocChartCard.MinHeight = target;
+        if (Math.Abs(VIChartCard.MinHeight - target) > 0.5)
+            VIChartCard.MinHeight = target;
+    }
+
+    private double GetPageViewportHeight()
+    {
+        DependencyObject? node = this;
+        while ((node = VisualTreeHelper.GetParent(node)) is not null)
+        {
+            if (node is Frame frame && frame.ActualHeight > 0)
+                return frame.ActualHeight;
+        }
+
+        if (ActualHeight > 0) return ActualHeight;
+        if (DashboardScroller?.ActualHeight > 0) return DashboardScroller.ActualHeight;
+        return 0;
     }
 
     private void RefreshDashboardAlerts()
@@ -215,7 +283,6 @@ public sealed partial class DashboardPage : Page
         string socUnit  = RedrawSocChart();
         string viUnit   = RedrawVIChart();
         UpdateXAxisLabels(socUnit, viUnit);
-        UpdateTrimBar();
         _tsCache = null;
     }
 
@@ -1228,193 +1295,4 @@ public sealed partial class DashboardPage : Page
             .Replace(">",  "&gt;")
             .Replace("\"", "&quot;");
 
-    // ── Trim bar (video-editor style time range selector) ─────────────────
-    // Two draggable handles set the visible time window; the charts re-render
-    // to the selected range. Reset returns to the rolling-window mode.
-
-    private bool _draggingStart;
-    private bool _draggingEnd;
-
-    private void TrimCanvas_SizeChanged(object sender, SizeChangedEventArgs e)
-        => UpdateTrimBar();
-
-    private void StartThumb_PointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        _draggingStart = true;
-        StartThumb.CapturePointer(e.Pointer);
-    }
-
-    private void EndThumb_PointerPressed(object sender, PointerRoutedEventArgs e)
-    {
-        _draggingEnd = true;
-        EndThumb.CapturePointer(e.Pointer);
-    }
-
-    private void Thumb_PointerMoved(object sender, PointerRoutedEventArgs e)
-    {
-        if (!_draggingStart && !_draggingEnd) return;
-
-        var earliest = ViewModel.EarliestTimestamp;
-        var latest   = ViewModel.LatestTimestamp;
-        if (earliest is null || latest is null || earliest == latest) return;
-
-        double w = TrimCanvas.ActualWidth;
-        if (w <= 0) return;
-
-        double xCanvas = e.GetCurrentPoint(TrimCanvas).Position.X;
-        xCanvas = Math.Clamp(xCanvas, 0, w);
-
-        var ts = XToTimestamp(xCanvas, earliest.Value, latest.Value, w);
-
-        if (_draggingStart)
-        {
-            var endTs = _filterEnd ?? latest.Value;
-            if (ts >= endTs) ts = endTs.AddSeconds(-1);
-            _filterStart = ts;
-        }
-        else if (_draggingEnd)
-        {
-            var startTs = _filterStart ?? earliest.Value;
-            if (ts <= startTs) ts = startTs.AddSeconds(1);
-            _filterEnd = ts;
-        }
-
-        UpdateTrimBar();
-        RedrawSocChart();
-        RedrawVIChart();
-    }
-
-    private void Thumb_PointerReleased(object sender, PointerRoutedEventArgs e)
-    {
-        if (_draggingStart)
-        {
-            // Snap to "no trim at start" if dropped at the leftmost edge
-            var earliest = ViewModel.EarliestTimestamp;
-            if (earliest is not null && _filterStart is not null &&
-                (_filterStart.Value - earliest.Value).TotalSeconds < 1)
-                _filterStart = null;
-            StartThumb.ReleasePointerCapture(e.Pointer);
-        }
-        if (_draggingEnd)
-        {
-            var latest = ViewModel.LatestTimestamp;
-            if (latest is not null && _filterEnd is not null &&
-                (latest.Value - _filterEnd.Value).TotalSeconds < 1)
-                _filterEnd = null;
-            EndThumb.ReleasePointerCapture(e.Pointer);
-        }
-        _draggingStart = false;
-        _draggingEnd   = false;
-
-        UpdateTrimBar();
-        RedrawSocChart();
-        RedrawVIChart();
-    }
-
-    private void ResetTrim_Click(object sender, RoutedEventArgs e)
-    {
-        _filterStart = null;
-        _filterEnd   = null;
-        UpdateTrimBar();
-        RedrawSocChart();
-        RedrawVIChart();
-    }
-
-    /// <summary>
-    /// Repositions the trim track, selection, and handles based on the current
-    /// data range (earliest..latest) and active filter (_filterStart/_filterEnd).
-    /// </summary>
-    private void UpdateTrimBar()
-    {
-        if (TrimCanvas is null) return;
-
-        double w = TrimCanvas.ActualWidth;
-        if (w <= 0) return;
-
-        // Track always spans the full canvas
-        TrimTrack.Width = w;
-        Canvas.SetLeft(TrimTrack, 0);
-
-        var earliest = ViewModel.EarliestTimestamp;
-        var latest   = ViewModel.LatestTimestamp;
-
-        bool noData = earliest is null || latest is null || earliest == latest;
-
-        // Disable interaction when there's no usable range
-        StartThumb.IsHitTestVisible = !noData;
-        EndThumb.IsHitTestVisible   = !noData;
-        ResetTrimBtn.IsEnabled      = _filterStart.HasValue || _filterEnd.HasValue;
-
-        if (noData)
-        {
-            DataStartLabel.Text = "—";
-            DataEndLabel.Text   = "—";
-            TrimRangeText.Text  = "No data captured yet";
-            // Park handles at extremes
-            Canvas.SetLeft(StartThumb, 0);
-            Canvas.SetLeft(EndThumb,   Math.Max(0, w - EndThumb.Width));
-            Canvas.SetLeft(TrimSelection, 0);
-            TrimSelection.Width = 0;
-            return;
-        }
-
-        // Elapsed time = offset from the very first sample of the session
-        // (first sample = 00:00:00, last sample = total elapsed duration)
-        DataStartLabel.Text = "00:00:00";
-        DataEndLabel.Text   = FormatElapsed(latest!.Value - earliest!.Value);
-
-        var trimStart = _filterStart ?? earliest.Value;
-        var trimEnd   = _filterEnd   ?? latest.Value;
-
-        double startX = TimestampToX(trimStart, earliest.Value, latest.Value, w);
-        double endX   = TimestampToX(trimEnd,   earliest.Value, latest.Value, w);
-
-        // Center the thumbs on their target X
-        Canvas.SetLeft(StartThumb, startX - StartThumb.Width / 2);
-        Canvas.SetLeft(EndThumb,   endX   - EndThumb.Width   / 2);
-
-        // Selection highlight between the two handles
-        Canvas.SetLeft(TrimSelection, startX);
-        TrimSelection.Width = Math.Max(0, endX - startX);
-
-        // Status line uses elapsed time relative to session start
-        TimeSpan trimStartElapsed = trimStart - earliest.Value;
-        TimeSpan trimEndElapsed   = trimEnd   - earliest.Value;
-        TimeSpan duration         = trimEnd   - trimStart;
-
-        string durStr = duration.TotalHours    >= 1 ? $"{duration.TotalHours:0.#} h"
-                      : duration.TotalMinutes  >= 1 ? $"{duration.TotalMinutes:0.#} min"
-                      :                                $"{duration.TotalSeconds:0} s";
-
-        string startStr = FormatElapsed(trimStartElapsed);
-        string endStr   = FormatElapsed(trimEndElapsed);
-
-        TrimRangeText.Text = (_filterStart.HasValue || _filterEnd.HasValue)
-            ? $"Trim: {startStr} → {endStr}  ·  {durStr}"
-            : $"Full range: {startStr} → {endStr}  ·  {durStr}  (drag a handle to trim)";
-    }
-
-    /// <summary>Formats a duration as HH:MM:SS, where 00:00:00 = first sample.</summary>
-    private static string FormatElapsed(TimeSpan ts)
-    {
-        if (ts.Ticks < 0) ts = TimeSpan.Zero;
-        int hours = (int)Math.Floor(ts.TotalHours);
-        return $"{hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
-    }
-
-    private static double TimestampToX(DateTime t, DateTime earliest, DateTime latest, double w)
-    {
-        double totalSec = (latest - earliest).TotalSeconds;
-        if (totalSec <= 0) return 0;
-        double frac = (t - earliest).TotalSeconds / totalSec;
-        return Math.Clamp(frac, 0, 1) * w;
-    }
-
-    private static DateTime XToTimestamp(double x, DateTime earliest, DateTime latest, double w)
-    {
-        if (w <= 0) return earliest;
-        double frac = Math.Clamp(x / w, 0, 1);
-        double totalSec = (latest - earliest).TotalSeconds;
-        return earliest.AddSeconds(frac * totalSec);
-    }
 }

@@ -22,13 +22,15 @@ public partial class App : Application
     {
         try
         {
+            // Register BEFORE creating the window so the AUMID + Start-menu
+            // shortcut exist by the time the first data frame fires a toast.
+            // Without this, the very first critical alert can be dropped.
+            Notifications.Register();
+
             CurrentWindow = new MainWindow();
             ViewModel = CurrentWindow.ViewModel;
             CurrentWindow.Activate();
             CurrentWindow.MaximizeOnLaunch();
-
-            // Register for Windows toast notifications (creates Start menu shortcut)
-            Notifications.Register();
         }
         catch (Exception ex)
         {

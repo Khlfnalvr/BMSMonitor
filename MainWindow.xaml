@@ -208,36 +208,32 @@
                                        FontSize="12"
                                        Text="{x:Bind Lang.Ui_Menu_About, Mode=OneWay}">
                         <MenuFlyoutItem FontSize="12"
+                                        IsHitTestVisible="False"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind AboutProductText, Mode=OneWay}"/>
                         <MenuFlyoutItem FontSize="12"
+                                        IsHitTestVisible="False"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind AboutVersionText, Mode=OneWay}"/>
                         <MenuFlyoutItem FontSize="12"
+                                        IsHitTestVisible="False"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind AboutLicenseText, Mode=OneWay}"/>
                         <MenuFlyoutItem FontSize="12"
+                                        IsHitTestVisible="False"
+                                        Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                         Text="{x:Bind AboutCopyrightText, Mode=OneWay}"/>
-                        <MenuFlyoutSeparator/>
-                        <MenuFlyoutItem FontSize="12"
-                                        Text="{x:Bind AboutDescriptionText, Mode=OneWay}"/>
                     </MenuFlyoutSubItem>
                     <MenuFlyoutSeparator/>
                     <MenuFlyoutItem x:Name="MenuTour"
                                     FontSize="12"
                                     Text="{x:Bind Lang.Ui_Menu_Tour, Mode=OneWay}"
-                                    Click="MenuTour_Click">
-                        <MenuFlyoutItem.Icon>
-                            <SymbolIcon Symbol="Help"/>
-                        </MenuFlyoutItem.Icon>
-                    </MenuFlyoutItem>
+                                    Click="MenuTour_Click"/>
                     <MenuFlyoutSeparator/>
                     <MenuFlyoutItem x:Name="MenuRefreshApp"
                                     FontSize="12"
                                     Text="{x:Bind Lang.Ui_Menu_RefreshApp, Mode=OneWay}"
-                                    Click="RefreshApp_Click">
-                        <MenuFlyoutItem.Icon>
-                            <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
-                                      Glyph="&#xE72C;"/>
-                        </MenuFlyoutItem.Icon>
-                    </MenuFlyoutItem>
+                                    Click="RefreshApp_Click"/>
                 </MenuFlyout>
             </Border.ContextFlyout>
         </Border>

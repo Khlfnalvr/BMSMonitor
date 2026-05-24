@@ -33,15 +33,10 @@ public sealed partial class MainWindow : Window
         ?? typeof(App).Assembly.GetName().Version?.ToString(3)
         ?? "1.6.0";
 
-    private static string AppDescription =>
-        typeof(App).Assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description
-        ?? "BMS Monitor - Cell voltages, SOC, temperatures & balancing";
-
     private string AboutProductText => $"{Lang.Ui_About_Product}: {AppProductName}";
     private string AboutVersionText => $"{Lang.Ui_About_Version}: {AppVersion}";
     private string AboutLicenseText => $"{Lang.Ui_About_License}: ICO Laboratory proprietary license";
     private string AboutCopyrightText => $"{Lang.Ui_About_Copyright}: (C) 2026 ICO Laboratory";
-    private string AboutDescriptionText => AppDescription;
 
     public ObservableCollection<AlertRecord> AlertHistory { get; } = new();
     private int _unreadAlerts = 0;
@@ -931,6 +926,11 @@ public sealed partial class MainWindow : Window
     private void InitAlertFlyout()
     {
         App.Notifications.AlertFired += OnAlertFired;
+        // Flash the taskbar (FlashWindowEx) on Error/Alert severity so a
+        // minimized or background window still draws the user's eye even if
+        // the Action Center toast is dismissed or suppressed by Focus Assist.
+        App.Notifications.CriticalAlertFired += _ =>
+            DispatcherQueue.TryEnqueue(FlashTaskbarForCriticalAlert);
         NoAlertsText.Visibility = Visibility.Visible;
 
         // Route serial errors (parse failures, port errors) to the alert history.
@@ -1130,6 +1130,24 @@ public sealed partial class MainWindow : Window
         ViewModel.Serial.Connect(channel, bitrate);
     }
 
+    // Flash the taskbar button (and caption when foreground) until the user
+    // brings the window forward. Intentionally does NOT restore a minimized
+    // window — the toast already surfaced the alert; flashing is the gentler
+    // attention cue when toasts are suppressed.
+    private void FlashTaskbarForCriticalAlert()
+    {
+        if (_hwnd == IntPtr.Zero) return;
+        var info = new FLASHWINFO
+        {
+            cbSize    = (uint)Marshal.SizeOf<FLASHWINFO>(),
+            hwnd      = _hwnd,
+            dwFlags   = FLASHW_ALL | FLASHW_TIMERNOFG,
+            uCount    = 0,
+            dwTimeout = 0,
+        };
+        FlashWindowEx(ref info);
+    }
+
     private const int GWLP_WNDPROC = -4;
     private const uint WM_GETMINMAXINFO = 0x0024;
     private const uint WM_NCRBUTTONDOWN = 0x00A4;
@@ -1137,6 +1155,12 @@ public sealed partial class MainWindow : Window
     private const uint WM_CONTEXTMENU = 0x007B;
     private const int HTCAPTION = 2;
     private const uint MONITOR_DEFAULTTONEAREST = 0x00000002;
+
+    // FlashWindowEx flags
+    private const uint FLASHW_CAPTION    = 0x00000001;
+    private const uint FLASHW_TRAY       = 0x00000002;
+    private const uint FLASHW_ALL        = FLASHW_CAPTION | FLASHW_TRAY;
+    private const uint FLASHW_TIMERNOFG  = 0x0000000C;
 
     private delegate IntPtr WndProcDelegate(
         IntPtr hWnd,
@@ -1203,5 +1227,19 @@ public sealed partial class MainWindow : Window
         public RECT rcMonitor;
         public RECT rcWork;
         public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FlashWindowEx(ref FLASHWINFO pwfi);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct FLASHWINFO
+    {
+        public uint cbSize;
+        public IntPtr hwnd;
+        public uint dwFlags;
+        public uint uCount;
+        public uint dwTimeout;
     }
 }

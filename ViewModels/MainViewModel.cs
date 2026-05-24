@@ -18,8 +18,15 @@ public partial class MainViewModel : ObservableObject
 
     // --- Pack level ---
     [ObservableProperty][NotifyPropertyChangedFor(nameof(PackVoltageText))] private double _packVoltage;
-    [ObservableProperty][NotifyPropertyChangedFor(nameof(SocText))][NotifyPropertyChangedFor(nameof(RemainingCapacityText))] private double _soc;
-    [ObservableProperty][NotifyPropertyChangedFor(nameof(CurrentText))]     private double _current;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SocText))]
+    [NotifyPropertyChangedFor(nameof(RemainingCapacityText))]
+    [NotifyPropertyChangedFor(nameof(TimeToEmptyText))]
+    private double _soc;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CurrentText))]
+    [NotifyPropertyChangedFor(nameof(TimeToEmptyText))]
+    private double _current;
     [ObservableProperty] private string _packStatus = "—";
 
     // --- Voltage summary ---
@@ -164,6 +171,53 @@ public partial class MainViewModel : ObservableObject
                                          : Current >= 0 ? $"+{Current:F2} A" : $"{Current:F2} A";
     public string RemainingCapacityText => !HasData ? UnitFormatter.MissingWithUnit(CapacitySymbol)
                                          : UnitFormatter.FormatCapacityFromAh(Soc / 100.0 * Config.NominalCapacityAh, CapacityUnit);
+
+    // Sub-text on the Remaining card: estimated time-to-empty (discharging) or
+    // time-to-full (charging), computed from instantaneous current and the
+    // remaining/headroom Ah. Falls back to "idle" near zero current.
+    public string TimeToEmptyText
+    {
+        get
+        {
+            if (!HasData) return "—";
+
+            const double idleThresholdA = 0.05;
+            var lang = LocalizationManager.Instance;
+
+            if (Math.Abs(Current) < idleThresholdA)
+                return lang.Dash_SubIdle;
+
+            double hours;
+            string template;
+            if (Current > 0)
+            {
+                double headroomAh = (1.0 - Soc / 100.0) * Config.NominalCapacityAh;
+                if (headroomAh <= 0) return lang.Dash_SubIdle;
+                hours = headroomAh / Current;
+                template = lang.Dash_SubToFull;
+            }
+            else
+            {
+                double remainingAh = (Soc / 100.0) * Config.NominalCapacityAh;
+                if (remainingAh <= 0) return lang.Dash_SubIdle;
+                hours = remainingAh / Math.Abs(Current);
+                template = lang.Dash_SubToEmpty;
+            }
+
+            return string.Format(template, FormatDuration(hours));
+        }
+    }
+
+    private static string FormatDuration(double hours)
+    {
+        if (double.IsNaN(hours) || double.IsInfinity(hours) || hours >= 99.0)
+            return ">99h";
+        int totalMinutes = (int)Math.Round(hours * 60.0);
+        int h = totalMinutes / 60;
+        int m = totalMinutes % 60;
+        return h <= 0 ? $"{m}m" : $"{h}h {m}m";
+    }
+
     public string MinCellText     => HasData ? UnitFormatter.FormatVoltage(MinCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string MaxCellText     => HasData ? UnitFormatter.FormatVoltage(MaxCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
     public string AvgCellText     => HasData ? UnitFormatter.FormatVoltage(AvgCellVoltage, VoltageUnit) : UnitFormatter.MissingWithUnit(VoltageSymbol);
@@ -240,6 +294,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(CurrentText));
         OnPropertyChanged(nameof(BalancingText));
         OnPropertyChanged(nameof(RemainingCapacityText));
+        OnPropertyChanged(nameof(TimeToEmptyText));
     }
 
     private void NotifyVoltageTextProperties()

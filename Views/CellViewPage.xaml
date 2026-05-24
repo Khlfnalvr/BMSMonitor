@@ -208,6 +208,37 @@
                 </ItemsRepeater.ItemTemplate>
             </ItemsRepeater>
 
+            <!-- Thresholds + color legend — sits right under the NTC tiles
+                 so the reference info is adjacent to the sensors it describes. -->
+            <Border Style="{StaticResource CardStyle}" Margin="0,4,0,0">
+                <Grid ColumnSpacing="40">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Cell_Thresholds, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_ThreshWarn, Mode=OneWay}" FontSize="13"/>
+                        <TextBlock Text="{x:Bind Lang.Cell_ThreshCutoff, Mode=OneWay}" FontSize="13"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Text="{x:Bind Lang.Cell_Legend, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind Lang.Cell_NormalDesc, Mode=OneWay}" FontSize="13"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" Fill="#FFFF8C00" VerticalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind Lang.Cell_WarnDesc, Mode=OneWay}" FontSize="13"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="8" Height="8" Fill="#FFDC3545" VerticalAlignment="Center"/>
+                            <TextBlock Text="{x:Bind Lang.Cell_CutoffDesc, Mode=OneWay}" FontSize="13"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -290,34 +321,80 @@
                 </Grid>
             </Border>
 
-            <!-- Thresholds reference -->
-            <Border Style="{StaticResource CardStyle}" Margin="0,4,0,0">
-                <Grid ColumnSpacing="40">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Cell_Thresholds, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind Lang.Cell_ThreshWarn, Mode=OneWay}" FontSize="13"/>
-                        <TextBlock Text="{x:Bind Lang.Cell_ThreshCutoff, Mode=OneWay}" FontSize="13"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Cell_Legend, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Cell_NormalDesc, Mode=OneWay}" FontSize="13"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="8" Height="8" Fill="#FFFF8C00" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Cell_WarnDesc, Mode=OneWay}" FontSize="13"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="8" Height="8" Fill="#FFDC3545" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Cell_CutoffDesc, Mode=OneWay}" FontSize="13"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Grid>
+            <!-- ── TIME RANGE TRIM (drives the Temperature History chart) ── -->
+            <TextBlock Text="Time Range (trim)" Style="{StaticResource SectionHeaderStyle}"/>
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel Spacing="6">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="TrimRangeText"
+                                   Text="No data captured yet"
+                                   FontFamily="Consolas" FontSize="12" Opacity="0.75"
+                                   VerticalAlignment="Center"/>
+                        <Button Grid.Column="1" x:Name="ResetTrimBtn"
+                                Content="Reset"
+                                Click="ResetTrim_Click"
+                                FontSize="11" Padding="10,4"
+                                IsEnabled="False"/>
+                    </Grid>
+
+                    <Canvas x:Name="TrimCanvas" Height="34"
+                            HorizontalAlignment="Stretch"
+                            Background="Transparent"
+                            SizeChanged="TrimCanvas_SizeChanged">
+                        <Border x:Name="TrimTrack"
+                                Background="{ThemeResource ControlFillColorTertiaryBrush}"
+                                Height="8" CornerRadius="4"
+                                Canvas.Top="13"/>
+                        <Border x:Name="TrimSelection"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                Opacity="0.45"
+                                Height="8" CornerRadius="4"
+                                Canvas.Top="13"/>
+                        <Border x:Name="StartThumb"
+                                Width="14" Height="30"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource AccentFillColorTertiaryBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Canvas.Top="2"
+                                ManipulationMode="TranslateX"
+                                PointerPressed="StartThumb_PointerPressed"
+                                PointerMoved="Thumb_PointerMoved"
+                                PointerReleased="Thumb_PointerReleased"
+                                PointerCaptureLost="Thumb_PointerReleased"/>
+                        <Border x:Name="EndThumb"
+                                Width="14" Height="30"
+                                Background="{ThemeResource AccentFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource AccentFillColorTertiaryBrush}"
+                                BorderThickness="1"
+                                CornerRadius="3"
+                                Canvas.Top="2"
+                                ManipulationMode="TranslateX"
+                                PointerPressed="EndThumb_PointerPressed"
+                                PointerMoved="Thumb_PointerMoved"
+                                PointerReleased="Thumb_PointerReleased"
+                                PointerCaptureLost="Thumb_PointerReleased"/>
+                    </Canvas>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock x:Name="DataStartLabel" Text="—"
+                                   FontFamily="Consolas" FontSize="10" Opacity="0.55"/>
+                        <TextBlock Grid.Column="1" x:Name="DataEndLabel" Text="—"
+                                   FontFamily="Consolas" FontSize="10" Opacity="0.55"
+                                   HorizontalAlignment="Right"/>
+                    </Grid>
+
+                    <TextBlock FontSize="10" Opacity="0.45" TextWrapping="Wrap"
+                               Text="Drag the handles to select a time range. The temperature chart updates live to the selected window. Reset to return to the rolling view."/>
+                </StackPanel>
             </Border>
 
         </StackPanel>

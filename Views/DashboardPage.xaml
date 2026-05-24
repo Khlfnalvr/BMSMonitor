@@ -13,9 +13,21 @@
         <conv:BoolToVisibilityConverter    x:Key="BoolToVisConverter"/>
     </Page.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Padding="20,16,20,24" Spacing="8">
-            <Grid ColumnSpacing="10">
+    <!--
+        Root is a ScrollViewer hosting a Grid (not a StackPanel) so the
+        ChartsGrid in row 1 can take Height="*" and fill the remaining
+        vertical space. MinHeight is bound in code-behind to the viewport
+        height so the layout stays tall enough to fill the window but still
+        scrolls when the window is shorter than the natural content.
+    -->
+    <ScrollViewer x:Name="DashboardScroller" VerticalScrollBarVisibility="Auto">
+        <Grid x:Name="DashboardRoot" Padding="20,16,20,16" RowSpacing="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid x:Name="DashboardTopGrid" Grid.Row="0" ColumnSpacing="10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="*"/>
@@ -61,7 +73,7 @@
                         <TextBlock Text="{x:Bind Lang.Dash_Remaining, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
                         <TextBlock Text="{x:Bind ViewModel.RemainingCapacityText, Mode=OneWay}"
                                    Style="{StaticResource CardValueStyle}"/>
-                        <TextBlock Text="{x:Bind Lang.Dash_RemainingSub, Mode=OneWay}" FontSize="11" Opacity="0.45"/>
+                        <TextBlock Text="{x:Bind ViewModel.TimeToEmptyText, Mode=OneWay}" FontSize="11" Opacity="0.55"/>
                     </StackPanel>
                 </Border>
 
@@ -239,14 +251,15 @@
                 </Grid>
             </Grid>
 
-            <Grid x:Name="ChartsGrid" ColumnSpacing="10" RowSpacing="8">
+            <Grid x:Name="ChartsGrid" Grid.Row="1" ColumnSpacing="10" RowSpacing="8"
+                  VerticalAlignment="Stretch">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
+                    <RowDefinition x:Name="ChartsRow0" Height="*"/>
+                    <RowDefinition x:Name="ChartsRow1" Height="*"/>
                 </Grid.RowDefinitions>
 
                 <VisualStateManager.VisualStateGroups>
@@ -277,8 +290,17 @@
                 </VisualStateManager.VisualStateGroups>
 
                 <!-- ── SOC HISTORY CHART ─────────────────────────────────── -->
-                <StackPanel x:Name="SocChartContainer" Grid.Row="0" Grid.Column="0" Spacing="6">
-                    <Grid>
+                <!--
+                    StackPanel → Grid so the Border (chart card) can take row
+                    Height="*" and stretch to fill the available vertical
+                    space inside ChartsGrid's star row.
+                -->
+                <Grid x:Name="SocChartContainer" Grid.Row="0" Grid.Column="0" RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -294,10 +316,12 @@
                             <SymbolIcon Symbol="Save"/>
                         </Button>
                     </Grid>
-                    <Border x:Name="SocChartCard" Style="{StaticResource CardStyle}">
+                    <Border x:Name="SocChartCard" Grid.Row="1"
+                            Style="{StaticResource CardStyle}"
+                            VerticalAlignment="Stretch">
                         <Grid x:Name="SocChartArea" RowSpacing="2">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -309,7 +333,7 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Y-axis labels -->
-                                <Grid x:Name="SocYAxisGrid" Grid.Column="0" Height="160">
+                                <Grid x:Name="SocYAxisGrid" Grid.Column="0">
                                     <TextBlock Text="100" FontSize="9" Opacity="0.45"
                                                VerticalAlignment="Top" HorizontalAlignment="Right"/>
                                     <TextBlock Text="50" FontSize="9" Opacity="0.45"
@@ -318,8 +342,8 @@
                                                VerticalAlignment="Bottom" HorizontalAlignment="Right"/>
                                 </Grid>
 
-                                <!-- Chart canvas -->
-                                <Canvas x:Name="SocChartCanvas" Grid.Column="1" Height="160"
+                                <!-- Chart canvas — Height comes from the star row so it grows with the page -->
+                                <Canvas x:Name="SocChartCanvas" Grid.Column="1" MinHeight="160"
                                         SizeChanged="SocChartCanvas_SizeChanged">
                                     <Line x:Name="GridLine75" StrokeThickness="1" StrokeDashArray="4,3"/>
                                     <Line x:Name="GridLine50" StrokeThickness="1" StrokeDashArray="4,3"/>
@@ -352,11 +376,15 @@
                             </Grid>
                         </Grid>
                     </Border>
-                </StackPanel>
+                </Grid>
 
                 <!-- ── V/I HISTORY CHART ─────────────────────────────────── -->
-                <StackPanel x:Name="ViChartContainer" Grid.Row="0" Grid.Column="1" Spacing="6">
-                    <Grid>
+                <Grid x:Name="ViChartContainer" Grid.Row="0" Grid.Column="1" RowSpacing="6">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
@@ -369,10 +397,12 @@
                             <SymbolIcon Symbol="Save"/>
                         </Button>
                     </Grid>
-                    <Border x:Name="VIChartCard" Style="{StaticResource CardStyle}">
+                    <Border x:Name="VIChartCard" Grid.Row="1"
+                            Style="{StaticResource CardStyle}"
+                            VerticalAlignment="Stretch">
                         <Grid x:Name="VIChartArea" RowSpacing="2">
                             <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
@@ -386,7 +416,8 @@
                                 </Grid.ColumnDefinitions>
 
                                 <!-- Voltage Y-axis labels (left, right-aligned) -->
-                                <Canvas x:Name="VAxisCanvas" Grid.Column="0" Height="160">
+                                <!-- Heights drop to MinHeight so the axes track the chart canvas as it grows. -->
+                                <Canvas x:Name="VAxisCanvas" Grid.Column="0" MinHeight="160">
                                     <TextBlock x:Name="VLabel4" Text="—" FontSize="9" Opacity="0.55"
                                                Width="36" TextAlignment="Right" Canvas.Top="0"/>
                                     <TextBlock x:Name="VLabel3" Text="—" FontSize="9" Opacity="0.55"
@@ -399,8 +430,8 @@
                                                Width="36" TextAlignment="Right" Canvas.Top="149"/>
                                 </Canvas>
 
-                                <!-- Chart canvas -->
-                                <Canvas x:Name="VIChartCanvas" Grid.Column="1" Height="160"
+                                <!-- Chart canvas — Height comes from the star row -->
+                                <Canvas x:Name="VIChartCanvas" Grid.Column="1" MinHeight="160"
                                         SizeChanged="VIChartCanvas_SizeChanged">
                                     <Line x:Name="VIGridH1" StrokeThickness="1" StrokeDashArray="3,3"/>
                                     <Line x:Name="VIGridH2" StrokeThickness="1" StrokeDashArray="3,3"/>
@@ -414,7 +445,7 @@
                                 </Canvas>
 
                                 <!-- Current Y-axis labels (right, left-aligned) -->
-                                <Canvas x:Name="IAxisCanvas" Grid.Column="2" Height="160">
+                                <Canvas x:Name="IAxisCanvas" Grid.Column="2" MinHeight="160">
                                     <TextBlock x:Name="ILabel4" Text="—" FontSize="9" Opacity="0.55"
                                                Canvas.Left="2" Canvas.Top="0"/>
                                     <TextBlock x:Name="ILabel3" Text="—" FontSize="9" Opacity="0.55"
@@ -452,91 +483,9 @@
                             </Grid>
                         </Grid>
                     </Border>
-                </StackPanel>
+                </Grid>
             </Grid>
 
-            <!-- ── TIME RANGE TRIM ──────────────────────────────────── -->
-            <TextBlock Text="Time Range (trim)" Style="{StaticResource SectionHeaderStyle}"/>
-            <Border Style="{StaticResource CardStyle}">
-                <StackPanel Spacing="6">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="TrimRangeText"
-                                   Text="No data captured yet"
-                                   FontFamily="Consolas" FontSize="12" Opacity="0.75"
-                                   VerticalAlignment="Center"/>
-                        <Button Grid.Column="1" x:Name="ResetTrimBtn"
-                                Content="Reset"
-                                Click="ResetTrim_Click"
-                                FontSize="11" Padding="10,4"
-                                IsEnabled="False"/>
-                    </Grid>
-
-                    <!-- Trim bar canvas -->
-                    <Canvas x:Name="TrimCanvas" Height="34"
-                            HorizontalAlignment="Stretch"
-                            Background="Transparent"
-                            SizeChanged="TrimCanvas_SizeChanged">
-                        <!-- Background track (full data range) -->
-                        <Border x:Name="TrimTrack"
-                                Background="{ThemeResource ControlFillColorTertiaryBrush}"
-                                Height="8" CornerRadius="4"
-                                Canvas.Top="13"/>
-                        <!-- Selected segment (between handles) -->
-                        <Border x:Name="TrimSelection"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                Opacity="0.45"
-                                Height="8" CornerRadius="4"
-                                Canvas.Top="13"/>
-                        <!-- Start handle -->
-                        <Border x:Name="StartThumb"
-                                Width="14" Height="30"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource AccentFillColorTertiaryBrush}"
-                                BorderThickness="1"
-                                CornerRadius="3"
-                                Canvas.Top="2"
-                                ManipulationMode="TranslateX"
-                                PointerPressed="StartThumb_PointerPressed"
-                                PointerMoved="Thumb_PointerMoved"
-                                PointerReleased="Thumb_PointerReleased"
-                                PointerCaptureLost="Thumb_PointerReleased"/>
-                        <!-- End handle -->
-                        <Border x:Name="EndThumb"
-                                Width="14" Height="30"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}"
-                                BorderBrush="{ThemeResource AccentFillColorTertiaryBrush}"
-                                BorderThickness="1"
-                                CornerRadius="3"
-                                Canvas.Top="2"
-                                ManipulationMode="TranslateX"
-                                PointerPressed="EndThumb_PointerPressed"
-                                PointerMoved="Thumb_PointerMoved"
-                                PointerReleased="Thumb_PointerReleased"
-                                PointerCaptureLost="Thumb_PointerReleased"/>
-                    </Canvas>
-
-                    <!-- Time labels (full range extents) -->
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock x:Name="DataStartLabel" Text="—"
-                                   FontFamily="Consolas" FontSize="10" Opacity="0.55"/>
-                        <TextBlock Grid.Column="1" x:Name="DataEndLabel" Text="—"
-                                   FontFamily="Consolas" FontSize="10" Opacity="0.55"
-                                   HorizontalAlignment="Right"/>
-                    </Grid>
-
-                    <TextBlock FontSize="10" Opacity="0.45" TextWrapping="Wrap"
-                               Text="Drag the handles to select a time range. The charts update live to the selected window. Reset to return to the rolling view."/>
-                </StackPanel>
-            </Border>
-
-        </StackPanel>
+        </Grid>
     </ScrollViewer>
 </Page>
