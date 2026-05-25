@@ -31,6 +31,12 @@ public sealed class UpdateCheckInfo
     public string?           ErrorMessage  { get; init; }
 }
 
+public sealed class PreparedUpdate
+{
+    public required string PayloadPath { get; init; }
+    public required string CleanupPath { get; init; }
+}
+
 public static class UpdateService
 {
     private static readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(30) };
@@ -59,7 +65,10 @@ public static class UpdateService
             var current   = currentVersion.TrimStart('v');
 
             var zipAsset = release.Assets.FirstOrDefault(a =>
-                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+                    a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                    a.Name.Contains("Update", StringComparison.OrdinalIgnoreCase))
+                ?? release.Assets.FirstOrDefault(a =>
+                    a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
 
             return new UpdateCheckInfo
             {
@@ -78,12 +87,13 @@ public static class UpdateService
         }
     }
 
-    // Downloads the update ZIP and extracts it to a staging folder.
-    // Returns the staging directory path where the new app files live.
-    public static async Task<string> DownloadAndExtractAsync(
+    // Downloads the update ZIP and extracts it to an isolated staging folder.
+    // Returns the app payload path plus the temporary folder to remove later.
+    public static async Task<PreparedUpdate> DownloadAndExtractAsync(
         string url, string currentVersion, Action<double>? progress = null)
     {
-        var tempDir = Path.Combine(Path.GetTempPath(), "BMSMonitorUpdate");
+        var tempDir = Path.Combine(
+            Path.GetTempPath(), "BMSMonitorUpdate", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
         var zipPath = Path.Combine(tempDir, "update.zip");
 
@@ -107,37 +117,74 @@ public static class UpdateService
             }
         }
 
-        // Extract to staging subfolder
         var stagePath = Path.Combine(tempDir, "stage");
-        if (Directory.Exists(stagePath)) Directory.Delete(stagePath, true);
         Directory.CreateDirectory(stagePath);
         ZipFile.ExtractToDirectory(zipPath, stagePath);
         File.Delete(zipPath);
 
+        var payloadPath = FindPayloadPath(stagePath);
+
         progress?.Invoke(1.0);
-        return stagePath;
+        return new PreparedUpdate
+        {
+            PayloadPath = payloadPath,
+            CleanupPath = tempDir
+        };
     }
 
     // Writes a PowerShell script that, once launched, waits for BMSMonitor
     // to exit, copies all staged files over the installed app, then restarts it.
     // Returns the path to the written script.
-    public static string WriteApplyScript(string stagingPath, string appDir)
+    public static string WriteApplyScript(string payloadPath, string cleanupPath, string appDir)
     {
-        var scriptPath = Path.Combine(Path.GetTempPath(), "BMSMonitorUpdate", "apply.ps1");
+        Directory.CreateDirectory(cleanupPath);
+        var scriptPath = Path.Combine(cleanupPath, "apply.ps1");
 
         var sb = new StringBuilder();
-        sb.AppendLine("param($Staging, $AppDir)");
-        sb.AppendLine("# Wait for BMSMonitor to fully exit");
-        sb.AppendLine("while (Get-Process -Name BMSMonitor -ErrorAction SilentlyContinue) {");
-        sb.AppendLine("    Start-Sleep -Milliseconds 500");
+        sb.AppendLine("param(");
+        sb.AppendLine("    [Parameter(Mandatory=$true)][string]$Payload,");
+        sb.AppendLine("    [Parameter(Mandatory=$true)][string]$AppDir,");
+        sb.AppendLine("    [Parameter(Mandatory=$true)][string]$Cleanup,");
+        sb.AppendLine("    [int]$ParentProcessId = 0");
+        sb.AppendLine(")");
+        sb.AppendLine("$ErrorActionPreference = 'Stop'");
+        sb.AppendLine("$exe = Join-Path $AppDir 'BMSMonitor.exe'");
+        sb.AppendLine("$logDir = Join-Path $env:TEMP 'BMSMonitorUpdate'");
+        sb.AppendLine("$logPath = Join-Path $logDir 'last-update-error.log'");
+        sb.AppendLine("try {");
+        sb.AppendLine("    if ($ParentProcessId -gt 0) {");
+        sb.AppendLine("        Wait-Process -Id $ParentProcessId -ErrorAction SilentlyContinue");
+        sb.AppendLine("    } else {");
+        sb.AppendLine("        while (Get-Process -Name BMSMonitor -ErrorAction SilentlyContinue) {");
+        sb.AppendLine("            Start-Sleep -Milliseconds 500");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine("    Start-Sleep -Milliseconds 300");
+        sb.AppendLine("    if (-not (Test-Path (Join-Path $Payload 'BMSMonitor.exe'))) {");
+        sb.AppendLine("        throw \"Update payload does not contain BMSMonitor.exe: $Payload\"");
+        sb.AppendLine("    }");
+        sb.AppendLine("    $robocopyArgs = @(");
+        sb.AppendLine("        $Payload, $AppDir,");
+        sb.AppendLine("        '/E', '/IS', '/IT', '/R:5', '/W:1',");
+        sb.AppendLine("        '/NJH', '/NJS', '/NFL', '/NDL', '/NP', '/COPY:DAT'");
+        sb.AppendLine("    )");
+        sb.AppendLine("    & robocopy @robocopyArgs | Out-Null");
+        sb.AppendLine("    if ($LASTEXITCODE -ge 8) {");
+        sb.AppendLine("        throw \"robocopy failed with exit code $LASTEXITCODE\"");
+        sb.AppendLine("    }");
+        sb.AppendLine("    Start-Process -FilePath $exe -WorkingDirectory $AppDir");
         sb.AppendLine("}");
-        sb.AppendLine("# Copy update files over the installed app");
-        sb.AppendLine("robocopy $Staging $AppDir /E /IS /IT /NJH /NJS /NFL /NDL /COPY:DAT | Out-Null");
-        sb.AppendLine("# Restart the app");
-        sb.AppendLine("Start-Process (Join-Path $AppDir 'BMSMonitor.exe')");
-        sb.AppendLine("# Cleanup");
-        sb.AppendLine("Remove-Item $Staging -Recurse -Force -ErrorAction SilentlyContinue");
-        sb.AppendLine("Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue");
+        sb.AppendLine("catch {");
+        sb.AppendLine("    New-Item -ItemType Directory -Path $logDir -Force | Out-Null");
+        sb.AppendLine("    $_ | Out-File -FilePath $logPath -Encoding UTF8");
+        sb.AppendLine("    if (Test-Path $exe) {");
+        sb.AppendLine("        Start-Process -FilePath $exe -WorkingDirectory $AppDir");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+        sb.AppendLine("finally {");
+        sb.AppendLine("    Remove-Item $Cleanup -Recurse -Force -ErrorAction SilentlyContinue");
+        sb.AppendLine("    Remove-Item $PSCommandPath -Force -ErrorAction SilentlyContinue");
+        sb.AppendLine("}");
 
         File.WriteAllText(scriptPath, sb.ToString(), Encoding.UTF8);
         return scriptPath;
@@ -151,5 +198,23 @@ public static class UpdateService
         if (Version.TryParse(latest, out var l) && Version.TryParse(current, out var c))
             return l > c;
         return string.Compare(latest, current, StringComparison.OrdinalIgnoreCase) > 0;
+    }
+
+    private static string FindPayloadPath(string stagePath)
+    {
+        if (File.Exists(Path.Combine(stagePath, "BMSMonitor.exe")))
+            return stagePath;
+
+        var payloadPath = Directory
+            .EnumerateFiles(stagePath, "BMSMonitor.exe", SearchOption.AllDirectories)
+            .Select(Path.GetDirectoryName)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .OrderBy(path => path!.Length)
+            .FirstOrDefault();
+
+        if (payloadPath is null)
+            throw new InvalidDataException("The update ZIP does not contain BMSMonitor.exe.");
+
+        return payloadPath;
     }
 }
