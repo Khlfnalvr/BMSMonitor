@@ -110,6 +110,8 @@ public sealed partial class MainWindow : Window
 
         InitSerialFlyout();
         InitAlertFlyout();
+
+        _ = StartupUpdateCheckAsync();
     }
 
     public void MaximizeOnLaunch()
@@ -626,6 +628,279 @@ public sealed partial class MainWindow : Window
     private void MenuTour_Click(object sender, RoutedEventArgs e)
     {
         ShowTourOverlay();
+    }
+
+    // ── Startup update check ───────────────────────────────────────────────
+
+    private async Task StartupUpdateCheckAsync()
+    {
+        await Task.Delay(3000); // let the app finish loading first
+
+        var info = await Services.UpdateService.CheckAsync(AppVersion);
+        _cachedUpdateInfo = info;
+
+        if (info.Result != Services.UpdateCheckResult.UpdateAvailable) return;
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            UpdateNotifyBtn.Visibility = Visibility.Visible;
+            ToolTipService.SetToolTip(UpdateNotifyBtn,
+                $"{Lang.Upd_AvailableTitle}: v{info.LatestVersion}");
+        });
+    }
+
+    private void UpdateNotifyBtn_Click(object sender, RoutedEventArgs e)
+    {
+        var info = _cachedUpdateInfo;
+        if (info?.Result == Services.UpdateCheckResult.UpdateAvailable)
+        {
+            UpdateDialogTitle.Text        = Lang.Upd_AvailableTitle;
+            UpdateContentHost.Content     = BuildUpdateAvailableContent(info);
+            _pendingInstallerUrl          = info.InstallerUrl;
+            _pendingReleaseUrl            = info.ReleaseUrl;
+            UpdatePrimaryButton.Visibility = Visibility.Visible;
+            UpdatePrimaryButton.Content    = info.InstallerUrl is not null
+                                                ? Lang.Upd_Download
+                                                : Lang.Upd_OpenPage;
+            UpdatePrimaryButton.IsEnabled  = true;
+            UpdateCloseButton.Content      = Lang.Upd_Later;
+            UpdateCloseButton.IsEnabled    = true;
+            UpdateOverlay.Visibility       = Visibility.Visible;
+        }
+        else
+        {
+            ShowUpdateChecking();
+            _ = RunUpdateCheckAsync();
+        }
+    }
+
+    // ── Update overlay ─────────────────────────────────────────────────────
+
+    private string?                        _pendingInstallerUrl;
+    private string?                        _pendingReleaseUrl;
+    private Services.UpdateCheckInfo?      _cachedUpdateInfo;
+
+    private void MenuCheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        ShowUpdateChecking();
+        _ = RunUpdateCheckAsync();
+    }
+
+    private void ShowUpdateChecking()
+    {
+        UpdateDialogTitle.Text = Lang.Upd_CheckingTitle;
+        UpdateContentHost.Content = BuildUpdateSpinner();
+        UpdatePrimaryButton.Visibility = Visibility.Collapsed;
+        UpdateCloseButton.Content = Lang.Upd_Close;
+        UpdateCloseButton.IsEnabled = true;
+        _pendingInstallerUrl = null;
+        _pendingReleaseUrl   = null;
+        UpdateOverlay.Visibility = Visibility.Visible;
+    }
+
+    private async Task RunUpdateCheckAsync()
+    {
+        var info = await Services.UpdateService.CheckAsync(AppVersion);
+
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            if (UpdateOverlay.Visibility == Visibility.Collapsed) return;
+
+            switch (info.Result)
+            {
+                case Services.UpdateCheckResult.UpToDate:
+                    UpdateDialogTitle.Text = Lang.Upd_UpToDateTitle;
+                    UpdateContentHost.Content = BuildUpdateStatusContent(
+                        "", Lang.Upd_UpToDateMsg,
+                        $"{Lang.Upd_LatestVersion}: {info.LatestVersion}");
+                    UpdatePrimaryButton.Visibility = Visibility.Collapsed;
+                    UpdateCloseButton.Content = Lang.Upd_Close;
+                    break;
+
+                case Services.UpdateCheckResult.UpdateAvailable:
+                    UpdateDialogTitle.Text = Lang.Upd_AvailableTitle;
+                    UpdateContentHost.Content = BuildUpdateAvailableContent(info);
+                    _pendingInstallerUrl = info.InstallerUrl;
+                    _pendingReleaseUrl   = info.ReleaseUrl;
+                    UpdatePrimaryButton.Visibility = Visibility.Visible;
+                    UpdatePrimaryButton.Content    = info.InstallerUrl is not null
+                                                        ? Lang.Upd_Download
+                                                        : Lang.Upd_OpenPage;
+                    UpdatePrimaryButton.IsEnabled  = true;
+                    UpdateCloseButton.Content      = Lang.Upd_Later;
+                    break;
+
+                case Services.UpdateCheckResult.Error:
+                    UpdateDialogTitle.Text = Lang.Upd_ErrorTitle;
+                    UpdateContentHost.Content = BuildUpdateStatusContent(
+                        "", info.ErrorMessage ?? "Unknown error", null);
+                    UpdatePrimaryButton.Visibility = Visibility.Collapsed;
+                    UpdateCloseButton.Content = Lang.Upd_Close;
+                    break;
+            }
+        });
+    }
+
+    private async void UpdatePrimary_Click(object sender, RoutedEventArgs e)
+    {
+        if (_pendingInstallerUrl is not null)
+        {
+            UpdatePrimaryButton.IsEnabled = false;
+            UpdateCloseButton.IsEnabled   = false;
+            UpdateDialogTitle.Text        = Lang.Upd_Downloading;
+
+            var bar = new ProgressBar
+            {
+                IsIndeterminate = true,
+                Margin = new Thickness(0, 8, 0, 8)
+            };
+            UpdateContentHost.Content = bar;
+
+            try
+            {
+                var path = await Services.UpdateService.DownloadInstallerAsync(
+                    _pendingInstallerUrl, AppVersion, p =>
+                    {
+                        DispatcherQueue.TryEnqueue(() =>
+                        {
+                            bar.IsIndeterminate = false;
+                            bar.Value           = p * 100;
+                        });
+                    });
+
+                UpdateOverlay.Visibility       = Visibility.Collapsed;
+                UpdateNotifyBtn.Visibility     = Visibility.Collapsed;
+                _cachedUpdateInfo              = null;
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName        = path,
+                    UseShellExecute = true
+                });
+            }
+            catch
+            {
+                if (_pendingReleaseUrl is not null)
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri(_pendingReleaseUrl));
+                UpdateOverlay.Visibility   = Visibility.Collapsed;
+                UpdateNotifyBtn.Visibility = Visibility.Collapsed;
+                _cachedUpdateInfo          = null;
+            }
+        }
+        else if (_pendingReleaseUrl is not null)
+        {
+            await Windows.System.Launcher.LaunchUriAsync(new Uri(_pendingReleaseUrl));
+            UpdateOverlay.Visibility   = Visibility.Collapsed;
+            UpdateNotifyBtn.Visibility = Visibility.Collapsed;
+            _cachedUpdateInfo          = null;
+        }
+    }
+
+    private void UpdateClose_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private static UIElement BuildUpdateSpinner()
+    {
+        var ring = new ProgressRing
+        {
+            IsActive = true,
+            Width    = 36,
+            Height   = 36,
+            Margin   = new Thickness(0, 8, 0, 16),
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+        return ring;
+    }
+
+    private UIElement BuildUpdateStatusContent(string glyph, string line1, string? line2)
+    {
+        var panel = new StackPanel { Spacing = 6, Margin = new Thickness(0, 0, 0, 8) };
+        panel.Children.Add(new FontIcon
+        {
+            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons,Segoe MDL2 Assets"),
+            Glyph      = glyph,
+            FontSize   = 28,
+            HorizontalAlignment = HorizontalAlignment.Left
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text        = line1,
+            FontSize    = 14,
+            TextWrapping = TextWrapping.Wrap
+        });
+        if (line2 is not null)
+            panel.Children.Add(new TextBlock
+            {
+                Text     = line2,
+                FontSize = 13,
+                Opacity  = 0.7,
+                TextWrapping = TextWrapping.Wrap
+            });
+        return panel;
+    }
+
+    private UIElement BuildUpdateAvailableContent(Services.UpdateCheckInfo info)
+    {
+        var panel = new StackPanel { Spacing = 10, Margin = new Thickness(0, 0, 0, 8) };
+
+        var versionGrid = new Grid { ColumnSpacing = 12 };
+        versionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        versionGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        versionGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        versionGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        void AddVersionRow(int row, string label, string? value, bool accent = false)
+        {
+            var lbl = new TextBlock { Text = label, FontSize = 13, Opacity = 0.7, VerticalAlignment = VerticalAlignment.Center };
+            var val = new TextBlock
+            {
+                Text        = value ?? "-",
+                FontSize    = 13,
+                FontWeight  = accent ? Microsoft.UI.Text.FontWeights.SemiBold : Microsoft.UI.Text.FontWeights.Normal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetRow(lbl, row); Grid.SetColumn(lbl, 0);
+            Grid.SetRow(val, row); Grid.SetColumn(val, 1);
+            versionGrid.Children.Add(lbl);
+            versionGrid.Children.Add(val);
+        }
+
+        AddVersionRow(0, Lang.Upd_CurrentVersion + ":", AppVersion);
+        AddVersionRow(1, Lang.Upd_LatestVersion  + ":", info.LatestVersion, accent: true);
+        panel.Children.Add(versionGrid);
+
+        if (!string.IsNullOrWhiteSpace(info.ReleaseNotes))
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text     = Lang.Upd_ReleaseNotes,
+                FontSize = 13,
+                FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                Margin   = new Thickness(0, 4, 0, 0)
+            });
+
+            var notes = info.ReleaseNotes.Length > 500
+                ? info.ReleaseNotes[..500] + "…"
+                : info.ReleaseNotes;
+
+            var sv = new ScrollViewer
+            {
+                MaxHeight = 140,
+                HorizontalScrollBarVisibility = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Disabled,
+                VerticalScrollBarVisibility   = Microsoft.UI.Xaml.Controls.ScrollBarVisibility.Auto,
+                Content = new TextBlock
+                {
+                    Text         = notes,
+                    FontSize     = 12,
+                    Opacity      = 0.8,
+                    TextWrapping = TextWrapping.Wrap
+                }
+            };
+            panel.Children.Add(sv);
+        }
+
+        return panel;
     }
 
     private async void MenuGithub_Click(object sender, RoutedEventArgs e)

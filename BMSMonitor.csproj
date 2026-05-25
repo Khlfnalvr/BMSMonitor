@@ -18,20 +18,23 @@
     <AssemblyTitle>Software BMS ICO</AssemblyTitle>
     <Product>Software BMS ICO</Product>
     <Description>BMS Monitor — Cell voltages, SOC, temperatures &amp; balancing</Description>
-    <Version>1.7.0</Version>
-    <AssemblyVersion>1.7.0.0</AssemblyVersion>
-    <FileVersion>1.7.0.0</FileVersion>
-    <InformationalVersion>1.7.0</InformationalVersion>
+    <Version>1.8.0</Version>
+    <AssemblyVersion>1.8.0.0</AssemblyVersion>
+    <FileVersion>1.8.0.0</FileVersion>
+    <InformationalVersion>1.8.0</InformationalVersion>
   </PropertyGroup>
 
   <!-- Publish / release optimizations -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <!--
-      Partial trim: removes unused assemblies but preserves all types within
-      assemblies (safe for WinUI 3 / XAML reflection). Reduces publish size.
+      Trimming disabled: WinUI 3 + CsWinRT rely on reflection-based vtable
+      lookup (WinRT.TypeExtensions.GetAbiToProjectionVftblPtr). When trimming
+      is active, the generated projection code for observable/MVVM types can
+      be removed, producing a NullReferenceException at startup.
+      Keeping trimming off guarantees correct WinRT COM interop at the cost
+      of a larger publish folder (~300 MB self-contained).
     -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
+    <PublishTrimmed>false</PublishTrimmed>
 
     <!--
       ReadyToRun pre-JIT speeds first-launch load time at the cost of larger

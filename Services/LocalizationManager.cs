@@ -128,6 +128,23 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ui_Menu_OpenLogFolder => T(nameof(Ui_Menu_OpenLogFolder));
     public string Ui_Menu_OpenSettings  => T(nameof(Ui_Menu_OpenSettings));
     public string Ui_Menu_ReportBug     => T(nameof(Ui_Menu_ReportBug));
+    public string Ui_Menu_CheckUpdate   => T(nameof(Ui_Menu_CheckUpdate));
+
+    // ── Update dialog ─────────────────────────────────────────────────────
+    public string Upd_CheckingTitle  => T(nameof(Upd_CheckingTitle));
+    public string Upd_UpToDateTitle  => T(nameof(Upd_UpToDateTitle));
+    public string Upd_UpToDateMsg    => T(nameof(Upd_UpToDateMsg));
+    public string Upd_AvailableTitle => T(nameof(Upd_AvailableTitle));
+    public string Upd_CurrentVersion => T(nameof(Upd_CurrentVersion));
+    public string Upd_LatestVersion  => T(nameof(Upd_LatestVersion));
+    public string Upd_ReleaseNotes   => T(nameof(Upd_ReleaseNotes));
+    public string Upd_Download       => T(nameof(Upd_Download));
+    public string Upd_OpenPage       => T(nameof(Upd_OpenPage));
+    public string Upd_Later          => T(nameof(Upd_Later));
+    public string Upd_Close          => T(nameof(Upd_Close));
+    public string Upd_ErrorTitle     => T(nameof(Upd_ErrorTitle));
+    public string Upd_Downloading    => T(nameof(Upd_Downloading));
+    public string Upd_InstallNow     => T(nameof(Upd_InstallNow));
 
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
@@ -337,7 +354,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_About_License)]   = "License",
             [nameof(Ui_About_Copyright)] = "Copyright",
             [nameof(Ui_Menu_Tour)]       = "Tour",
-            [nameof(Ui_Menu_RefreshApp)] = "Refresh App",
+            [nameof(Ui_Menu_RefreshApp)] = "Refresh",
             [nameof(Ui_Menu_Zoom)]       = "Zoom",
             [nameof(Ui_Menu_ActualSize)] = "Actual Size",
             [nameof(Ui_Menu_ZoomIn)]     = "Zoom In",
@@ -346,6 +363,22 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Menu_OpenLogFolder)] = "Open Log Folder",
             [nameof(Ui_Menu_OpenSettings)]  = "Open settings.json",
             [nameof(Ui_Menu_ReportBug)]     = "Report Bug…",
+            [nameof(Ui_Menu_CheckUpdate)]   = "Check for Updates…",
+
+            [nameof(Upd_CheckingTitle)]  = "Checking for Updates",
+            [nameof(Upd_UpToDateTitle)]  = "Up to Date",
+            [nameof(Upd_UpToDateMsg)]    = "You are running the latest version.",
+            [nameof(Upd_AvailableTitle)] = "Update Available",
+            [nameof(Upd_CurrentVersion)] = "Current version",
+            [nameof(Upd_LatestVersion)]  = "Latest version",
+            [nameof(Upd_ReleaseNotes)]   = "Release Notes",
+            [nameof(Upd_Download)]       = "Download & Install",
+            [nameof(Upd_OpenPage)]       = "Open Release Page",
+            [nameof(Upd_Later)]          = "Later",
+            [nameof(Upd_Close)]          = "Close",
+            [nameof(Upd_ErrorTitle)]     = "Update Check Failed",
+            [nameof(Upd_Downloading)]    = "Downloading Update…",
+            [nameof(Upd_InstallNow)]     = "Install Now",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -530,7 +563,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_About_License)]   = "Lisensi",
             [nameof(Ui_About_Copyright)] = "Hak cipta",
             [nameof(Ui_Menu_Tour)]       = "Tour",
-            [nameof(Ui_Menu_RefreshApp)] = "Muat Ulang Aplikasi",
+            [nameof(Ui_Menu_RefreshApp)] = "Refresh",
             [nameof(Ui_Menu_Zoom)]       = "Zoom",
             [nameof(Ui_Menu_ActualSize)] = "Ukuran Asli",
             [nameof(Ui_Menu_ZoomIn)]     = "Perbesar",
@@ -539,6 +572,22 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Menu_OpenLogFolder)] = "Buka Folder Log",
             [nameof(Ui_Menu_OpenSettings)]  = "Buka settings.json",
             [nameof(Ui_Menu_ReportBug)]     = "Laporkan Bug…",
+            [nameof(Ui_Menu_CheckUpdate)]   = "Periksa Pembaruan…",
+
+            [nameof(Upd_CheckingTitle)]  = "Memeriksa Pembaruan",
+            [nameof(Upd_UpToDateTitle)]  = "Versi Terbaru",
+            [nameof(Upd_UpToDateMsg)]    = "Anda sudah menggunakan versi terbaru.",
+            [nameof(Upd_AvailableTitle)] = "Pembaruan Tersedia",
+            [nameof(Upd_CurrentVersion)] = "Versi saat ini",
+            [nameof(Upd_LatestVersion)]  = "Versi terbaru",
+            [nameof(Upd_ReleaseNotes)]   = "Catatan Rilis",
+            [nameof(Upd_Download)]       = "Unduh & Pasang",
+            [nameof(Upd_OpenPage)]       = "Buka Halaman Rilis",
+            [nameof(Upd_Later)]          = "Nanti",
+            [nameof(Upd_Close)]          = "Tutup",
+            [nameof(Upd_ErrorTitle)]     = "Gagal Memeriksa Pembaruan",
+            [nameof(Upd_Downloading)]    = "Mengunduh Pembaruan…",
+            [nameof(Upd_InstallNow)]     = "Pasang Sekarang",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -723,7 +772,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_About_License)]   = "Lesen",
             [nameof(Ui_About_Copyright)] = "Hak cipta",
             [nameof(Ui_Menu_Tour)]       = "Tour",
-            [nameof(Ui_Menu_RefreshApp)] = "Muat Semula Aplikasi",
+            [nameof(Ui_Menu_RefreshApp)] = "Refresh",
             [nameof(Ui_Menu_Zoom)]       = "Zum",
             [nameof(Ui_Menu_ActualSize)] = "Saiz Sebenar",
             [nameof(Ui_Menu_ZoomIn)]     = "Zum Masuk",
@@ -732,6 +781,22 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Menu_OpenLogFolder)] = "Buka Folder Log",
             [nameof(Ui_Menu_OpenSettings)]  = "Buka settings.json",
             [nameof(Ui_Menu_ReportBug)]     = "Laporkan Pepijat…",
+            [nameof(Ui_Menu_CheckUpdate)]   = "Semak Kemas Kini…",
+
+            [nameof(Upd_CheckingTitle)]  = "Menyemak Kemas Kini",
+            [nameof(Upd_UpToDateTitle)]  = "Versi Terkini",
+            [nameof(Upd_UpToDateMsg)]    = "Anda sedang menggunakan versi terkini.",
+            [nameof(Upd_AvailableTitle)] = "Kemas Kini Tersedia",
+            [nameof(Upd_CurrentVersion)] = "Versi semasa",
+            [nameof(Upd_LatestVersion)]  = "Versi terkini",
+            [nameof(Upd_ReleaseNotes)]   = "Nota Keluaran",
+            [nameof(Upd_Download)]       = "Muat Turun & Pasang",
+            [nameof(Upd_OpenPage)]       = "Buka Halaman Keluaran",
+            [nameof(Upd_Later)]          = "Kemudian",
+            [nameof(Upd_Close)]          = "Tutup",
+            [nameof(Upd_ErrorTitle)]     = "Semakan Kemas Kini Gagal",
+            [nameof(Upd_Downloading)]    = "Memuat Turun Kemas Kini…",
+            [nameof(Upd_InstallNow)]     = "Pasang Sekarang",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -916,7 +981,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_About_License)]   = "Licentie",
             [nameof(Ui_About_Copyright)] = "Copyright",
             [nameof(Ui_Menu_Tour)]       = "Rondleiding",
-            [nameof(Ui_Menu_RefreshApp)] = "App vernieuwen",
+            [nameof(Ui_Menu_RefreshApp)] = "Refresh",
             [nameof(Ui_Menu_Zoom)]       = "Zoomen",
             [nameof(Ui_Menu_ActualSize)] = "Werkelijke grootte",
             [nameof(Ui_Menu_ZoomIn)]     = "Inzoomen",
@@ -925,6 +990,22 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Menu_OpenLogFolder)] = "Logmap openen",
             [nameof(Ui_Menu_OpenSettings)]  = "settings.json openen",
             [nameof(Ui_Menu_ReportBug)]     = "Bug melden…",
+            [nameof(Ui_Menu_CheckUpdate)]   = "Controleren op updates…",
+
+            [nameof(Upd_CheckingTitle)]  = "Controleren op updates",
+            [nameof(Upd_UpToDateTitle)]  = "Up-to-date",
+            [nameof(Upd_UpToDateMsg)]    = "U gebruikt de nieuwste versie.",
+            [nameof(Upd_AvailableTitle)] = "Update beschikbaar",
+            [nameof(Upd_CurrentVersion)] = "Huidige versie",
+            [nameof(Upd_LatestVersion)]  = "Nieuwste versie",
+            [nameof(Upd_ReleaseNotes)]   = "Release-opmerkingen",
+            [nameof(Upd_Download)]       = "Downloaden & installeren",
+            [nameof(Upd_OpenPage)]       = "Release-pagina openen",
+            [nameof(Upd_Later)]          = "Later",
+            [nameof(Upd_Close)]          = "Sluiten",
+            [nameof(Upd_ErrorTitle)]     = "Update-controle mislukt",
+            [nameof(Upd_Downloading)]    = "Update downloaden…",
+            [nameof(Upd_InstallNow)]     = "Nu installeren",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -1109,7 +1190,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_About_License)]   = "许可",
             [nameof(Ui_About_Copyright)] = "版权",
             [nameof(Ui_Menu_Tour)]       = "导览",
-            [nameof(Ui_Menu_RefreshApp)] = "刷新应用",
+            [nameof(Ui_Menu_RefreshApp)] = "Refresh",
             [nameof(Ui_Menu_Zoom)]       = "缩放",
             [nameof(Ui_Menu_ActualSize)] = "实际大小",
             [nameof(Ui_Menu_ZoomIn)]     = "放大",
@@ -1118,6 +1199,22 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_Menu_OpenLogFolder)] = "打开日志文件夹",
             [nameof(Ui_Menu_OpenSettings)]  = "打开 settings.json",
             [nameof(Ui_Menu_ReportBug)]     = "报告问题…",
+            [nameof(Ui_Menu_CheckUpdate)]   = "检查更新…",
+
+            [nameof(Upd_CheckingTitle)]  = "正在检查更新",
+            [nameof(Upd_UpToDateTitle)]  = "已是最新版本",
+            [nameof(Upd_UpToDateMsg)]    = "您正在运行最新版本。",
+            [nameof(Upd_AvailableTitle)] = "有可用更新",
+            [nameof(Upd_CurrentVersion)] = "当前版本",
+            [nameof(Upd_LatestVersion)]  = "最新版本",
+            [nameof(Upd_ReleaseNotes)]   = "版本说明",
+            [nameof(Upd_Download)]       = "下载并安装",
+            [nameof(Upd_OpenPage)]       = "打开发布页面",
+            [nameof(Upd_Later)]          = "稍后",
+            [nameof(Upd_Close)]          = "关闭",
+            [nameof(Upd_ErrorTitle)]     = "检查更新失败",
+            [nameof(Upd_Downloading)]    = "正在下载更新…",
+            [nameof(Upd_InstallNow)]     = "立即安装",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",

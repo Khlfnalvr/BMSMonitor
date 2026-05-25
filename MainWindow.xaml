@@ -304,11 +304,20 @@
                                     FontSize="12"
                                     Text="{x:Bind Lang.Ui_Menu_Tour, Mode=OneWay}"
                                     Click="MenuTour_Click"/>
+                    <MenuFlyoutItem x:Name="MenuCheckUpdate"
+                                    FontSize="12"
+                                    Text="{x:Bind Lang.Ui_Menu_CheckUpdate, Mode=OneWay}"
+                                    Click="MenuCheckUpdate_Click"/>
                     <MenuFlyoutSeparator/>
                     <MenuFlyoutItem x:Name="MenuRefreshApp"
                                     FontSize="12"
                                     Text="{x:Bind Lang.Ui_Menu_RefreshApp, Mode=OneWay}"
-                                    Click="RefreshApp_Click"/>
+                                    KeyboardAcceleratorTextOverride="Ctrl+R"
+                                    Click="RefreshApp_Click">
+                        <MenuFlyoutItem.KeyboardAccelerators>
+                            <KeyboardAccelerator Modifiers="Control" Key="R"/>
+                        </MenuFlyoutItem.KeyboardAccelerators>
+                    </MenuFlyoutItem>
                 </MenuFlyout>
             </Border.ContextFlyout>
         </Border>
@@ -325,6 +334,17 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Top">
             <StackPanel Orientation="Horizontal">
+                <!-- Update-available notification button — hidden until a newer release is found -->
+                <Button x:Name="UpdateNotifyBtn"
+                        Style="{StaticResource CaptionButtonStyle}"
+                        Visibility="Collapsed"
+                        Click="UpdateNotifyBtn_Click">
+                    <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                              FontSize="15"
+                              Glyph="&#xE777;"
+                              Foreground="#F79022"/>
+                </Button>
+
                 <!--
                     Alert history bell — badge count shows unread alerts.
                     Opens a flyout with the full alert log.
@@ -607,6 +627,69 @@
                            VerticalAlignment="Center"/>
             </Grid>
         </Border>
+
+        <!--  Update dialog overlay  -->
+        <Grid x:Name="UpdateOverlay"
+              Grid.RowSpan="3"
+              Visibility="Collapsed"
+              Canvas.ZIndex="19">
+            <Grid.Background>
+                <AcrylicBrush TintColor="Black"
+                              TintOpacity="0.55"
+                              TintLuminosityOpacity="0.0"
+                              AlwaysUseFallback="True"
+                              FallbackColor="#8D000000"/>
+            </Grid.Background>
+            <Border x:Name="UpdateDialogCard"
+                    Width="480"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="{ThemeResource SolidBackgroundFillColorBaseBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="UpdateDialogTitle"
+                               Grid.Row="0"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Margin="28,24,28,0"/>
+                    <ContentControl x:Name="UpdateContentHost"
+                                    Grid.Row="1"
+                                    Margin="28,16,28,0"
+                                    HorizontalContentAlignment="Stretch"
+                                    HorizontalAlignment="Stretch"/>
+                    <Border Grid.Row="2"
+                            Padding="28,16"
+                            Margin="0,16,0,0"
+                            BorderThickness="0,1,0,0"
+                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                        <Grid ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="UpdatePrimaryButton"
+                                    Grid.Column="0"
+                                    HorizontalAlignment="Stretch"
+                                    Style="{ThemeResource AccentButtonStyle}"
+                                    Visibility="Collapsed"
+                                    Click="UpdatePrimary_Click"/>
+                            <Button x:Name="UpdateCloseButton"
+                                    Grid.Column="1"
+                                    MinWidth="90"
+                                    Click="UpdateClose_Click"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+        </Grid>
 
         <Grid x:Name="TourOverlay"
               Grid.RowSpan="3"
