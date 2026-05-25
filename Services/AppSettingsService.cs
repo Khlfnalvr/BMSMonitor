@@ -39,6 +39,10 @@ public class AppSettings
 
     // UI zoom level (1.0 = 100%). Adjusted via the Zoom menu / Ctrl +/-/0.
     public double ZoomLevel              { get; set; } = 1.0;
+
+    // UI language — persisted here so it uses the same proven save/load path
+    // as every other setting. One of: "id" | "ms" | "en" | "nl" | "zh".
+    public string Language               { get; set; } = "en";
 }
 
 public static class AppSettingsService

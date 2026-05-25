@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.IO;
 using System.Globalization;
 
 namespace BMSMonitor.Services;
@@ -38,20 +37,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public static readonly string[] LanguageLabels     = ["Indonesia", "Malay", "English", "Nederlands", "中文"];
 
     // ── Persistence ───────────────────────────────────────────────────────
-    private static readonly string _settingsFile =
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "BMSMonitor", "language.txt");
+    // Language is stored inside AppSettingsService's settings.json so it
+    // benefits from the same atomic save/load path as every other setting.
 
     private static string LoadSavedOrDefault()
     {
         try
         {
-            if (File.Exists(_settingsFile))
-            {
-                var saved = File.ReadAllText(_settingsFile).Trim();
-                if (Array.IndexOf(SupportedLanguages, saved) >= 0) return saved;
-            }
+            var saved = AppSettingsService.Load().Language?.Trim() ?? "en";
+            if (Array.IndexOf(SupportedLanguages, saved) >= 0) return saved;
         }
         catch { /* ignore */ }
 
@@ -62,8 +56,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(_settingsFile)!);
-            File.WriteAllText(_settingsFile, lang);
+            var settings = AppSettingsService.Load();
+            settings.Language = lang;
+            AppSettingsService.Save(settings);
         }
         catch { /* ignore */ }
     }
