@@ -365,10 +365,30 @@ public sealed partial class MainWindow : Window
         // Apply once the root visual tree (playback bar + status bar) is built.
         RootGrid.Loaded += (_, _) => ApplyZoom();
 
-        // Main-keyboard +/- (top row) — Add/Subtract in the XAML only cover
-        // the numpad. OEM_PLUS (187) and OEM_MINUS (189) cover the top row.
-        AddOemZoomAccelerator((Windows.System.VirtualKey)187, ZoomIn_Click);
-        AddOemZoomAccelerator((Windows.System.VirtualKey)189, ZoomOut_Click);
+        // Main-keyboard +/- (top row) — handled via KeyDown to avoid the
+        // automatic accelerator tooltip that KeyboardAccelerator shows randomly.
+        if (Content is UIElement root)
+            root.KeyDown += OnRootKeyDown;
+    }
+
+    private void OnRootKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs e)
+    {
+        var ctrl = Microsoft.UI.Input.InputKeyboardSource
+            .GetKeyStateForCurrentThread(Windows.System.VirtualKey.Control)
+            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+        if (!ctrl) return;
+
+        // OEM_PLUS (187 = '=+' key) and OEM_MINUS (189 = '-_' key) on the top row
+        if (e.Key == (Windows.System.VirtualKey)187)
+        {
+            ZoomIn_Click(sender, new RoutedEventArgs());
+            e.Handled = true;
+        }
+        else if (e.Key == (Windows.System.VirtualKey)189)
+        {
+            ZoomOut_Click(sender, new RoutedEventArgs());
+            e.Handled = true;
+        }
     }
 
     private void OnPageLoadedApplyZoom(object sender, RoutedEventArgs e)
@@ -376,22 +396,6 @@ public sealed partial class MainWindow : Window
         if (sender is FrameworkElement fe)
             fe.Loaded -= OnPageLoadedApplyZoom;
         ApplyZoom();
-    }
-
-    private void AddOemZoomAccelerator(Windows.System.VirtualKey key, Action<object, RoutedEventArgs> handler)
-    {
-        var acc = new Microsoft.UI.Xaml.Input.KeyboardAccelerator
-        {
-            Modifiers = Windows.System.VirtualKeyModifiers.Control,
-            Key = key
-        };
-        acc.Invoked += (s, e) =>
-        {
-            handler(s, new RoutedEventArgs());
-            e.Handled = true;
-        };
-        if (Content is UIElement root)
-            root.KeyboardAccelerators.Add(acc);
     }
 
     private void ApplyZoom()
