@@ -446,6 +446,7 @@ public sealed partial class MainWindow : Window
 
         var s = AppSettingsService.Load();
         s.ZoomLevel = _zoomLevel;
+        s.Language  = Lang.CurrentLanguage;
         AppSettingsService.Save(s);
     }
 
@@ -609,6 +610,7 @@ public sealed partial class MainWindow : Window
         s.ShowNav_ControlPanel = ViewNavControlPanel.IsChecked;
         s.ShowNav_Logging      = ViewNavLogging.IsChecked;
         s.ShowNav_Playback     = ViewNavPlayback.IsChecked;
+        s.Language             = Lang.CurrentLanguage;
         AppSettingsService.Save(s);
     }
 
@@ -971,7 +973,11 @@ public sealed partial class MainWindow : Window
         // Materialize the file with current values if it doesn't exist yet —
         // otherwise Explorer/Notepad has nothing to open.
         if (!File.Exists(AppSettingsService.FilePath))
-            AppSettingsService.Save(AppSettingsService.Load());
+        {
+            var s = AppSettingsService.Load();
+            s.Language = Lang.CurrentLanguage;
+            AppSettingsService.Save(s);
+        }
 
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {

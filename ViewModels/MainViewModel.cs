@@ -659,6 +659,7 @@ public partial class MainViewModel : ObservableObject
         s.TemperatureUnit       = TemperatureUnit;
         s.VoltageUnit           = VoltageUnit;
         s.CapacityUnit          = CapacityUnit;
+        s.Language              = LocalizationManager.Instance.CurrentLanguage;
         AppSettingsService.Save(s);
     }
 
