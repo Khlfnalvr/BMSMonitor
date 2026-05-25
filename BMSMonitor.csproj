@@ -27,14 +27,14 @@
   <!-- Publish / release optimizations -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <!--
-      Trimming disabled: WinUI 3 + CsWinRT rely on reflection-based vtable
-      lookup (WinRT.TypeExtensions.GetAbiToProjectionVftblPtr). When trimming
-      is active, the generated projection code for observable/MVVM types can
-      be removed, producing a NullReferenceException at startup.
-      Keeping trimming off guarantees correct WinRT COM interop at the cost
-      of a larger publish folder (~300 MB self-contained).
+      Partial trim: removes unused assemblies and trims within trimmable
+      assemblies — EXCEPT WinRT.Runtime and BMSMonitor which are protected
+      by TrimmerRoots.xml. Those two assemblies host reflection-based vtable
+      lookup (GetAbiToProjectionVftblPtr) and XAML type registrations that
+      the trimmer cannot statically analyse, so they must be kept whole.
     -->
-    <PublishTrimmed>false</PublishTrimmed>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>partial</TrimMode>
 
     <!--
       ReadyToRun pre-JIT speeds first-launch load time at the cost of larger
@@ -63,6 +63,11 @@
     <!-- We bundle our own translation table — skip framework satellite DLLs. -->
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Protect WinRT.Runtime + main assembly from trimmer (see comments above) -->
+    <TrimmerRootDescriptor Include="TrimmerRoots.xml"/>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="MiniExcel" Version="1.34.2" />
