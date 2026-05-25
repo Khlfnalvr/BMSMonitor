@@ -10,6 +10,9 @@ namespace BMSMonitor.Services;
 /// </summary>
 public sealed class LocalizationManager : INotifyPropertyChanged
 {
+    public static readonly string[] SupportedLanguages = ["id", "ms", "en", "nl", "zh"];
+    public static readonly string[] LanguageLabels     = ["Indonesia", "Malay", "English", "Nederlands", "中文"];
+
     // ── Singleton ─────────────────────────────────────────────────────────
     public static LocalizationManager Instance { get; } = new();
     private LocalizationManager() { _currentLang = LoadSavedOrDefault(); }
@@ -26,15 +29,13 @@ public sealed class LocalizationManager : INotifyPropertyChanged
         get => _currentLang;
         set
         {
-            if (_currentLang == value) return;
-            _currentLang = value;
-            Save(value);
+            var language = NormalizeLanguage(value);
+            if (_currentLang == language) return;
+            _currentLang = language;
+            Save(language);
             Notify();
         }
     }
-
-    public static readonly string[] SupportedLanguages = ["id", "ms", "en", "nl", "zh"];
-    public static readonly string[] LanguageLabels     = ["Indonesia", "Malay", "English", "Nederlands", "中文"];
 
     // ── Persistence ───────────────────────────────────────────────────────
     // Language is stored inside AppSettingsService's settings.json so it
@@ -44,7 +45,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     {
         try
         {
-            var saved = AppSettingsService.Load().Language?.Trim() ?? "en";
+            var saved = AppSettingsService.LoadLanguage();
             if (Array.IndexOf(SupportedLanguages, saved) >= 0) return saved;
         }
         catch { /* ignore */ }
@@ -56,11 +57,15 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     {
         try
         {
-            var settings = AppSettingsService.Load();
-            settings.Language = lang;
-            AppSettingsService.Save(settings);
+            AppSettingsService.SaveLanguage(lang);
         }
         catch { /* ignore */ }
+    }
+
+    private static string NormalizeLanguage(string? lang)
+    {
+        var code = (lang ?? "").Trim();
+        return Array.IndexOf(SupportedLanguages, code) >= 0 ? code : "en";
     }
 
     // ── String lookup ─────────────────────────────────────────────────────

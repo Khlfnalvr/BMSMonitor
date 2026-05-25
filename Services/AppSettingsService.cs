@@ -47,22 +47,42 @@ public class AppSettings
 
 public static class AppSettingsService
 {
+    private static readonly string[] _supportedLanguages = ["id", "ms", "en", "nl", "zh"];
     private static readonly string _path = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "BMSMonitor", "settings.json");
+    private static readonly string _legacyLanguagePath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "BMSMonitor", "language.txt");
 
     public static string FilePath   => _path;
     public static string FolderPath => Path.GetDirectoryName(_path)!;
+    public static string LanguageFilePath => _legacyLanguagePath;
 
     public static AppSettings Load()
     {
+        AppSettings settings = new();
+        bool loadedSettingsFile = false;
+
         try
         {
             if (File.Exists(_path))
-                return JsonSerializer.Deserialize(File.ReadAllText(_path), AppJsonContext.Default.AppSettings) ?? new();
+            {
+                settings = JsonSerializer.Deserialize(File.ReadAllText(_path), AppJsonContext.Default.AppSettings) ?? new();
+                loadedSettingsFile = true;
+            }
         }
         catch { }
-        return new();
+
+        var persistedLanguage = LoadLanguageFromFiles(settings.Language);
+        if (settings.Language != persistedLanguage)
+        {
+            settings.Language = persistedLanguage;
+            if (loadedSettingsFile || File.Exists(_legacyLanguagePath))
+                Save(settings);
+        }
+
+        return settings;
     }
 
     public static void Save(AppSettings settings)
@@ -70,8 +90,45 @@ public static class AppSettingsService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            settings.Language = NormalizeLanguage(settings.Language);
             File.WriteAllText(_path, JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings));
+            File.WriteAllText(_legacyLanguagePath, settings.Language);
         }
         catch { }
+    }
+
+    public static string LoadLanguage() => Load().Language;
+
+    public static void SaveLanguage(string language)
+    {
+        var settings = Load();
+        settings.Language = NormalizeLanguage(language);
+        Save(settings);
+    }
+
+    private static string LoadLanguageFromFiles(string settingsLanguage)
+    {
+        var normalizedSettingsLanguage = NormalizeLanguage(settingsLanguage);
+        if (normalizedSettingsLanguage != "en")
+            return normalizedSettingsLanguage;
+
+        try
+        {
+            if (File.Exists(_legacyLanguagePath))
+            {
+                var legacyLanguage = NormalizeLanguage(File.ReadAllText(_legacyLanguagePath));
+                if (legacyLanguage != "en")
+                    return legacyLanguage;
+            }
+        }
+        catch { }
+
+        return normalizedSettingsLanguage;
+    }
+
+    private static string NormalizeLanguage(string? language)
+    {
+        var code = (language ?? "").Trim();
+        return Array.IndexOf(_supportedLanguages, code) >= 0 ? code : "en";
     }
 }
