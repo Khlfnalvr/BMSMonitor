@@ -13,6 +13,7 @@ public partial class MainViewModel : ObservableObject
     private readonly DispatcherQueue _dispatcherQueue;
 
     public SerialService      Serial      { get; }
+    public BluetoothService   Bluetooth   { get; } = new();
     public LoggingService     Logging     { get; } = new();
     public AutoConnectService AutoConnect { get; }
 
@@ -291,6 +292,14 @@ public partial class MainViewModel : ObservableObject
         Serial.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() =>
             ConnectionStatus = LocalizationManager.Instance.Format("Ui_ErrorWithMessage", msg));
 
+        // Bluetooth shares the same downstream pipeline. When a BT link is up
+        // it suspends auto-connect so the USB scanner doesn't fight for the
+        // same display fields.
+        Bluetooth.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
+        Bluetooth.StatusChanged += msg  => _dispatcherQueue.TryEnqueue(() => OnBluetoothStatus(msg));
+        Bluetooth.ErrorOccurred += msg  => _dispatcherQueue.TryEnqueue(() =>
+            ConnectionStatus = LocalizationManager.Instance.Format("Ui_ErrorWithMessage", msg));
+
         // Playback frames feed through the same pipeline as live data
         // (the chart history is pre-populated by FileLoaded, so ApplyData
         // will skip the enqueue step while a file is loaded).
@@ -331,9 +340,12 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(BalancingText));
         OnPropertyChanged(nameof(PackStatusText));
 
-        DataSourceText = Serial.IsConnected
-            ? LocalizationManager.Instance.Format("Ui_SourceConnected", Serial.ChannelName, Serial.BitrateText)
-            : LocalizationManager.Instance.Get("Ui_SourceNotConnected");
+        if (Serial.IsConnected)
+            DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Serial.ChannelName, Serial.BitrateText);
+        else if (Bluetooth.IsConnected)
+            DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Bluetooth.DeviceName, "BLE");
+        else
+            DataSourceText = LocalizationManager.Instance.Get("Ui_SourceNotConnected");
 
         if (Serial.IsConnected)
         {
@@ -341,6 +353,11 @@ public partial class MainViewModel : ObservableObject
                 "Serial_StatusConnected",
                 Serial.ChannelName,
                 Serial.Bitrate);
+        }
+        else if (Bluetooth.IsConnected)
+        {
+            ConnectionStatus = LocalizationManager.Instance.Format(
+                "Bt_StatusConnected", Bluetooth.DeviceName);
         }
         else if (!IsConnected)
         {
@@ -390,16 +407,44 @@ public partial class MainViewModel : ObservableObject
     private void OnSerialStatus(string msg)
     {
         ConnectionStatus = msg;
-        IsConnected      = Serial.IsConnected;
+        IsConnected      = Serial.IsConnected || Bluetooth.IsConnected;
 
         if (Serial.IsConnected)
+        {
+            DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Serial.ChannelName, Serial.BitrateText);
+        }
+        else if (Bluetooth.IsConnected)
+        {
+            // Keep showing the BT source if the user just dropped serial while BT is up.
+            DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Bluetooth.DeviceName, "BLE");
+        }
+        else
+        {
+            DataSourceText = LocalizationManager.Instance.Get("Ui_SourceNotConnected");
+            HasData        = false;   // last frame stays in fields, but UI shows "—"
+        }
+    }
+
+    private void OnBluetoothStatus(string msg)
+    {
+        ConnectionStatus = msg;
+        IsConnected      = Serial.IsConnected || Bluetooth.IsConnected;
+
+        if (Bluetooth.IsConnected)
+        {
+            // While BT is the active source, pause USB scanning so the two
+            // transports don't trample each other's "source" label.
+            AutoConnect.SuspendReconnect();
+            DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Bluetooth.DeviceName, "BLE");
+        }
+        else if (Serial.IsConnected)
         {
             DataSourceText = LocalizationManager.Instance.Format("Ui_SourceConnected", Serial.ChannelName, Serial.BitrateText);
         }
         else
         {
             DataSourceText = LocalizationManager.Instance.Get("Ui_SourceNotConnected");
-            HasData        = false;   // last frame stays in fields, but UI shows "—"
+            HasData        = false;
         }
     }
 

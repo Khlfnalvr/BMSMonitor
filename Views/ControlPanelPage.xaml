@@ -66,51 +66,121 @@
 
                     <StackPanel Grid.Row="0" Spacing="10">
 
-                    <!-- ── SERIAL CONNECTION ──────────────────────────────── -->
-                    <TextBlock Text="{x:Bind Lang.Ctrl_SecSerial, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel Spacing="14">
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_SerialPort, Mode=OneWay}"
-                                           Style="{StaticResource FormLabelStyle}"/>
-                                <ComboBox Grid.Column="1" x:Name="ComboSerialPort"
-                                          PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"
-                                          HorizontalAlignment="Stretch"/>
-                                <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshChannels_Click"/>
-                                <Button Grid.Column="3" x:Name="ConnectBtn"
-                                        Content=""
-                                        Style="{ThemeResource AccentButtonStyle}"
-                                        Click="ConnectBtn_Click"/>
-                            </Grid>
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_SerialBaud, Mode=OneWay}"
-                                           Style="{StaticResource FormLabelStyle}"/>
-                                <ComboBox Grid.Column="1" x:Name="ComboSerialBaud" HorizontalAlignment="Stretch"/>
-                            </Grid>
-                            <!-- Status -->
-                            <Grid ColumnSpacing="10">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="180"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ConnStatus, Mode=OneWay}"
-                                           Style="{StaticResource FormLabelStyle}"/>
-                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                    <TextBlock x:Name="ConnStatusText" FontSize="13" Text=""/>
-                                    <TextBlock x:Name="AutoConnectStatusText"
-                                               FontSize="11" Opacity="0.5" TextWrapping="Wrap"
-                                               Text="{x:Bind Lang.Ctrl_AutoConnectStatus, Mode=OneWay}"/>
-                                </StackPanel>
+                    <!-- ── CONNECTION (Serial + Bluetooth, tabbed) ────────── -->
+                    <TextBlock Text="{x:Bind Lang.Ctrl_SecConnection, Mode=OneWay}" Style="{StaticResource SectionHeaderStyle}"/>
+                    <!-- Slightly tighter top/bottom padding than the default CardStyle
+                         (16) — keeps the tab row close to the top edge so the card
+                         doesn't grow much taller than the old single-section card. -->
+                    <Border Style="{StaticResource CardStyle}" Padding="16,2,16,12">
+                        <StackPanel Spacing="2">
+
+                            <!-- Tab selector — same SelectorBar pattern used in the
+                                 title-bar flyout. SerialPanel is visible by default;
+                                 BluetoothPanel is toggled visible on tab switch. -->
+                            <SelectorBar x:Name="ConnTabsCtrl"
+                                         SelectionChanged="ConnTabsCtrl_SelectionChanged">
+                                <SelectorBarItem x:Name="CtrlTabSerial"
+                                                 FontSize="13"
+                                                 Padding="12,6,12,4"
+                                                 Text="{x:Bind Lang.Ui_TabSerial, Mode=OneWay}"/>
+                                <SelectorBarItem x:Name="CtrlTabBluetooth"
+                                                 FontSize="13"
+                                                 Padding="12,6,12,4"
+                                                 Text="{x:Bind Lang.Ui_TabBluetooth, Mode=OneWay}"/>
+                            </SelectorBar>
+
+                            <!-- Both panels share the same Grid cell so the cell
+                                 auto-sizes to max(Serial, Bluetooth). Visibility
+                                 toggles via Opacity/IsHitTestVisible/IsEnabled
+                                 instead of Visibility — keeps the hidden panel
+                                 in the layout tree, so switching tabs doesn't
+                                 resize the card (which would shift Serial
+                                 Parameters / Balancing below). -->
+                            <Grid>
+                            <!-- ── SERIAL PANEL ────────────────────────────── -->
+                            <StackPanel x:Name="SerialPanel" Spacing="12">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_SerialPort, Mode=OneWay}"
+                                               Style="{StaticResource FormLabelStyle}"/>
+                                    <ComboBox Grid.Column="1" x:Name="ComboSerialPort"
+                                              PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"
+                                              HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="2" Content="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}" Click="RefreshChannels_Click"/>
+                                    <Button Grid.Column="3" x:Name="ConnectBtn"
+                                            Content=""
+                                            Style="{ThemeResource AccentButtonStyle}"
+                                            Click="ConnectBtn_Click"/>
+                                </Grid>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_SerialBaud, Mode=OneWay}"
+                                               Style="{StaticResource FormLabelStyle}"/>
+                                    <ComboBox Grid.Column="1" x:Name="ComboSerialBaud" HorizontalAlignment="Stretch"/>
+                                </Grid>
+                                <!-- Status -->
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ConnStatus, Mode=OneWay}"
+                                               Style="{StaticResource FormLabelStyle}"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="ConnStatusText" FontSize="13" Text=""/>
+                                        <TextBlock x:Name="AutoConnectStatusText"
+                                                   FontSize="11" Opacity="0.5" TextWrapping="Wrap"
+                                                   Text="{x:Bind Lang.Ctrl_AutoConnectStatus, Mode=OneWay}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- ── BLUETOOTH PANEL ────────────────────────── -->
+                            <StackPanel x:Name="BluetoothPanel" Spacing="12"
+                                        Opacity="0" IsHitTestVisible="False">
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_BtDevice, Mode=OneWay}"
+                                               Style="{StaticResource FormLabelStyle}"/>
+                                    <ComboBox Grid.Column="1" x:Name="ComboBtDevice"
+                                              PlaceholderText="{x:Bind Lang.Ctrl_BtPhNoDevices, Mode=OneWay}"
+                                              HorizontalAlignment="Stretch"/>
+                                    <Button Grid.Column="2" x:Name="BtScanBtn"
+                                            Content="{x:Bind Lang.Ctrl_BtScan, Mode=OneWay}"
+                                            Click="BtScanBtn_Click"/>
+                                    <Button Grid.Column="3" x:Name="BtConnectBtn"
+                                            Content=""
+                                            Style="{ThemeResource AccentButtonStyle}"
+                                            Click="BtConnectBtn_Click"/>
+                                </Grid>
+                                <Grid ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="180"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_ConnStatus, Mode=OneWay}"
+                                               Style="{StaticResource FormLabelStyle}"/>
+                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock x:Name="BtStatusText" FontSize="13" Text=""/>
+                                        <TextBlock x:Name="BtHintText"
+                                                   FontSize="11" Opacity="0.5" TextWrapping="Wrap"
+                                                   Text="{x:Bind Lang.Ctrl_BtHint, Mode=OneWay}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -131,13 +201,21 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{x:Bind Lang.Ctrl_AutoConnect, Mode=OneWay}"
                                            Style="{StaticResource FormLabelStyle}"/>
-                                <StackPanel Grid.Column="1" Spacing="2">
-                                    <ToggleSwitch x:Name="ToggleAutoConnect"
+                                <Grid Grid.Column="1" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <ToggleSwitch Grid.Column="0" x:Name="ToggleAutoConnect"
+                                                  MinWidth="0"
+                                                  VerticalAlignment="Center"
                                                   Toggled="ToggleAutoConnect_Toggled"
                                                   OnContent="" OffContent=""/>
-                                    <TextBlock Text="{x:Bind Lang.Ctrl_AutoConnectHint, Mode=OneWay}"
-                                               FontSize="11" Opacity="0.5" TextWrapping="Wrap"/>
-                                </StackPanel>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{x:Bind Lang.Ctrl_AutoConnectHint, Mode=OneWay}"
+                                               FontSize="11" Opacity="0.5" TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
+                                </Grid>
                             </Grid>
 
                             <!-- Reconnect interval -->

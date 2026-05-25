@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using BMSMonitor.Services;
@@ -20,8 +21,17 @@ public sealed partial class ControlPanelPage : Page
         PopulateBitrates();
         RefreshChannels();
         HookSerial();
+        HookBluetooth();
+        RestoreLastBtDevice();
         SyncConnectButton();
+        SyncBtButtons();
         LoadSerialParams();
+
+        // Default to the Serial tab on first show. SelectorBar.SelectedItem
+        // is null on open, which would leave both panels visible — pick the
+        // first item explicitly.
+        ConnTabsCtrl.SelectedItem = CtrlTabSerial;
+        ApplyConnTab();
 
         // Poll frame counters at 2 Hz — cheap and avoids wiring an event
         // for every received frame. Started/stopped with page lifecycle.
@@ -50,6 +60,7 @@ public sealed partial class ControlPanelPage : Page
         Bindings.Update();
         RefreshChannels();
         SyncConnectButton();
+        SyncBtButtons();
         AutoConnectStatusText.Text = Lang.Ctrl_AutoConnectStatus;
     }
 
@@ -212,8 +223,151 @@ public sealed partial class ControlPanelPage : Page
 
     private void UpdateCounters()
     {
-        FramesReceivedText.Text = ViewModel.Serial.FramesReceived.ToString("N0");
-        ParseErrorsText.Text    = ViewModel.Serial.ParseErrors.ToString("N0");
+        // Sum frame counters across whichever transport is active. Either
+        // service zeroes its own counter on (re)connect, so this stays
+        // accurate per-session regardless of which one is in use.
+        int frames = ViewModel.Serial.FramesReceived + ViewModel.Bluetooth.FramesReceived;
+        int errors = ViewModel.Serial.ParseErrors    + ViewModel.Bluetooth.ParseErrors;
+        FramesReceivedText.Text = frames.ToString("N0");
+        ParseErrorsText.Text    = errors.ToString("N0");
+    }
+
+    // ── Connection tab switch ─────────────────────────────────────────────
+    private void ConnTabsCtrl_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        ApplyConnTab();
+    }
+
+    private void ApplyConnTab()
+    {
+        if (SerialPanel is null || BluetoothPanel is null) return;
+        bool serial = ConnTabsCtrl.SelectedItem == CtrlTabSerial || ConnTabsCtrl.SelectedItem is null;
+
+        // Opacity-toggle (instead of Visibility) keeps the hidden panel
+        // in the layout tree so the shared Grid cell stays sized to the
+        // taller (Serial) panel. IsHitTestVisible blocks pointer input on
+        // the invisible side. (StackPanel/Panel doesn't expose IsEnabled —
+        // that's on Control, so we can't disable the whole subtree here;
+        // pointer hit-testing is enough to make the hidden panel inert.)
+        SerialPanel.Opacity          = serial ? 1 : 0;
+        SerialPanel.IsHitTestVisible = serial;
+
+        BluetoothPanel.Opacity          = serial ? 0 : 1;
+        BluetoothPanel.IsHitTestVisible = !serial;
+    }
+
+    // ── Bluetooth controls ────────────────────────────────────────────────
+    private void HookBluetooth()
+    {
+        ViewModel.Bluetooth.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
+        {
+            BtStatusText.Text = msg;
+            SyncBtButtons();
+        });
+        ViewModel.Bluetooth.ErrorOccurred += msg => DispatcherQueue.TryEnqueue(() =>
+            ShowFeedback(Lang.Get("Alert_SerialErrorTitle"), msg, InfoBarSeverity.Error));
+        ViewModel.Bluetooth.DevicesChanged += () => DispatcherQueue.TryEnqueue(RefreshBtDevices);
+    }
+
+    private void RestoreLastBtDevice()
+    {
+        var saved = AppSettingsService.Load();
+        if (string.IsNullOrWhiteSpace(saved.LastBluetoothDeviceId)) return;
+
+        // Seed the dropdown with the remembered device so the user can press
+        // Connect without first running a scan. A live scan refreshes the
+        // entry if the device shows up under a different display name.
+        var entry = new BluetoothDeviceInfo(saved.LastBluetoothDeviceId,
+            string.IsNullOrWhiteSpace(saved.LastBluetoothDeviceName)
+                ? saved.LastBluetoothDeviceId
+                : saved.LastBluetoothDeviceName);
+        if (!ViewModel.Bluetooth.Devices.Any(d => d.DeviceId == entry.DeviceId))
+            ViewModel.Bluetooth.Devices.Add(entry);
+        RefreshBtDevices();
+    }
+
+    private void RefreshBtDevices()
+    {
+        var current = (ComboBtDevice.SelectedItem as ComboBoxItem)?.Tag as BluetoothDeviceInfo;
+        ComboBtDevice.Items.Clear();
+        foreach (var d in ViewModel.Bluetooth.Devices)
+            ComboBtDevice.Items.Add(new ComboBoxItem { Content = d.DisplayName, Tag = d });
+
+        var preferredId = current?.DeviceId
+                          ?? AppSettingsService.Load().LastBluetoothDeviceId;
+
+        if (!string.IsNullOrWhiteSpace(preferredId))
+        {
+            for (int i = 0; i < ComboBtDevice.Items.Count; i++)
+            {
+                if (ComboBtDevice.Items[i] is ComboBoxItem it &&
+                    it.Tag is BluetoothDeviceInfo c &&
+                    c.DeviceId == preferredId)
+                {
+                    ComboBtDevice.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+        if (ComboBtDevice.SelectedIndex < 0 && ComboBtDevice.Items.Count > 0)
+            ComboBtDevice.SelectedIndex = 0;
+    }
+
+    private void SyncBtButtons()
+    {
+        bool connected = ViewModel.Bluetooth.IsConnected;
+        bool scanning  = ViewModel.Bluetooth.IsScanning;
+        BtConnectBtn.Content = connected ? Lang.Ctrl_BtDisconnect : Lang.Ctrl_BtConnect;
+        BtScanBtn.Content    = scanning  ? Lang.Ctrl_BtStopScan   : Lang.Ctrl_BtScan;
+        ComboBtDevice.IsEnabled = !connected;
+        BtStatusText.Text = connected
+            ? Lang.Format("Bt_StatusConnected", ViewModel.Bluetooth.DeviceName)
+            : Lang.Ctrl_NotConnected;
+    }
+
+    private void BtScanBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Bluetooth.IsScanning)
+        {
+            ViewModel.Bluetooth.StopScan();
+        }
+        else
+        {
+            ViewModel.Bluetooth.StartScan();
+        }
+        SyncBtButtons();
+    }
+
+    private async void BtConnectBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Bluetooth.IsConnected)
+        {
+            ViewModel.Bluetooth.Disconnect();
+            return;
+        }
+
+        var device = (ComboBtDevice.SelectedItem as ComboBoxItem)?.Tag as BluetoothDeviceInfo;
+        if (device is null)
+        {
+            ShowFeedback(Lang.Get("Bt_FbSelect"), Lang.Get("Bt_FbSelectMsg"), InfoBarSeverity.Warning);
+            return;
+        }
+
+        // Pause the USB scanner — once BT is the active source the AutoConnect
+        // poll would otherwise keep hunting for COM ports in the background.
+        ViewModel.AutoConnect.SuspendReconnect();
+        // If a USB session was already up, drop it so the source label stays honest.
+        if (ViewModel.Serial.IsConnected) ViewModel.Serial.Disconnect();
+
+        bool ok = await ViewModel.Bluetooth.ConnectAsync(device);
+        if (ok)
+        {
+            var settings = AppSettingsService.Load();
+            settings.LastBluetoothDeviceId   = device.DeviceId;
+            settings.LastBluetoothDeviceName = device.DisplayName;
+            AppSettingsService.Save(settings);
+        }
+        SyncBtButtons();
     }
 
     // ── Settings ──────────────────────────────────────────────────────────

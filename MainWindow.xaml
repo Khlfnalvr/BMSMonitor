@@ -462,48 +462,120 @@
                     </Grid>
                     <Button.Flyout>
                         <Flyout x:Name="SerialFlyout" Placement="Bottom">
-                            <StackPanel Width="300" Spacing="10">
-                                <TextBlock Text="{x:Bind Lang.Ui_SerialConnection, Mode=OneWay}"
-                                           FontWeight="SemiBold" FontSize="12"/>
+                            <Flyout.FlyoutPresenterStyle>
+                                <!-- Tight padding + explicit theme corner radius. A bare
+                                     <Style TargetType="FlyoutPresenter"> with no Template
+                                     setter drops the platform's rounded-corner default,
+                                     so we re-state CornerRadius from OverlayCornerRadius
+                                     and add a hairline border to match the original look. -->
+                                <Style TargetType="FlyoutPresenter">
+                                    <Setter Property="Padding"         Value="12,0,12,12"/>
+                                    <Setter Property="CornerRadius"    Value="{ThemeResource OverlayCornerRadius}"/>
+                                    <Setter Property="BorderBrush"     Value="{ThemeResource SurfaceStrokeColorFlyoutBrush}"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                </Style>
+                            </Flyout.FlyoutPresenterStyle>
+                            <StackPanel Width="300" Spacing="5">
 
-                                <!-- Channel row + refresh -->
-                                <Grid ColumnSpacing="6">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <ComboBox Grid.Column="0"
-                                              x:Name="CapSerialPort"
+                                <!-- Tab selector: Serial / Bluetooth. Index 0
+                                     shows the original serial picker; index 1
+                                     reveals the BLE device list. -->
+                                <SelectorBar x:Name="ConnTabs"
+                                             SelectionChanged="ConnTabs_SelectionChanged">
+                                    <SelectorBarItem x:Name="ConnTabSerial"
+                                                     FontSize="12"
+                                                     Padding="12,4,12,4"
+                                                     Text="{x:Bind Lang.Ui_TabSerial, Mode=OneWay}"/>
+                                    <SelectorBarItem x:Name="ConnTabBluetooth"
+                                                     FontSize="12"
+                                                     Padding="12,4,12,4"
+                                                     Text="{x:Bind Lang.Ui_TabBluetooth, Mode=OneWay}"/>
+                                </SelectorBar>
+
+                                <!-- ───── SERIAL TAB ───────────────────────── -->
+                                <StackPanel x:Name="CapSerialPanel" Spacing="10">
+                                    <TextBlock Text="{x:Bind Lang.Ui_SerialConnection, Mode=OneWay}"
+                                               FontWeight="SemiBold" FontSize="12"/>
+
+                                    <!-- Channel row + refresh -->
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0"
+                                                  x:Name="CapSerialPort"
+                                                  FontSize="12"
+                                                  HorizontalAlignment="Stretch"
+                                                  PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"/>
+                                        <Button Grid.Column="1"
+                                                x:Name="CapRefreshBtn"
+                                                Padding="8,6"
+                                                ToolTipService.ToolTip="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}"
+                                                Click="CapRefresh_Click">
+                                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="12"/>
+                                        </Button>
+                                    </Grid>
+
+                                    <!-- Bitrate row -->
+                                    <ComboBox x:Name="CapSerialBaud"
                                               FontSize="12"
-                                              HorizontalAlignment="Stretch"
-                                              PlaceholderText="{x:Bind Lang.Ctrl_PhScanning, Mode=OneWay}"/>
-                                    <Button Grid.Column="1"
-                                            x:Name="CapRefreshBtn"
-                                            Padding="8,6"
-                                            ToolTipService.ToolTip="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}"
-                                            Click="CapRefresh_Click">
-                                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="12"/>
-                                    </Button>
-                                </Grid>
+                                              HorizontalAlignment="Stretch"/>
 
-                                <!-- Bitrate row -->
-                                <ComboBox x:Name="CapSerialBaud"
-                                          FontSize="12"
-                                          HorizontalAlignment="Stretch"/>
+                                    <!-- Connect / Disconnect -->
+                                    <Button x:Name="CapConnectBtn"
+                                            FontSize="12"
+                                            HorizontalAlignment="Stretch"
+                                            Style="{ThemeResource AccentButtonStyle}"
+                                            Click="CapConnectBtn_Click"
+                                            Content="{x:Bind Lang.Ctrl_Connect, Mode=OneWay}"/>
 
-                                <!-- Connect / Disconnect -->
-                                <Button x:Name="CapConnectBtn"
-                                        FontSize="12"
-                                        HorizontalAlignment="Stretch"
-                                        Style="{ThemeResource AccentButtonStyle}"
-                                        Click="CapConnectBtn_Click"
-                                        Content="{x:Bind Lang.Ctrl_Connect, Mode=OneWay}"/>
+                                    <!-- Status -->
+                                    <TextBlock x:Name="CapConnStatus"
+                                               FontSize="11" Opacity="0.7"
+                                               TextWrapping="Wrap"
+                                               Text="{x:Bind Lang.Ctrl_NotConnected, Mode=OneWay}"/>
+                                </StackPanel>
 
-                                <!-- Status -->
-                                <TextBlock x:Name="CapConnStatus"
-                                           FontSize="11" Opacity="0.7"
-                                           TextWrapping="Wrap"
-                                           Text="{x:Bind Lang.Ctrl_NotConnected, Mode=OneWay}"/>
+                                <!-- ───── BLUETOOTH TAB ────────────────────── -->
+                                <StackPanel x:Name="CapBtPanel" Spacing="10" Visibility="Collapsed">
+                                    <TextBlock Text="{x:Bind Lang.Ui_BluetoothConnection, Mode=OneWay}"
+                                               FontWeight="SemiBold" FontSize="12"/>
+
+                                    <!-- Device row + scan toggle -->
+                                    <Grid ColumnSpacing="6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ComboBox Grid.Column="0"
+                                                  x:Name="CapBtDevice"
+                                                  FontSize="12"
+                                                  HorizontalAlignment="Stretch"
+                                                  PlaceholderText="{x:Bind Lang.Ctrl_BtPhNoDevices, Mode=OneWay}"/>
+                                        <Button Grid.Column="1"
+                                                x:Name="CapBtScanBtn"
+                                                Padding="8,6"
+                                                ToolTipService.ToolTip="{x:Bind Lang.Ctrl_BtScan, Mode=OneWay}"
+                                                Click="CapBtScanBtn_Click">
+                                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE895;" FontSize="12"/>
+                                        </Button>
+                                    </Grid>
+
+                                    <!-- Connect / Disconnect -->
+                                    <Button x:Name="CapBtConnectBtn"
+                                            FontSize="12"
+                                            HorizontalAlignment="Stretch"
+                                            Style="{ThemeResource AccentButtonStyle}"
+                                            Click="CapBtConnectBtn_Click"
+                                            Content="{x:Bind Lang.Ctrl_BtConnect, Mode=OneWay}"/>
+
+                                    <!-- Status -->
+                                    <TextBlock x:Name="CapBtStatus"
+                                               FontSize="11" Opacity="0.7"
+                                               TextWrapping="Wrap"
+                                               Text="{x:Bind Lang.Ctrl_NotConnected, Mode=OneWay}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>

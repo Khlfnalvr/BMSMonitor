@@ -100,6 +100,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     // ── Caption-bar serial picker ─────────────────────────────────────────
     public string Ui_SerialConnection  => T(nameof(Ui_SerialConnection));
     public string Ui_SerialQuickAccess => T(nameof(Ui_SerialQuickAccess));
+    public string Ui_TabSerial         => T(nameof(Ui_TabSerial));
+    public string Ui_TabBluetooth      => T(nameof(Ui_TabBluetooth));
+    public string Ui_BluetoothConnection => T(nameof(Ui_BluetoothConnection));
 
     // ── Alert history ─────────────────────────────────────────────────────
     public string Ui_AlertHistory   => T(nameof(Ui_AlertHistory));
@@ -209,6 +212,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Cell_CutoffDesc        => T(nameof(Cell_CutoffDesc));
 
     // ── Control Panel ─────────────────────────────────────────────────────
+    public string Ctrl_SecConnection      => T(nameof(Ctrl_SecConnection));
     public string Ctrl_SecSerial          => T(nameof(Ctrl_SecSerial));
     public string Ctrl_SerialPort         => T(nameof(Ctrl_SerialPort));
     public string Ctrl_PhScanning         => T(nameof(Ctrl_PhScanning));
@@ -248,6 +252,17 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Ctrl_ProbeTimeout       => T(nameof(Ctrl_ProbeTimeout));
     public string Ctrl_FramesReceived     => T(nameof(Ctrl_FramesReceived));
     public string Ctrl_ParseErrors        => T(nameof(Ctrl_ParseErrors));
+
+    // ── Control Panel — Bluetooth ─────────────────────────────────────────
+    public string Ctrl_SecBluetooth       => T(nameof(Ctrl_SecBluetooth));
+    public string Ctrl_BtDevice           => T(nameof(Ctrl_BtDevice));
+    public string Ctrl_BtScan             => T(nameof(Ctrl_BtScan));
+    public string Ctrl_BtStopScan         => T(nameof(Ctrl_BtStopScan));
+    public string Ctrl_BtConnect          => T(nameof(Ctrl_BtConnect));
+    public string Ctrl_BtDisconnect       => T(nameof(Ctrl_BtDisconnect));
+    public string Ctrl_BtPhSelect         => T(nameof(Ctrl_BtPhSelect));
+    public string Ctrl_BtPhNoDevices      => T(nameof(Ctrl_BtPhNoDevices));
+    public string Ctrl_BtHint             => T(nameof(Ctrl_BtHint));
 
     // ── Feedback messages ─────────────────────────────────────────────────
     public string Fb_SerialError       => T(nameof(Fb_SerialError));
@@ -340,6 +355,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Change language",
             [nameof(Ui_SerialConnection)]  = "Serial Connection",
             [nameof(Ui_SerialQuickAccess)] = "Quick serial access",
+            [nameof(Ui_TabSerial)]         = "Serial",
+            [nameof(Ui_TabBluetooth)]      = "Bluetooth",
+            [nameof(Ui_BluetoothConnection)] = "Bluetooth Connection",
             [nameof(Ui_AlertHistory)]   = "Alert History",
             [nameof(Ui_NoAlerts)]       = "No alerts yet",
             [nameof(Ui_ClearAlerts)]    = "Clear",
@@ -438,6 +456,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Cutoff  (above 70°C)",
             [nameof(Cell_ResetStats)]        = "Reset Statistics",
 
+            [nameof(Ctrl_SecConnection)]        = "CONNECTION",
             [nameof(Ctrl_SecSerial)]            = "SERIAL CONNECTION",
             [nameof(Ctrl_SerialPort)]        = "COM Port",
             [nameof(Ctrl_PhScanning)]        = "Scanning ports…",
@@ -476,6 +495,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ProbeTimeout)]      = "Probe Timeout",
             [nameof(Ctrl_FramesReceived)]    = "Frames received",
             [nameof(Ctrl_ParseErrors)]       = "Parse errors",
+
+            [nameof(Ctrl_SecBluetooth)]      = "BLUETOOTH CONNECTION",
+            [nameof(Ctrl_BtDevice)]          = "Device",
+            [nameof(Ctrl_BtScan)]            = "Scan",
+            [nameof(Ctrl_BtStopScan)]        = "Stop",
+            [nameof(Ctrl_BtConnect)]         = "Connect",
+            [nameof(Ctrl_BtDisconnect)]      = "Disconnect",
+            [nameof(Ctrl_BtPhSelect)]        = "Select a device…",
+            [nameof(Ctrl_BtPhNoDevices)]     = "No devices yet — press Scan",
+            [nameof(Ctrl_BtHint)]            = "ESP32 BLE devices that advertise the Nordic UART Service (NUS) will appear here. Pair the device in Windows Settings first.",
 
             [nameof(Fb_SerialError)]            = "Serial error",
             [nameof(Fb_SelectChannel)]       = "Select a port",
@@ -550,6 +579,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Ubah bahasa",
             [nameof(Ui_SerialConnection)]  = "Koneksi Serial",
             [nameof(Ui_SerialQuickAccess)] = "Akses cepat serial",
+            [nameof(Ui_TabSerial)]         = "Serial",
+            [nameof(Ui_TabBluetooth)]      = "Bluetooth",
+            [nameof(Ui_BluetoothConnection)] = "Koneksi Bluetooth",
             [nameof(Ui_AlertHistory)]   = "Riwayat Alert",
             [nameof(Ui_NoAlerts)]       = "Belum ada alert",
             [nameof(Ui_ClearAlerts)]    = "Hapus",
@@ -648,6 +680,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
             [nameof(Cell_ResetStats)]        = "Reset Statistik",
 
+            [nameof(Ctrl_SecConnection)]        = "KONEKSI",
             [nameof(Ctrl_SecSerial)]            = "KONEKSI SERIAL",
             [nameof(Ctrl_SerialPort)]        = "Port COM",
             [nameof(Ctrl_PhScanning)]        = "Memindai port…",
@@ -686,6 +719,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ProbeTimeout)]      = "Timeout Verifikasi",
             [nameof(Ctrl_FramesReceived)]    = "Frame diterima",
             [nameof(Ctrl_ParseErrors)]       = "Kesalahan parsing",
+
+            [nameof(Ctrl_SecBluetooth)]      = "KONEKSI BLUETOOTH",
+            [nameof(Ctrl_BtDevice)]          = "Perangkat",
+            [nameof(Ctrl_BtScan)]            = "Pindai",
+            [nameof(Ctrl_BtStopScan)]        = "Berhenti",
+            [nameof(Ctrl_BtConnect)]         = "Hubungkan",
+            [nameof(Ctrl_BtDisconnect)]      = "Putuskan",
+            [nameof(Ctrl_BtPhSelect)]        = "Pilih perangkat…",
+            [nameof(Ctrl_BtPhNoDevices)]     = "Belum ada perangkat — tekan Pindai",
+            [nameof(Ctrl_BtHint)]            = "Perangkat ESP32 BLE yang menyiarkan Nordic UART Service (NUS) akan muncul di sini. Pasangkan perangkat di Pengaturan Windows terlebih dahulu.",
 
             [nameof(Fb_SerialError)]            = "Kesalahan Serial",
             [nameof(Fb_SelectChannel)]       = "Pilih port",
@@ -760,6 +803,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Tukar bahasa",
             [nameof(Ui_SerialConnection)]  = "Sambungan Serial",
             [nameof(Ui_SerialQuickAccess)] = "Akses pantas serial",
+            [nameof(Ui_TabSerial)]         = "Serial",
+            [nameof(Ui_TabBluetooth)]      = "Bluetooth",
+            [nameof(Ui_BluetoothConnection)] = "Sambungan Bluetooth",
             [nameof(Ui_AlertHistory)]   = "Sejarah Amaran",
             [nameof(Ui_NoAlerts)]       = "Tiada amaran lagi",
             [nameof(Ui_ClearAlerts)]    = "Hapus",
@@ -858,6 +904,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Pemutus  (di atas 70°C)",
             [nameof(Cell_ResetStats)]        = "Tetapkan Semula Statistik",
 
+            [nameof(Ctrl_SecConnection)]        = "SAMBUNGAN",
             [nameof(Ctrl_SecSerial)]            = "SAMBUNGAN SERIAL",
             [nameof(Ctrl_SerialPort)]        = "Port COM",
             [nameof(Ctrl_PhScanning)]        = "Mengimbas port…",
@@ -896,6 +943,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ProbeTimeout)]      = "Tamat Masa Pemeriksaan",
             [nameof(Ctrl_FramesReceived)]    = "Bingkai diterima",
             [nameof(Ctrl_ParseErrors)]       = "Ralat penghuraian",
+
+            [nameof(Ctrl_SecBluetooth)]      = "SAMBUNGAN BLUETOOTH",
+            [nameof(Ctrl_BtDevice)]          = "Peranti",
+            [nameof(Ctrl_BtScan)]            = "Imbas",
+            [nameof(Ctrl_BtStopScan)]        = "Berhenti",
+            [nameof(Ctrl_BtConnect)]         = "Sambung",
+            [nameof(Ctrl_BtDisconnect)]      = "Putus",
+            [nameof(Ctrl_BtPhSelect)]        = "Pilih peranti…",
+            [nameof(Ctrl_BtPhNoDevices)]     = "Tiada peranti lagi — tekan Imbas",
+            [nameof(Ctrl_BtHint)]            = "Peranti ESP32 BLE yang menyiarkan Nordic UART Service (NUS) akan muncul di sini. Gandingkan peranti dalam Tetapan Windows terlebih dahulu.",
 
             [nameof(Fb_SerialError)]            = "Ralat Serial",
             [nameof(Fb_SelectChannel)]       = "Pilih port",
@@ -970,6 +1027,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "Taal wijzigen",
             [nameof(Ui_SerialConnection)]  = "Seriële verbinding",
             [nameof(Ui_SerialQuickAccess)] = "Snelle seriële toegang",
+            [nameof(Ui_TabSerial)]         = "Serieel",
+            [nameof(Ui_TabBluetooth)]      = "Bluetooth",
+            [nameof(Ui_BluetoothConnection)] = "Bluetooth-verbinding",
             [nameof(Ui_AlertHistory)]   = "Waarschuwingslog",
             [nameof(Ui_NoAlerts)]       = "Geen waarschuwingen",
             [nameof(Ui_ClearAlerts)]    = "Wissen",
@@ -1068,6 +1128,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "Beveiliging  (boven 70°C)",
             [nameof(Cell_ResetStats)]        = "Statistieken resetten",
 
+            [nameof(Ctrl_SecConnection)]        = "VERBINDING",
             [nameof(Ctrl_SecSerial)]            = "SERIËLE VERBINDING",
             [nameof(Ctrl_SerialPort)]        = "COM-poort",
             [nameof(Ctrl_PhScanning)]        = "Poorten scannen…",
@@ -1106,6 +1167,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ProbeTimeout)]      = "Detectie-timeout",
             [nameof(Ctrl_FramesReceived)]    = "Frames ontvangen",
             [nameof(Ctrl_ParseErrors)]       = "Parse-fouten",
+
+            [nameof(Ctrl_SecBluetooth)]      = "BLUETOOTH-VERBINDING",
+            [nameof(Ctrl_BtDevice)]          = "Apparaat",
+            [nameof(Ctrl_BtScan)]            = "Scannen",
+            [nameof(Ctrl_BtStopScan)]        = "Stoppen",
+            [nameof(Ctrl_BtConnect)]         = "Verbinden",
+            [nameof(Ctrl_BtDisconnect)]      = "Verbreken",
+            [nameof(Ctrl_BtPhSelect)]        = "Selecteer een apparaat…",
+            [nameof(Ctrl_BtPhNoDevices)]     = "Nog geen apparaten — klik Scannen",
+            [nameof(Ctrl_BtHint)]            = "ESP32 BLE-apparaten die de Nordic UART Service (NUS) adverteren verschijnen hier. Koppel het apparaat eerst in Windows-instellingen.",
 
             [nameof(Fb_SerialError)]            = "Seriële fout",
             [nameof(Fb_SelectChannel)]       = "Selecteer een poort",
@@ -1180,6 +1251,9 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ui_ChangeLanguage)] = "更改语言",
             [nameof(Ui_SerialConnection)]  = "串口连接",
             [nameof(Ui_SerialQuickAccess)] = "串口快速访问",
+            [nameof(Ui_TabSerial)]         = "串口",
+            [nameof(Ui_TabBluetooth)]      = "蓝牙",
+            [nameof(Ui_BluetoothConnection)] = "蓝牙连接",
             [nameof(Ui_AlertHistory)]   = "警报历史",
             [nameof(Ui_NoAlerts)]       = "暂无警报",
             [nameof(Ui_ClearAlerts)]    = "清除",
@@ -1278,6 +1352,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Cell_CutoffDesc)]        = "断路 (高于 70°C)",
             [nameof(Cell_ResetStats)]        = "重置统计",
 
+            [nameof(Ctrl_SecConnection)]        = "连接",
             [nameof(Ctrl_SecSerial)]            = "串口连接",
             [nameof(Ctrl_SerialPort)]        = "COM 端口",
             [nameof(Ctrl_PhScanning)]        = "正在扫描端口…",
@@ -1316,6 +1391,16 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Ctrl_ProbeTimeout)]      = "探测超时",
             [nameof(Ctrl_FramesReceived)]    = "已接收帧数",
             [nameof(Ctrl_ParseErrors)]       = "解析错误",
+
+            [nameof(Ctrl_SecBluetooth)]      = "蓝牙连接",
+            [nameof(Ctrl_BtDevice)]          = "设备",
+            [nameof(Ctrl_BtScan)]            = "扫描",
+            [nameof(Ctrl_BtStopScan)]        = "停止",
+            [nameof(Ctrl_BtConnect)]         = "连接",
+            [nameof(Ctrl_BtDisconnect)]      = "断开",
+            [nameof(Ctrl_BtPhSelect)]        = "选择设备…",
+            [nameof(Ctrl_BtPhNoDevices)]     = "暂无设备 — 点击扫描",
+            [nameof(Ctrl_BtHint)]            = "广播 Nordic UART 服务 (NUS) 的 ESP32 BLE 设备将出现在此处。请先在 Windows 设置中配对设备。",
 
             [nameof(Fb_SerialError)]            = "串口错误",
             [nameof(Fb_SelectChannel)]       = "选择端口",
@@ -1403,6 +1488,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["AutoConnect_NoData"] = "{0} - no BMS data, skipped.",
             ["AutoConnect_Verified"] = "{0} verified - connecting...",
             ["AutoConnect_ConnectFailed"] = "{0} - failed to connect after verification.",
+
+            ["Bt_StatusConnected"] = "Connected - {0} (Bluetooth)",
+            ["Bt_StatusDisconnected"] = "Bluetooth disconnected",
+            ["Bt_ScanError"] = "Bluetooth scan failed: {0}",
+            ["Bt_OpenFailed"] = "Failed to connect to {0}: {1}",
+            ["Bt_NoNusService"] = "{0} does not expose the Nordic UART Service.",
+            ["Bt_NoTxCharacteristic"] = "{0} - notify characteristic not found.",
+            ["Bt_SubscribeFailed"] = "{0} - could not subscribe to notifications.",
+            ["Bt_ReadError"] = "Bluetooth read error: {0}",
+            ["Bt_ParseError"] = "BLE JSON parse error (total: {0}) - data: \"{1}\"",
+            ["Bt_FbSelect"] = "Select a device",
+            ["Bt_FbSelectMsg"] = "Pick a Bluetooth device from the dropdown first.",
 
             ["Dash_BalancingCells"] = "{0} cells balancing",
             ["Dash_NotBalancing"] = "Not balancing",
@@ -1527,6 +1624,18 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["AutoConnect_Verified"] = "{0} terverifikasi - menghubungkan...",
             ["AutoConnect_ConnectFailed"] = "{0} - gagal terhubung setelah verifikasi.",
 
+            ["Bt_StatusConnected"] = "Terhubung - {0} (Bluetooth)",
+            ["Bt_StatusDisconnected"] = "Bluetooth terputus",
+            ["Bt_ScanError"] = "Pemindaian Bluetooth gagal: {0}",
+            ["Bt_OpenFailed"] = "Gagal terhubung ke {0}: {1}",
+            ["Bt_NoNusService"] = "{0} tidak menyediakan Nordic UART Service.",
+            ["Bt_NoTxCharacteristic"] = "{0} - karakteristik notify tidak ditemukan.",
+            ["Bt_SubscribeFailed"] = "{0} - tidak dapat berlangganan notifikasi.",
+            ["Bt_ReadError"] = "Error baca Bluetooth: {0}",
+            ["Bt_ParseError"] = "Error parsing JSON BLE (total: {0}) - data: \"{1}\"",
+            ["Bt_FbSelect"] = "Pilih perangkat",
+            ["Bt_FbSelectMsg"] = "Pilih perangkat Bluetooth dari dropdown terlebih dahulu.",
+
             ["Dash_BalancingCells"] = "{0} sel menyeimbangkan",
             ["Dash_NotBalancing"] = "Tidak menyeimbangkan",
             ["Chart_TimeAxis"] = "waktu ({0})",
@@ -1648,6 +1757,19 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["AutoConnect_NoData"] = "{0} - tiada data BMS, dilangkau.",
             ["AutoConnect_Verified"] = "{0} disahkan - menyambung...",
             ["AutoConnect_ConnectFailed"] = "{0} - gagal menyambung selepas pengesahan.",
+
+            ["Bt_StatusConnected"] = "Disambungkan - {0} (Bluetooth)",
+            ["Bt_StatusDisconnected"] = "Bluetooth terputus",
+            ["Bt_ScanError"] = "Imbasan Bluetooth gagal: {0}",
+            ["Bt_OpenFailed"] = "Gagal menyambung ke {0}: {1}",
+            ["Bt_NoNusService"] = "{0} tidak menawarkan Nordic UART Service.",
+            ["Bt_NoTxCharacteristic"] = "{0} - ciri notify tidak ditemui.",
+            ["Bt_SubscribeFailed"] = "{0} - tidak dapat melanggan pemberitahuan.",
+            ["Bt_ReadError"] = "Ralat baca Bluetooth: {0}",
+            ["Bt_ParseError"] = "Ralat hurai JSON BLE (jumlah: {0}) - data: \"{1}\"",
+            ["Bt_FbSelect"] = "Pilih peranti",
+            ["Bt_FbSelectMsg"] = "Pilih peranti Bluetooth dari menu lungsur terlebih dahulu.",
+
             ["Dash_BalancingCells"] = "{0} sel sedang diimbangkan",
             ["Dash_NotBalancing"] = "Tidak mengimbang",
             ["Chart_TimeAxis"] = "masa ({0})",
@@ -1745,6 +1867,19 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["AutoConnect_NoData"] = "{0} - geen BMS-data, overgeslagen.",
             ["AutoConnect_Verified"] = "{0} geverifieerd - verbinden...",
             ["AutoConnect_ConnectFailed"] = "{0} - verbinden mislukt na verificatie.",
+
+            ["Bt_StatusConnected"] = "Verbonden - {0} (Bluetooth)",
+            ["Bt_StatusDisconnected"] = "Bluetooth verbroken",
+            ["Bt_ScanError"] = "Bluetooth-scan mislukt: {0}",
+            ["Bt_OpenFailed"] = "Verbinden met {0} mislukt: {1}",
+            ["Bt_NoNusService"] = "{0} biedt geen Nordic UART Service.",
+            ["Bt_NoTxCharacteristic"] = "{0} - notify-kenmerk niet gevonden.",
+            ["Bt_SubscribeFailed"] = "{0} - kan niet abonneren op meldingen.",
+            ["Bt_ReadError"] = "Bluetooth-leesfout: {0}",
+            ["Bt_ParseError"] = "BLE JSON-parsefout (totaal: {0}) - data: \"{1}\"",
+            ["Bt_FbSelect"] = "Selecteer een apparaat",
+            ["Bt_FbSelectMsg"] = "Kies eerst een Bluetooth-apparaat in de keuzelijst.",
+
             ["Dash_BalancingCells"] = "{0} cellen balanceren",
             ["Dash_NotBalancing"] = "Niet balanceren",
             ["Chart_TimeAxis"] = "tijd ({0})",
@@ -1842,6 +1977,19 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["AutoConnect_NoData"] = "{0} - 无 BMS 数据，已跳过。",
             ["AutoConnect_Verified"] = "{0} 已验证 - 正在连接...",
             ["AutoConnect_ConnectFailed"] = "{0} - 验证后连接失败。",
+
+            ["Bt_StatusConnected"] = "已连接 - {0} (蓝牙)",
+            ["Bt_StatusDisconnected"] = "蓝牙已断开",
+            ["Bt_ScanError"] = "蓝牙扫描失败: {0}",
+            ["Bt_OpenFailed"] = "无法连接到 {0}: {1}",
+            ["Bt_NoNusService"] = "{0} 不提供 Nordic UART 服务。",
+            ["Bt_NoTxCharacteristic"] = "{0} - 未找到 notify 特征。",
+            ["Bt_SubscribeFailed"] = "{0} - 无法订阅通知。",
+            ["Bt_ReadError"] = "蓝牙读取错误: {0}",
+            ["Bt_ParseError"] = "BLE JSON 解析错误 (总计: {0}) - 数据: \"{1}\"",
+            ["Bt_FbSelect"] = "选择设备",
+            ["Bt_FbSelectMsg"] = "请先从下拉列表中选择一个蓝牙设备。",
+
             ["Dash_BalancingCells"] = "{0} 个电芯正在均衡",
             ["Dash_NotBalancing"] = "未均衡",
             ["Chart_TimeAxis"] = "时间 ({0})",

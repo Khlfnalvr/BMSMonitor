@@ -1621,6 +1621,11 @@ public sealed partial class MainWindow : Window
         RefreshSerialButtonTooltip();
         UpdateSerialStatusDot();
 
+        // Default tab: Serial. SelectorBar.SelectedItem must be assigned
+        // explicitly — leaving it null fires no SelectionChanged on open.
+        ConnTabs.SelectedItem = ConnTabSerial;
+        ApplyConnTab();
+
         // Mirror connection status into the flyout text + the status dot.
         ViewModel.Serial.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
         {
@@ -1629,14 +1634,120 @@ public sealed partial class MainWindow : Window
             UpdateSerialStatusDot();
         });
 
-        // Re-sync channel preselection whenever the flyout opens, so the
-        // dropdown reflects the live channel even if the user connected
-        // from the Control Panel instead.
+        // Bluetooth-tab live wiring.
+        ViewModel.Bluetooth.StatusChanged += msg => DispatcherQueue.TryEnqueue(() =>
+        {
+            CapBtStatus.Text = msg;
+            SyncCapBtConnectButton();
+            UpdateSerialStatusDot();
+        });
+        ViewModel.Bluetooth.DevicesChanged += () => DispatcherQueue.TryEnqueue(RefreshCapBtDevices);
+
+        // Re-sync whenever the flyout opens so the dropdowns reflect live
+        // state even if the user toggled connection from the Control Panel.
         SerialFlyout.Opening += (_, _) =>
         {
             RefreshCapChannels();
+            RefreshCapBtDevices();
             SyncCapConnectButton();
+            SyncCapBtConnectButton();
         };
+    }
+
+    private void ConnTabs_SelectionChanged(SelectorBar sender, SelectorBarSelectionChangedEventArgs args)
+    {
+        ApplyConnTab();
+    }
+
+    private void ApplyConnTab()
+    {
+        if (CapSerialPanel is null || CapBtPanel is null) return;
+        bool serial = ConnTabs.SelectedItem == ConnTabSerial || ConnTabs.SelectedItem is null;
+        CapSerialPanel.Visibility = serial ? Visibility.Visible : Visibility.Collapsed;
+        CapBtPanel.Visibility     = serial ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void RefreshCapBtDevices()
+    {
+        if (CapBtDevice is null) return;
+        var previous = (CapBtDevice.SelectedItem as ComboBoxItem)?.Tag as BluetoothDeviceInfo;
+        CapBtDevice.Items.Clear();
+        foreach (var d in ViewModel.Bluetooth.Devices)
+            CapBtDevice.Items.Add(new ComboBoxItem { Content = d.DisplayName, Tag = d, FontSize = 12 });
+
+        // Prefer the live device, then the previous selection, then the
+        // last paired device from settings.
+        string preferredId = ViewModel.Bluetooth.IsConnected
+            ? ViewModel.Bluetooth.DeviceId
+            : previous?.DeviceId ?? AppSettingsService.Load().LastBluetoothDeviceId;
+
+        if (!string.IsNullOrWhiteSpace(preferredId))
+        {
+            for (int i = 0; i < CapBtDevice.Items.Count; i++)
+            {
+                if (CapBtDevice.Items[i] is ComboBoxItem it &&
+                    it.Tag is BluetoothDeviceInfo c &&
+                    c.DeviceId == preferredId)
+                {
+                    CapBtDevice.SelectedIndex = i;
+                    return;
+                }
+            }
+        }
+        if (CapBtDevice.SelectedIndex < 0 && CapBtDevice.Items.Count > 0)
+            CapBtDevice.SelectedIndex = 0;
+    }
+
+    private void SyncCapBtConnectButton()
+    {
+        if (CapBtConnectBtn is null) return;
+        bool connected = ViewModel.Bluetooth.IsConnected;
+        bool scanning  = ViewModel.Bluetooth.IsScanning;
+        CapBtConnectBtn.Content = connected ? Lang.Ctrl_BtDisconnect : Lang.Ctrl_BtConnect;
+        CapBtDevice.IsEnabled   = !connected;
+        ToolTipService.SetToolTip(CapBtScanBtn,
+            scanning ? Lang.Ctrl_BtStopScan : Lang.Ctrl_BtScan);
+        CapBtStatus.Text = connected
+            ? Lang.Format("Bt_StatusConnected", ViewModel.Bluetooth.DeviceName)
+            : Lang.Ctrl_NotConnected;
+    }
+
+    private void CapBtScanBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Bluetooth.IsScanning) ViewModel.Bluetooth.StopScan();
+        else                                ViewModel.Bluetooth.StartScan();
+        SyncCapBtConnectButton();
+    }
+
+    private async void CapBtConnectBtn_Click(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Bluetooth.IsConnected)
+        {
+            ViewModel.Bluetooth.Disconnect();
+            return;
+        }
+
+        if (CapBtDevice.SelectedItem is not ComboBoxItem item ||
+            item.Tag is not BluetoothDeviceInfo device)
+        {
+            CapBtStatus.Text = Lang.Get("Bt_FbSelectMsg");
+            return;
+        }
+
+        // Hand-off from USB: drop the existing serial link and freeze the
+        // scanner so the source label stays honest while BT is the source.
+        ViewModel.AutoConnect.SuspendReconnect();
+        if (ViewModel.Serial.IsConnected) ViewModel.Serial.Disconnect();
+
+        bool ok = await ViewModel.Bluetooth.ConnectAsync(device);
+        if (ok)
+        {
+            var s = AppSettingsService.Load();
+            s.LastBluetoothDeviceId   = device.DeviceId;
+            s.LastBluetoothDeviceName = device.DisplayName;
+            AppSettingsService.Save(s);
+        }
+        SyncCapBtConnectButton();
     }
 
     private void RefreshSerialButtonTooltip()
@@ -1648,11 +1759,15 @@ public sealed partial class MainWindow : Window
     private void UpdateSerialStatusDot()
     {
         if (SerialStatusDot is null) return;
-        // Green when connected, dimmed when idle. Tinted from theme
-        // resources so it adapts to dark/light mode automatically.
-        SerialStatusDot.Fill = ViewModel.Serial.IsConnected
-            ? new SolidColorBrush(Color.FromArgb(0xFF, 0x25, 0xC6, 0x85))
-            : new SolidColorBrush(Color.FromArgb(0xCC, 0x9E, 0x9E, 0x9E));
+        // Green for serial, blue for Bluetooth, dimmed when idle. Picking
+        // distinct hues makes it obvious at a glance which transport is live.
+        bool serial = ViewModel.Serial.IsConnected;
+        bool bt     = ViewModel.Bluetooth.IsConnected;
+        SerialStatusDot.Fill = serial
+            ? new SolidColorBrush(Color.FromArgb(0xFF, 0x25, 0xC6, 0x85))     // green
+            : bt
+                ? new SolidColorBrush(Color.FromArgb(0xFF, 0x3D, 0x9C, 0xFD))  // sky blue
+                : new SolidColorBrush(Color.FromArgb(0xCC, 0x9E, 0x9E, 0x9E));   // grey
     }
 
     private void PopulateCapBauds()

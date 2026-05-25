@@ -25,6 +25,11 @@ public class AppSettings
     public int    ProbeTimeoutMs         { get; set; } = 3000;
     public bool   AutoConnectEnabled     { get; set; } = true;
 
+    // Last paired BLE device id — restored into the Bluetooth dropdown so the
+    // user can reconnect to "their" pack with one click after relaunch.
+    public string LastBluetoothDeviceId   { get; set; } = "";
+    public string LastBluetoothDeviceName { get; set; } = "";
+
     // Display units selected from the title-bar customize menu.
     public string TemperatureUnit         { get; set; } = "C";
     public string VoltageUnit             { get; set; } = "V";
