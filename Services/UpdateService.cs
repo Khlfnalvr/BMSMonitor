@@ -49,7 +49,7 @@ public static class UpdateService
             resp.EnsureSuccessStatusCode();
 
             var json    = await resp.Content.ReadAsStringAsync();
-            var release = JsonSerializer.Deserialize<GitHubRelease>(json);
+            var release = JsonSerializer.Deserialize(json, AppJsonContext.Default.GitHubRelease);
             if (release is null)
                 return Err("Invalid API response");
 

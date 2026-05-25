@@ -54,15 +54,12 @@ public static class AppSettingsService
     public static string FilePath   => _path;
     public static string FolderPath => Path.GetDirectoryName(_path)!;
 
-    private static readonly JsonSerializerOptions _opts =
-        new() { WriteIndented = true };
-
     public static AppSettings Load()
     {
         try
         {
             if (File.Exists(_path))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path)) ?? new();
+                return JsonSerializer.Deserialize(File.ReadAllText(_path), AppJsonContext.Default.AppSettings) ?? new();
         }
         catch { }
         return new();
@@ -73,7 +70,7 @@ public static class AppSettingsService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-            File.WriteAllText(_path, JsonSerializer.Serialize(settings, _opts));
+            File.WriteAllText(_path, JsonSerializer.Serialize(settings, AppJsonContext.Default.AppSettings));
         }
         catch { }
     }
