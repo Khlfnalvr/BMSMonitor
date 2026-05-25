@@ -140,6 +140,7 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Upd_ErrorTitle     => T(nameof(Upd_ErrorTitle));
     public string Upd_Downloading    => T(nameof(Upd_Downloading));
     public string Upd_InstallNow     => T(nameof(Upd_InstallNow));
+    public string Upd_Extracting     => T(nameof(Upd_Extracting));
 
     // ── Common ────────────────────────────────────────────────────────────
     public string Com_Min    => T(nameof(Com_Min));
@@ -367,13 +368,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Upd_CurrentVersion)] = "Current version",
             [nameof(Upd_LatestVersion)]  = "Latest version",
             [nameof(Upd_ReleaseNotes)]   = "Release Notes",
-            [nameof(Upd_Download)]       = "Download & Install",
+            [nameof(Upd_Download)]       = "Download & Apply",
             [nameof(Upd_OpenPage)]       = "Open Release Page",
             [nameof(Upd_Later)]          = "Later",
             [nameof(Upd_Close)]          = "Close",
             [nameof(Upd_ErrorTitle)]     = "Update Check Failed",
             [nameof(Upd_Downloading)]    = "Downloading Update…",
-            [nameof(Upd_InstallNow)]     = "Install Now",
+            [nameof(Upd_InstallNow)]     = "Restart to Apply",
+            [nameof(Upd_Extracting)]     = "Preparing Update…",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -576,13 +578,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Upd_CurrentVersion)] = "Versi saat ini",
             [nameof(Upd_LatestVersion)]  = "Versi terbaru",
             [nameof(Upd_ReleaseNotes)]   = "Catatan Rilis",
-            [nameof(Upd_Download)]       = "Unduh & Pasang",
+            [nameof(Upd_Download)]       = "Unduh & Terapkan",
             [nameof(Upd_OpenPage)]       = "Buka Halaman Rilis",
             [nameof(Upd_Later)]          = "Nanti",
             [nameof(Upd_Close)]          = "Tutup",
             [nameof(Upd_ErrorTitle)]     = "Gagal Memeriksa Pembaruan",
             [nameof(Upd_Downloading)]    = "Mengunduh Pembaruan…",
-            [nameof(Upd_InstallNow)]     = "Pasang Sekarang",
+            [nameof(Upd_InstallNow)]     = "Restart untuk Terapkan",
+            [nameof(Upd_Extracting)]     = "Mempersiapkan Pembaruan…",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -785,13 +788,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Upd_CurrentVersion)] = "Versi semasa",
             [nameof(Upd_LatestVersion)]  = "Versi terkini",
             [nameof(Upd_ReleaseNotes)]   = "Nota Keluaran",
-            [nameof(Upd_Download)]       = "Muat Turun & Pasang",
+            [nameof(Upd_Download)]       = "Muat Turun & Guna",
             [nameof(Upd_OpenPage)]       = "Buka Halaman Keluaran",
             [nameof(Upd_Later)]          = "Kemudian",
             [nameof(Upd_Close)]          = "Tutup",
             [nameof(Upd_ErrorTitle)]     = "Semakan Kemas Kini Gagal",
             [nameof(Upd_Downloading)]    = "Memuat Turun Kemas Kini…",
-            [nameof(Upd_InstallNow)]     = "Pasang Sekarang",
+            [nameof(Upd_InstallNow)]     = "Mulakan Semula untuk Guna",
+            [nameof(Upd_Extracting)]     = "Menyediakan Kemas Kini…",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAKS",
@@ -994,13 +998,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Upd_CurrentVersion)] = "Huidige versie",
             [nameof(Upd_LatestVersion)]  = "Nieuwste versie",
             [nameof(Upd_ReleaseNotes)]   = "Release-opmerkingen",
-            [nameof(Upd_Download)]       = "Downloaden & installeren",
+            [nameof(Upd_Download)]       = "Downloaden & toepassen",
             [nameof(Upd_OpenPage)]       = "Release-pagina openen",
             [nameof(Upd_Later)]          = "Later",
             [nameof(Upd_Close)]          = "Sluiten",
             [nameof(Upd_ErrorTitle)]     = "Update-controle mislukt",
             [nameof(Upd_Downloading)]    = "Update downloaden…",
-            [nameof(Upd_InstallNow)]     = "Nu installeren",
+            [nameof(Upd_InstallNow)]     = "Opnieuw opstarten",
+            [nameof(Upd_Extracting)]     = "Update voorbereiden…",
 
             [nameof(Com_Min)]    = "MIN",
             [nameof(Com_Max)]    = "MAX",
@@ -1203,13 +1208,14 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             [nameof(Upd_CurrentVersion)] = "当前版本",
             [nameof(Upd_LatestVersion)]  = "最新版本",
             [nameof(Upd_ReleaseNotes)]   = "版本说明",
-            [nameof(Upd_Download)]       = "下载并安装",
+            [nameof(Upd_Download)]       = "下载并应用",
             [nameof(Upd_OpenPage)]       = "打开发布页面",
             [nameof(Upd_Later)]          = "稍后",
             [nameof(Upd_Close)]          = "关闭",
             [nameof(Upd_ErrorTitle)]     = "检查更新失败",
             [nameof(Upd_Downloading)]    = "正在下载更新…",
-            [nameof(Upd_InstallNow)]     = "立即安装",
+            [nameof(Upd_InstallNow)]     = "重启以应用",
+            [nameof(Upd_Extracting)]     = "正在准备更新…",
 
             [nameof(Com_Min)]    = "最低",
             [nameof(Com_Max)]    = "最高",

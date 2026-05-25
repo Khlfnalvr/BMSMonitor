@@ -656,10 +656,11 @@ public sealed partial class MainWindow : Window
         {
             UpdateDialogTitle.Text        = Lang.Upd_AvailableTitle;
             UpdateContentHost.Content     = BuildUpdateAvailableContent(info);
-            _pendingInstallerUrl          = info.InstallerUrl;
+            _pendingZipUrl                = info.UpdateZipUrl;
             _pendingReleaseUrl            = info.ReleaseUrl;
+            _pendingApplyPath             = null;
             UpdatePrimaryButton.Visibility = Visibility.Visible;
-            UpdatePrimaryButton.Content    = info.InstallerUrl is not null
+            UpdatePrimaryButton.Content    = info.UpdateZipUrl is not null
                                                 ? Lang.Upd_Download
                                                 : Lang.Upd_OpenPage;
             UpdatePrimaryButton.IsEnabled  = true;
@@ -676,8 +677,9 @@ public sealed partial class MainWindow : Window
 
     // ── Update overlay ─────────────────────────────────────────────────────
 
-    private string?                        _pendingInstallerUrl;
+    private string?                        _pendingZipUrl;
     private string?                        _pendingReleaseUrl;
+    private string?                        _pendingApplyPath;   // staging dir after extract
     private Services.UpdateCheckInfo?      _cachedUpdateInfo;
 
     private void MenuCheckUpdate_Click(object sender, RoutedEventArgs e)
@@ -693,8 +695,9 @@ public sealed partial class MainWindow : Window
         UpdatePrimaryButton.Visibility = Visibility.Collapsed;
         UpdateCloseButton.Content = Lang.Upd_Close;
         UpdateCloseButton.IsEnabled = true;
-        _pendingInstallerUrl = null;
-        _pendingReleaseUrl   = null;
+        _pendingZipUrl    = null;
+        _pendingReleaseUrl = null;
+        _pendingApplyPath  = null;
         UpdateOverlay.Visibility = Visibility.Visible;
     }
 
@@ -720,10 +723,11 @@ public sealed partial class MainWindow : Window
                 case Services.UpdateCheckResult.UpdateAvailable:
                     UpdateDialogTitle.Text = Lang.Upd_AvailableTitle;
                     UpdateContentHost.Content = BuildUpdateAvailableContent(info);
-                    _pendingInstallerUrl = info.InstallerUrl;
+                    _pendingZipUrl       = info.UpdateZipUrl;
                     _pendingReleaseUrl   = info.ReleaseUrl;
+                    _pendingApplyPath    = null;
                     UpdatePrimaryButton.Visibility = Visibility.Visible;
-                    UpdatePrimaryButton.Content    = info.InstallerUrl is not null
+                    UpdatePrimaryButton.Content    = info.UpdateZipUrl is not null
                                                         ? Lang.Upd_Download
                                                         : Lang.Upd_OpenPage;
                     UpdatePrimaryButton.IsEnabled  = true;
@@ -743,7 +747,38 @@ public sealed partial class MainWindow : Window
 
     private async void UpdatePrimary_Click(object sender, RoutedEventArgs e)
     {
-        if (_pendingInstallerUrl is not null)
+        // ── Phase 2: user clicks "Restart to Apply" ───────────────────────
+        if (_pendingApplyPath is not null)
+        {
+            try
+            {
+                var scriptPath = Services.UpdateService.WriteApplyScript(
+                    _pendingApplyPath, AppContext.BaseDirectory);
+
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName        = "powershell.exe",
+                    Arguments       = $"-ExecutionPolicy Bypass -NonInteractive -WindowStyle Hidden" +
+                                      $" -File \"{scriptPath}\"" +
+                                      $" -Staging \"{_pendingApplyPath}\"" +
+                                      $" -AppDir \"{AppContext.BaseDirectory}\"",
+                    UseShellExecute = true,
+                    Verb            = "runas"   // elevated: update needs write access to Program Files
+                });
+            }
+            catch
+            {
+                // UAC cancelled or launch failed — fall back to release page
+                if (_pendingReleaseUrl is not null)
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri(_pendingReleaseUrl));
+            }
+
+            Application.Current.Exit();
+            return;
+        }
+
+        // ── Phase 1: download + extract ZIP ──────────────────────────────
+        if (_pendingZipUrl is not null)
         {
             UpdatePrimaryButton.IsEnabled = false;
             UpdateCloseButton.IsEnabled   = false;
@@ -752,14 +787,14 @@ public sealed partial class MainWindow : Window
             var bar = new ProgressBar
             {
                 IsIndeterminate = true,
-                Margin = new Thickness(0, 8, 0, 8)
+                Margin          = new Thickness(0, 8, 0, 8)
             };
             UpdateContentHost.Content = bar;
 
             try
             {
-                var path = await Services.UpdateService.DownloadInstallerAsync(
-                    _pendingInstallerUrl, AppVersion, p =>
+                var stagePath = await Services.UpdateService.DownloadAndExtractAsync(
+                    _pendingZipUrl, AppVersion, p =>
                     {
                         DispatcherQueue.TryEnqueue(() =>
                         {
@@ -768,25 +803,36 @@ public sealed partial class MainWindow : Window
                         });
                     });
 
-                UpdateOverlay.Visibility       = Visibility.Collapsed;
-                UpdateNotifyBtn.Visibility     = Visibility.Collapsed;
-                _cachedUpdateInfo              = null;
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                _pendingApplyPath = stagePath;
+
+                DispatcherQueue.TryEnqueue(() =>
                 {
-                    FileName        = path,
-                    UseShellExecute = true
+                    UpdateDialogTitle.Text        = Lang.Upd_Extracting;
+                    UpdateContentHost.Content     = BuildUpdateStatusContent(
+                        "",   // Segoe: Accept/Check glyph
+                        Lang.Upd_Extracting,
+                        null);
+                    UpdatePrimaryButton.Content   = Lang.Upd_InstallNow;
+                    UpdatePrimaryButton.IsEnabled = true;
+                    UpdateCloseButton.IsEnabled   = true;
                 });
             }
             catch
             {
+                // Download/extract failed — fall back to release page
                 if (_pendingReleaseUrl is not null)
                     await Windows.System.Launcher.LaunchUriAsync(new Uri(_pendingReleaseUrl));
                 UpdateOverlay.Visibility   = Visibility.Collapsed;
                 UpdateNotifyBtn.Visibility = Visibility.Collapsed;
                 _cachedUpdateInfo          = null;
+                _pendingApplyPath          = null;
             }
+
+            return;
         }
-        else if (_pendingReleaseUrl is not null)
+
+        // ── Fallback: open release page ───────────────────────────────────
+        if (_pendingReleaseUrl is not null)
         {
             await Windows.System.Launcher.LaunchUriAsync(new Uri(_pendingReleaseUrl));
             UpdateOverlay.Visibility   = Visibility.Collapsed;
@@ -798,6 +844,7 @@ public sealed partial class MainWindow : Window
     private void UpdateClose_Click(object sender, RoutedEventArgs e)
     {
         UpdateOverlay.Visibility = Visibility.Collapsed;
+        _pendingApplyPath        = null;
     }
 
     private static UIElement BuildUpdateSpinner()
