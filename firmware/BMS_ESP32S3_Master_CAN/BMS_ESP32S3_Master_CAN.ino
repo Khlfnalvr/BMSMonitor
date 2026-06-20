@@ -55,7 +55,7 @@
 // Runtime link-state logging. Keep 0 when BMSMonitor is connected: those logs
 // are plain text and would show up as parse errors in the app. Set to 1 to
 // watch the CAN link in a serial monitor.
-#define MASTER_DEBUG 0
+#define MASTER_DEBUG 1
 
 // ── CAN protocol — identical to BMS_ESP32S3_Slave_CAN ──────────────────────
 #define CAN_ID_PACK   0x100
