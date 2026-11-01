@@ -562,7 +562,9 @@ public sealed partial class CellViewPage : Page
         if (args.Element is not Button button)
             return;
 
-        button.Tag = args.Index + 1;
+        // Tag with the sensor's global NTC number (module 2 repeater starts at 11).
+        if (sender.ItemsSourceView?.GetAt(args.Index) is TempViewModel tvm)
+            button.Tag = tvm.Index;
         button.Click -= NtcButton_Click;
         button.Click += NtcButton_Click;
     }

@@ -247,6 +247,11 @@ public partial class MainViewModel : ObservableObject
     // --- Collections ---
     public ObservableCollection<CellViewModel> Cells        { get; } = new();
     public ObservableCollection<TempViewModel> Temperatures { get; } = new();
+    // Battery is split into two modules: NTC 1-10 → module 1, NTC 11-20 → module 2.
+    // Same TempViewModel instances as Temperatures, just partitioned for the UI.
+    public const int TempsPerModule = BmsData.TempCount / 2;
+    public ObservableCollection<TempViewModel> Module1Temperatures { get; } = new();
+    public ObservableCollection<TempViewModel> Module2Temperatures { get; } = new();
     public ObservableCollection<LogRow>        DataStream   { get; } = new();
     public ObservableCollection<LogColumn>     LogColumns   { get; } = LogColumn.CreateDefaults();
     private const int StreamCapacity = 20;
@@ -284,7 +289,12 @@ public partial class MainViewModel : ObservableObject
         LocalizationManager.Instance.PropertyChanged += (_, _) => RefreshLocalizedText();
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1, VoltageUnit = VoltageUnit });
-        for (int i = 0; i < BmsData.TempCount; i++) Temperatures.Add(new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit });
+        for (int i = 0; i < BmsData.TempCount; i++)
+        {
+            var t = new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit };
+            Temperatures.Add(t);
+            (i < TempsPerModule ? Module1Temperatures : Module2Temperatures).Add(t);
+        }
 
         // Live data — skip if a playback file is loaded (don't overwrite review data).
         Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };

@@ -329,6 +329,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
     public string Log_FormatExcel     => T(nameof(Log_FormatExcel));
     public string Log_FormatJson      => T(nameof(Log_FormatJson));
     public string Cell_NtcThermistor  => T(nameof(Cell_NtcThermistor));
+    public string Cell_Module1        => T(nameof(Cell_Module1));
+    public string Cell_Module2        => T(nameof(Cell_Module2));
     public string Cell_TimeRangeTrim  => T(nameof(Cell_TimeRangeTrim));
     public string Cell_TrimNoData     => T(nameof(Cell_TrimNoData));
     public string Cell_TrimReset      => T(nameof(Cell_TrimReset));
@@ -1535,6 +1537,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["Pb_NoValidDataRows"] = "No valid data rows found.",
 
             ["Cell_NtcThermistor"] = "10kOhm NTC thermistor",
+            ["Cell_Module1"] = "MODULE 1",
+            ["Cell_Module2"] = "MODULE 2",
             ["Cell_TimeRangeTrim"] = "TIME RANGE (TRIM)",
             ["Cell_TrimNoData"] = "No data captured yet",
             ["Cell_TrimReset"] = "Reset",
@@ -1670,6 +1674,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["Pb_NoValidDataRows"] = "Tidak ada baris data valid yang ditemukan.",
 
             ["Cell_NtcThermistor"] = "Termistor NTC 10kOhm",
+            ["Cell_Module1"] = "MODUL 1",
+            ["Cell_Module2"] = "MODUL 2",
             ["Cell_TimeRangeTrim"] = "RENTANG WAKTU (TRIM)",
             ["Cell_TrimNoData"] = "Belum ada data yang direkam",
             ["Cell_TrimReset"] = "Reset",
@@ -1801,6 +1807,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["Pb_JsonNoRows"] = "Fail JSON tidak mengandungi baris data.",
             ["Pb_NoValidDataRows"] = "Tiada baris data sah ditemui.",
             ["Cell_NtcThermistor"] = "Termistor NTC 10kOhm",
+            ["Cell_Module1"] = "MODUL 1",
+            ["Cell_Module2"] = "MODUL 2",
             ["Cell_TimeRangeTrim"] = "JULAT MASA (TRIM)",
             ["Cell_TrimNoData"] = "Tiada data direkodkan lagi",
             ["Cell_TrimReset"] = "Tetap Semula",
@@ -1911,6 +1919,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["Pb_JsonNoRows"] = "JSON-bestand bevat geen rijen.",
             ["Pb_NoValidDataRows"] = "Geen geldige datarijen gevonden.",
             ["Cell_NtcThermistor"] = "10kOhm NTC-thermistor",
+            ["Cell_Module1"] = "MODULE 1",
+            ["Cell_Module2"] = "MODULE 2",
             ["Cell_TimeRangeTrim"] = "TIJDBEREIK (TRIM)",
             ["Cell_TrimNoData"] = "Nog geen data vastgelegd",
             ["Cell_TrimReset"] = "Resetten",
@@ -2040,6 +2050,8 @@ public sealed class LocalizationManager : INotifyPropertyChanged
             ["Alert_TempWarningBody"] = "传感器 {0} 为 {1:F0}C - 超过 {2:F0}C 警告值",
             ["Alert_ImbalanceBody"] = "压差 {0:F1}mV - 超过 {1:F0}mV 阈值",
             ["Cell_NtcThermistor"] = "10kOhm NTC 热敏电阻",
+            ["Cell_Module1"] = "模块 1",
+            ["Cell_Module2"] = "模块 2",
             ["Cell_TimeRangeTrim"] = "时间范围 (裁剪)",
             ["Cell_TrimNoData"] = "尚未采集数据",
             ["Cell_TrimReset"] = "重置",

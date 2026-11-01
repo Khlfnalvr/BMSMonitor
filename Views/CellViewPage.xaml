@@ -168,45 +168,102 @@
             <TextBlock Text="{x:Bind Lang.Cell_SecNtcReadings, Mode=OneWay}"
                        Style="{StaticResource SectionHeaderStyle}"
                        Margin="0,16,0,0"/>
-            <ItemsRepeater x:Name="NtcRepeater"
-                           ItemsSource="{x:Bind ViewModel.Temperatures, Mode=OneWay}"
-                           ElementPrepared="NtcRepeater_ElementPrepared">
-                <ItemsRepeater.Layout>
-                    <UniformGridLayout
-                        Orientation="Horizontal"
-                        MinItemWidth="200" MinItemHeight="120"
-                        MinColumnSpacing="10" MinRowSpacing="10"
-                        MaximumRowsOrColumns="5"
-                        ItemsStretch="Fill"/>
-                </ItemsRepeater.Layout>
-                <ItemsRepeater.ItemTemplate>
-                    <DataTemplate x:DataType="vm:TempViewModel">
-                        <Button Padding="0"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Stretch"
-                                VerticalContentAlignment="Stretch"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Tag="{x:Bind Index}"
-                                Click="NtcButton_Click">
-                            <Border CornerRadius="8" Padding="16,14" BorderThickness="1"
-                                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
-                                <StackPanel Spacing="6">
-                                    <TextBlock Text="{x:Bind Label}" FontSize="11" Opacity="0.55"
-                                               FontWeight="SemiBold" CharacterSpacing="80"/>
-                                    <TextBlock Text="{x:Bind TempText, Mode=OneWay}"
-                                               FontSize="28" FontWeight="SemiBold"/>
-                                    <ProgressBar Value="{x:Bind TempRaw, Mode=OneWay}"
-                                                 Minimum="0" Maximum="80"
-                                                 Height="5" CornerRadius="2.5"/>
-                                    <TextBlock Text="{x:Bind ThermistorLabel, Mode=OneWay}" FontSize="11" Opacity="0.4"/>
-                                </StackPanel>
-                            </Border>
-                        </Button>
-                    </DataTemplate>
-                </ItemsRepeater.ItemTemplate>
-            </ItemsRepeater>
+            <!-- Two battery modules side by side: NTC 1-10 (left) / NTC 11-20 (right). -->
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Spacing="8">
+                    <TextBlock Text="{x:Bind Lang.Cell_Module1, Mode=OneWay}"
+                               FontSize="12" FontWeight="SemiBold" Opacity="0.7" CharacterSpacing="80"/>
+                    <ItemsRepeater x:Name="NtcRepeaterModule1"
+                                   ItemsSource="{x:Bind ViewModel.Module1Temperatures, Mode=OneWay}"
+                                   ElementPrepared="NtcRepeater_ElementPrepared">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout
+                                Orientation="Horizontal"
+                                MinItemWidth="140" MinItemHeight="120"
+                                MinColumnSpacing="10" MinRowSpacing="10"
+                                MaximumRowsOrColumns="5"
+                                ItemsStretch="Fill"/>
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TempViewModel">
+                                <Button Padding="0"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Tag="{x:Bind Index}"
+                                        Click="NtcButton_Click">
+                                    <Border CornerRadius="8" Padding="12,12" BorderThickness="1"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="{x:Bind Label}" FontSize="11" Opacity="0.55"
+                                                       FontWeight="SemiBold" CharacterSpacing="80"/>
+                                            <TextBlock Text="{x:Bind TempText, Mode=OneWay}"
+                                                       FontSize="28" FontWeight="SemiBold"/>
+                                            <ProgressBar Value="{x:Bind TempRaw, Mode=OneWay}"
+                                                         Minimum="0" Maximum="80"
+                                                         Height="5" CornerRadius="2.5"/>
+                                            <TextBlock Text="{x:Bind ThermistorLabel, Mode=OneWay}" FontSize="11" Opacity="0.4"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+                <Rectangle Grid.Column="1" Width="1"
+                           Fill="{ThemeResource CardStrokeColorDefaultBrush}"/>
+                <StackPanel Grid.Column="2" Spacing="8">
+                    <TextBlock Text="{x:Bind Lang.Cell_Module2, Mode=OneWay}"
+                               FontSize="12" FontWeight="SemiBold" Opacity="0.7" CharacterSpacing="80"/>
+                    <ItemsRepeater x:Name="NtcRepeaterModule2"
+                                   ItemsSource="{x:Bind ViewModel.Module2Temperatures, Mode=OneWay}"
+                                   ElementPrepared="NtcRepeater_ElementPrepared">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout
+                                Orientation="Horizontal"
+                                MinItemWidth="140" MinItemHeight="120"
+                                MinColumnSpacing="10" MinRowSpacing="10"
+                                MaximumRowsOrColumns="5"
+                                ItemsStretch="Fill"/>
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TempViewModel">
+                                <Button Padding="0"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Stretch"
+                                        VerticalContentAlignment="Stretch"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Tag="{x:Bind Index}"
+                                        Click="NtcButton_Click">
+                                    <Border CornerRadius="8" Padding="12,12" BorderThickness="1"
+                                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Text="{x:Bind Label}" FontSize="11" Opacity="0.55"
+                                                       FontWeight="SemiBold" CharacterSpacing="80"/>
+                                            <TextBlock Text="{x:Bind TempText, Mode=OneWay}"
+                                                       FontSize="28" FontWeight="SemiBold"/>
+                                            <ProgressBar Value="{x:Bind TempRaw, Mode=OneWay}"
+                                                         Minimum="0" Maximum="80"
+                                                         Height="5" CornerRadius="2.5"/>
+                                            <TextBlock Text="{x:Bind ThermistorLabel, Mode=OneWay}" FontSize="11" Opacity="0.4"/>
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </Grid>
 
             <!-- Thresholds + color legend — sits right under the NTC tiles
                  so the reference info is adjacent to the sensors it describes. -->
