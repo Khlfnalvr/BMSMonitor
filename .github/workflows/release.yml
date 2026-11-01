@@ -1,0 +1,87 @@
+# Builds and publishes a GitHub release following RELEASE_GUIDELINES.md.
+# Trigger: push a tag vX.Y.Z (must match the version in BMSMonitor.csproj / installer.iss).
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (vX.Y.Z)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        run: |
+          $tag = if ("${{ github.event_name }}" -eq "workflow_dispatch") { "${{ inputs.tag }}" } else { "${{ github.ref_name }}" }
+          $ver = $tag.TrimStart('v')
+          [xml]$proj = Get-Content .\BMSMonitor.csproj
+          $projVer = ($proj.Project.PropertyGroup | Where-Object { $_.Version } | Select-Object -First 1).Version
+          if ($projVer -ne $ver) { throw "Tag $tag does not match BMSMonitor.csproj version $projVer" }
+          if (-not (Select-String -Path .\installer.iss -SimpleMatch "OutputBaseFilename=BMSMonitorSetup-v$ver")) { throw "installer.iss is not set to $ver" }
+          "TAG=$tag" | Out-File $env:GITHUB_ENV -Append
+          "VER=$ver" | Out-File $env:GITHUB_ENV -Append
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish app
+        run: |
+          Remove-Item -LiteralPath .\Publish\AppFiles -Recurse -Force -ErrorAction SilentlyContinue
+          dotnet publish .\BMSMonitor.csproj -c Release -r win-x64 --self-contained true -o .\Publish\AppFiles
+
+      - name: Create update ZIP
+        run: |
+          Compress-Archive -Path .\Publish\AppFiles\* -DestinationPath ".\Publish\BMSMonitorUpdate-v$env:VER.zip" -Force
+
+      - name: Verify ZIP
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $zip = [IO.Compression.ZipFile]::OpenRead(".\Publish\BMSMonitorUpdate-v$env:VER.zip")
+          $names = $zip.Entries.FullName
+          $zip.Dispose()
+          foreach ($f in 'BMSMonitor.exe','BMSMonitor.dll','BMSMonitor.runtimeconfig.json') {
+            if ($names -notcontains $f) { throw "ZIP root is missing $f" }
+          }
+
+      - name: Build installer
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc .\installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+          if (-not (Test-Path ".\Publish\BMSMonitorSetup-v$env:VER.exe")) { throw "Installer not produced" }
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Title/notes come from the annotated tag message (subject / body).
+          git fetch --force origin "refs/tags/${env:TAG}:refs/tags/${env:TAG}"
+          $title = git for-each-ref "refs/tags/$env:TAG" --format='%(contents:subject)'
+          $notes = (git for-each-ref "refs/tags/$env:TAG" --format='%(contents:body)') -join "`n"
+          if (-not $title) { $title = "Release" }
+          if (-not $notes) { $notes = $title }
+          gh release create $env:TAG `
+            ".\Publish\BMSMonitorSetup-v$env:VER.exe#BMSMonitorSetup-v$env:VER.exe" `
+            ".\Publish\BMSMonitorUpdate-v$env:VER.zip#BMSMonitorUpdate-v$env:VER.zip" `
+            --repo ${{ github.repository }} `
+            --target ${{ github.sha }} `
+            --title "$env:TAG - $title" `
+            --notes "$notes"
+          gh release view $env:TAG --repo ${{ github.repository }} --json tagName,name,url,assets,publishedAt
