@@ -10,6 +10,12 @@ on:
       tag:
         description: 'Release tag (vX.Y.Z)'
         required: true
+      title:
+        description: 'Release title (without the tag)'
+        required: false
+      notes:
+        description: 'Release notes'
+        required: false
 
 permissions:
   contents: write
@@ -70,11 +76,17 @@ jobs:
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+          IN_TITLE: ${{ inputs.title }}
+          IN_NOTES: ${{ inputs.notes }}
         run: |
-          # Title/notes come from the annotated tag message (subject / body).
-          git fetch --force origin "refs/tags/${env:TAG}:refs/tags/${env:TAG}"
-          $title = git for-each-ref "refs/tags/$env:TAG" --format='%(contents:subject)'
-          $notes = (git for-each-ref "refs/tags/$env:TAG" --format='%(contents:body)') -join "`n"
+          # Title/notes: workflow_dispatch inputs, else the annotated tag message.
+          $title = $env:IN_TITLE
+          $notes = $env:IN_NOTES
+          if (-not $title) {
+            git fetch --force origin "refs/tags/${env:TAG}:refs/tags/${env:TAG}" 2>$null
+            $title = git for-each-ref "refs/tags/$env:TAG" --format='%(contents:subject)'
+            $notes = (git for-each-ref "refs/tags/$env:TAG" --format='%(contents:body)') -join "`n"
+          }
           if (-not $title) { $title = "Release" }
           if (-not $notes) { $notes = $title }
           gh release create $env:TAG `
