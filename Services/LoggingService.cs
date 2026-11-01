@@ -56,7 +56,7 @@ public class LoggingService
 
     /// <param name="columns">
     /// Ordered list of columns to log. Only enabled columns are written.
-    /// Pass LogColumn.CreateDefaults() for the standard 55-column layout.
+    /// Pass LogColumn.CreateDefaults() for the standard 65-column layout.
     /// </param>
     public void Start(string filePath, LogFormat format, IEnumerable<LogColumn> columns)
     {

@@ -1114,8 +1114,8 @@ public sealed partial class MainWindow : Window
                 "Pantau tegangan pack, SOC, arus, status pack, ringkasan sel, dan grafik historis utama.",
                 "Monitor pack voltage, SOC, current, pack status, cell summaries, and the main history charts.")),
             ("\uE8A5", Lang.Nav_CellView, TourText(
-                "Lihat 20 sel dan 10 sensor NTC. Klik sel atau sensor untuk membuka grafik historis item tersebut.",
-                "Inspect 20 cells and 10 NTC sensors. Click a cell or sensor to open its history chart.")),
+                "Lihat 20 sel dan 20 sensor NTC. Klik sel atau sensor untuk membuka grafik historis item tersebut.",
+                "Inspect 20 cells and 20 NTC sensors. Click a cell or sensor to open its history chart.")),
             ("\uE713", Lang.Nav_ControlPanel, TourText(
                 "Atur port COM, baud rate, auto-connect, kapasitas baterai, ambang proteksi, batas arus, dan balancing.",
                 "Configure COM port, baud rate, auto-connect, battery capacity, protection thresholds, current limits, and balancing.")),
@@ -1424,7 +1424,7 @@ public sealed partial class MainWindow : Window
         ["Close"] = ("Tutup", "Sluiten", "关闭"),
         ["MAIN PAGES"] = ("HALAMAN UTAMA", "HOOFDPAGINA'S", "主要页面"),
         ["Monitor pack voltage, SOC, current, pack status, cell summaries, and the main history charts."] = ("Pantau voltan pek, SOC, arus, status pek, ringkasan sel, dan carta sejarah utama.", "Bewaak pakketspanning, SOC, stroom, pakketstatus, celoverzichten en de belangrijkste geschiedenisgrafieken.", "监控电池组电压、SOC、电流、电池组状态、电芯摘要和主要历史图表。"),
-        ["Inspect 20 cells and 10 NTC sensors. Click a cell or sensor to open its history chart."] = ("Periksa 20 sel dan 10 sensor NTC. Klik sel atau sensor untuk membuka carta sejarahnya.", "Inspecteer 20 cellen en 10 NTC-sensoren. Klik op een cel of sensor om de geschiedenisgrafiek te openen.", "查看 20 个电芯和 10 个 NTC 传感器。点击电芯或传感器可打开其历史图表。"),
+        ["Inspect 20 cells and 20 NTC sensors. Click a cell or sensor to open its history chart."] = ("Periksa 20 sel dan 20 sensor NTC. Klik sel atau sensor untuk membuka carta sejarahnya.", "Inspecteer 20 cellen en 20 NTC-sensoren. Klik op een cel of sensor om de geschiedenisgrafiek te openen.", "查看 20 个电芯和 20 个 NTC 传感器。点击电芯或传感器可打开其历史图表。"),
         ["Configure COM port, baud rate, auto-connect, battery capacity, protection thresholds, current limits, and balancing."] = ("Konfigurasikan port COM, kadar baud, auto-sambung, kapasiti bateri, ambang perlindungan, had arus, dan pengimbangan.", "Configureer COM-poort, baudrate, automatisch verbinden, batterijcapaciteit, beveiligingsdrempels, stroomlimieten en balanceren.", "配置 COM 端口、波特率、自动连接、电池容量、保护阈值、电流限制和均衡。"),
         ["Record live data to CSV, TSV, Excel, or JSON, choose the output folder, and watch the latest 20 frames."] = ("Rakam data langsung ke CSV, TSV, Excel, atau JSON, pilih folder output, dan pantau 20 bingkai terkini.", "Neem live data op naar CSV, TSV, Excel of JSON, kies de uitvoermap en bekijk de nieuwste 20 frames.", "将实时数据记录为 CSV、TSV、Excel 或 JSON，选择输出文件夹，并查看最新 20 帧。"),
         ["Load a CSV log and replay it. Every page updates as if live data were coming in."] = ("Muat log CSV dan mainkan semula. Semua halaman dikemas kini seolah-olah data langsung sedang masuk.", "Laad een CSV-log en speel deze af. Elke pagina werkt bij alsof er live data binnenkomt.", "加载 CSV 日志并回放。所有页面都会像接收实时数据一样更新。"),

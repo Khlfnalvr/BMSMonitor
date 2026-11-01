@@ -134,7 +134,7 @@ public partial class MainViewModel : ObservableObject
     private readonly Queue<double>   _socHistory     = new(120);
     private readonly Queue<double>   _voltageHistory = new(120);
     private readonly Queue<double>   _currentHistory = new(120);
-    private readonly Queue<double[]> _tempHistory    = new(120);  // 10 values per sample
+    private readonly Queue<double[]> _tempHistory    = new(120);  // 20 values per sample
     private readonly Queue<double[]> _cellHistory    = new(120);  // 20 cell voltages per sample
     private readonly Queue<DateTime> _timestamps     = new(120);
 
@@ -284,7 +284,7 @@ public partial class MainViewModel : ObservableObject
         LocalizationManager.Instance.PropertyChanged += (_, _) => RefreshLocalizedText();
 
         for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1, VoltageUnit = VoltageUnit });
-        for (int i = 0; i < 10; i++) Temperatures.Add(new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit });
+        for (int i = 0; i < BmsData.TempCount; i++) Temperatures.Add(new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit });
 
         // Live data — skip if a playback file is loaded (don't overwrite review data).
         Serial.DataReceived  += data => { if (!Playback.IsLoaded) _dispatcherQueue.TryEnqueue(() => ApplyData(data)); };
@@ -499,7 +499,7 @@ public partial class MainViewModel : ObservableObject
             if (cells[i] > 0) Cells[i].StatAvg = _cellStatSum[i] * invCount;
 
         var temps = data.Temps;
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < BmsData.TempCount; i++)
             Temperatures[i].Temperature = temps[i];
 
         HasData = true;
@@ -608,14 +608,14 @@ public partial class MainViewModel : ObservableObject
     public (double[] voltages, double[] currents) GetViHistory() =>
         (_voltageHistory.ToArray(), _currentHistory.ToArray());
 
-    // Returns temperature history as 10 separate series (one per sensor),
+    // Returns temperature history as 20 separate series (one per sensor),
     // each in chronological order (oldest → newest).
     public double[][] GetTempHistory()
     {
         var all = _tempHistory.ToArray();
         if (all.Length == 0) return [];
-        var result = new double[10][];
-        for (int s = 0; s < 10; s++)
+        var result = new double[BmsData.TempCount][];
+        for (int s = 0; s < BmsData.TempCount; s++)
         {
             result[s] = new double[all.Length];
             for (int i = 0; i < all.Length; i++)
@@ -635,11 +635,11 @@ public partial class MainViewModel : ObservableObject
         return result;
     }
 
-    // Returns temperature history for a single NTC sensor (0-indexed, 0-9).
+    // Returns temperature history for a single NTC sensor (0-indexed, 0-19).
     public double[] GetTempSensorHistory(int sensorIndex)
     {
         var all = _tempHistory.ToArray();
-        if (all.Length == 0 || sensorIndex < 0 || sensorIndex >= 10) return [];
+        if (all.Length == 0 || sensorIndex < 0 || sensorIndex >= BmsData.TempCount) return [];
         var result = new double[all.Length];
         for (int i = 0; i < all.Length; i++)
             result[i] = all[i][sensorIndex];

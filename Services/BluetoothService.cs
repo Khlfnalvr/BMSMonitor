@@ -25,7 +25,7 @@ public record BluetoothDeviceInfo(string DeviceId, string DisplayName)
 ///
 ///   {"v":53.12,"i":-2.5,"soc":78,"st":"discharging",
 ///    "cells":[3.682, …20 values…],
-///    "temps":[28,   …10 values…],
+///    "temps":[28,   …20 values…],
 ///    "bal":[0,5,12]}
 ///
 /// Frames are merged into the last known snapshot — missing fields keep
@@ -368,7 +368,7 @@ public sealed class BluetoothService : IDisposable
         dst.Soc         = src.Soc;
         dst.Status      = src.Status;
         for (int k = 0; k < 20; k++) if (src.Cells[k] != 0) dst.Cells[k] = src.Cells[k];
-        for (int k = 0; k < 10; k++) if (src.Temps[k] != 0) dst.Temps[k] = src.Temps[k];
+        for (int k = 0; k < BmsData.TempCount; k++) if (src.Temps[k] != 0) dst.Temps[k] = src.Temps[k];
         for (int k = 0; k < 20; k++) dst.Balancing[k] = src.Balancing[k];
     }
 
@@ -382,7 +382,7 @@ public sealed class BluetoothService : IDisposable
             Status      = s.Status,
         };
         Array.Copy(s.Cells,     c.Cells,     20);
-        Array.Copy(s.Temps,     c.Temps,     10);
+        Array.Copy(s.Temps,     c.Temps,     BmsData.TempCount);
         Array.Copy(s.Balancing, c.Balancing, 20);
         return c;
     }

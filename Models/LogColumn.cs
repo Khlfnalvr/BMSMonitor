@@ -94,7 +94,7 @@ public sealed class LogColumn : INotifyPropertyChanged
             else if (Key.StartsWith("Temp", StringComparison.Ordinal) &&
                      Key.EndsWith("_C", StringComparison.Ordinal) &&
                      int.TryParse(Key.AsSpan(4, Key.Length - 6), out int ti) &&
-                     ti is >= 1 and <= 10)
+                     ti is >= 1 and <= BmsData.TempCount)
             { _kind = ColKind.Temp; _idx = ti - 1; }
         }
     }
@@ -153,7 +153,7 @@ public sealed class LogColumn : INotifyPropertyChanged
             list.Add(new() { Key = $"Cell{i}_V", Label = $"Cell {i} (V)",   Group = "Cells" });
         for (int i = 1; i <= 20; i++)
             list.Add(new() { Key = $"Bal{i}",    Label = $"Balancing {i}",  Group = "Balancing" });
-        for (int i = 1; i <= 10; i++)
+        for (int i = 1; i <= BmsData.TempCount; i++)
             list.Add(new() { Key = $"Temp{i}_C", Label = $"Temp {i} (°C)", Group = "Temperatures" });
         return list;
     }

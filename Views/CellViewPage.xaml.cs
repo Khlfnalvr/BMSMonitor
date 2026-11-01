@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
+using BMSMonitor.Models;
 using BMSMonitor.Services;
 using BMSMonitor.ViewModels;
 using Windows.Foundation;
@@ -21,7 +22,7 @@ public sealed partial class CellViewPage : Page
     private bool _ntcPopupOpen;
     private Flyout? _ntcChartFlyout;
     private const int MaxTicks = 24;
-    private const int TempSensorCount = 10;
+    private const int TempSensorCount = BmsData.TempCount;
     private readonly Polyline[] _tempLines = new Polyline[TempSensorCount];
     private readonly Border[] _tempLegendItems = new Border[TempSensorCount];
     private TextBlock[] _tempTicks = [];
@@ -173,6 +174,16 @@ public sealed partial class CellViewPage : Page
         7 => Color.FromArgb(255, 255, 87, 34),
         8 => Color.FromArgb(255, 121, 85, 72),
         9 => Color.FromArgb(255, 158, 158, 158),
+        10 => Color.FromArgb(255, 233, 30, 99),
+        11 => Color.FromArgb(255, 63, 81, 181),
+        12 => Color.FromArgb(255, 0, 150, 136),
+        13 => Color.FromArgb(255, 255, 193, 7),
+        14 => Color.FromArgb(255, 103, 58, 183),
+        15 => Color.FromArgb(255, 3, 169, 244),
+        16 => Color.FromArgb(255, 139, 195, 74),
+        17 => Color.FromArgb(255, 255, 112, 67),
+        18 => Color.FromArgb(255, 96, 125, 139),
+        19 => Color.FromArgb(255, 186, 104, 200),
         _ => Color.FromArgb(255, 128, 128, 128),
     };
 
@@ -565,7 +576,7 @@ public sealed partial class CellViewPage : Page
             : fe.DataContext is TempViewModel tvm ? tvm.Index : 0;
 
         int ntcIdx = ntcNumber - 1;
-        if (ntcIdx < 0 || ntcIdx >= 10) return;
+        if (ntcIdx < 0 || ntcIdx >= TempSensorCount) return;
 
         try
         {

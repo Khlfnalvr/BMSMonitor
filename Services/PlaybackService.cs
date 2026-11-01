@@ -135,7 +135,7 @@ public sealed class PlaybackService
             if (!ok) continue;
 
             for (int j = 0; j < 20; j++) data.Balancing[j] = row[25 + j] == "1";
-            for (int j = 0; j < 10; j++) P(row[45 + j], out data.Temps[j]);
+            for (int j = 0; j < BmsData.TempCount && 45 + j < row.Length; j++) P(row[45 + j], out data.Temps[j]);
 
             frames.Add(data);
         }
@@ -179,7 +179,7 @@ public sealed class PlaybackService
                 if (row.TryGetValue($"Bal{j + 1}", out var bal))
                     data.Balancing[j] = bal?.ToString()?.Trim() == "1";
             }
-            for (int j = 0; j < 10; j++)
+            for (int j = 0; j < BmsData.TempCount; j++)
                 Pobj(row, $"Temp{j + 1}_C", out data.Temps[j]);
 
             frames.Add(data);
@@ -221,8 +221,8 @@ public sealed class PlaybackService
                 for (int i = 0; i < 20; i++) data.Balancing[i] = bal[i];
 
             var temps = row.Temps;
-            if (temps?.Length == 10)
-                for (int i = 0; i < 10; i++) data.Temps[i] = temps[i];
+            if (temps != null)
+                for (int i = 0; i < Math.Min(temps.Length, BmsData.TempCount); i++) data.Temps[i] = temps[i];
 
             frames.Add(data);
         }

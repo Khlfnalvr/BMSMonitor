@@ -105,7 +105,8 @@ public class CellStatus
 public class BmsData
 {
     public double[] Cells { get; set; } = new double[20];
-    public double[] Temps { get; set; } = new double[10];
+    public const int TempCount = 20;
+    public double[] Temps { get; set; } = new double[TempCount];
     public double Soc { get; set; }
     public double Current { get; set; }
     public double PackVoltage { get; set; }
