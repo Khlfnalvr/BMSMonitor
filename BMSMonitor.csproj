@@ -18,10 +18,10 @@
     <AssemblyTitle>Software BMS ICO</AssemblyTitle>
     <Product>Software BMS ICO</Product>
     <Description>BMS Monitor — Cell voltages, SOC, temperatures &amp; balancing</Description>
-    <Version>2.2.3</Version>
-    <AssemblyVersion>2.2.3.0</AssemblyVersion>
-    <FileVersion>2.2.3.0</FileVersion>
-    <InformationalVersion>2.2.3</InformationalVersion>
+    <Version>2.2.4</Version>
+    <AssemblyVersion>2.2.4.0</AssemblyVersion>
+    <FileVersion>2.2.4.0</FileVersion>
+    <InformationalVersion>2.2.4</InformationalVersion>
   </PropertyGroup>
 
   <!-- Publish / release optimizations -->

@@ -4,7 +4,7 @@
 ; ============================================================
 
 #define AppName      "BMS Monitor"
-#define AppVersion   "2.2.3"
+#define AppVersion   "2.2.4"
 #define AppPublisher "ICO Laboratory"
 #define AppExe       "BMSMonitor.exe"
 
@@ -21,7 +21,7 @@ DefaultGroupName={#AppName}
 AllowNoIcons=yes
 LicenseFile=license.txt
 OutputDir=Publish
-OutputBaseFilename=BMSMonitorSetup-v2.2.3
+OutputBaseFilename=BMSMonitorSetup-v2.2.4
 SetupIconFile=Assets\logo.ico
 UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
@@ -30,7 +30,7 @@ SolidCompression=yes
 WizardStyle=modern
 MinVersion=10.0.17763
 PrivilegesRequired=admin
-VersionInfoVersion=2.2.3.0
+VersionInfoVersion=2.2.4.0
 VersionInfoProductName={#AppName}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription=BMS Monitor - Cell voltages, SOC, temperatures and balancing
