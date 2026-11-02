@@ -21,7 +21,27 @@ permissions:
   contents: write
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      ver: ${{ steps.v.outputs.ver }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          TAG="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          echo "ver=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+  # Android APK (Uno Platform head in Android/) — required asset of every release.
+  android:
+    needs: version
+    uses: ./.github/workflows/android.yml
+    with:
+      version: ${{ needs.version.outputs.ver }}
+    secrets: inherit
+
   release:
+    needs: android
     runs-on: windows-latest
     defaults:
       run:
@@ -73,6 +93,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
           if (-not (Test-Path ".\Publish\BMSMonitorSetup-v$env:VER.exe")) { throw "Installer not produced" }
 
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: android-apk
+          path: Publish
+
+      - name: Verify APK
+        run: |
+          if (-not (Test-Path ".\Publish\BMSMonitor-v$env:VER.apk")) { throw "Android APK missing" }
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -92,6 +122,7 @@ jobs:
           gh release create $env:TAG `
             ".\Publish\BMSMonitorSetup-v$env:VER.exe#BMSMonitorSetup-v$env:VER.exe" `
             ".\Publish\BMSMonitorUpdate-v$env:VER.zip#BMSMonitorUpdate-v$env:VER.zip" `
+            ".\Publish\BMSMonitor-v$env:VER.apk#BMSMonitor-v$env:VER.apk" `
             --repo ${{ github.repository }} `
             --target ${{ github.sha }} `
             --title "$env:TAG - $title" `

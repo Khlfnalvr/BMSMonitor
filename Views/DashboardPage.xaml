@@ -216,7 +216,7 @@
                                         </Grid.ColumnDefinitions>
 
                                         <FontIcon Grid.Column="0"
-                                                  FontFamily="Segoe MDL2 Assets"
+                                                  FontFamily="{StaticResource SymbolThemeFontFamily}"
                                                   Glyph="{x:Bind SeverityIcon}"
                                                   FontSize="14"
                                                   Foreground="{x:Bind SeverityColorBrush}"
@@ -247,7 +247,7 @@
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     Spacing="8">
-                            <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                       Glyph="&#xE930;"
                                       FontSize="28"
                                       Opacity="0.4"/>
@@ -323,7 +323,7 @@
                                 Height="22" Padding="5,2" MinWidth="0"
                                 Click="SaveSocChart_Click"
                                 ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
-                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE74E;" FontSize="12"/>
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE74E;" FontSize="12"/>
                         </Button>
                     </Grid>
                     <Border x:Name="SocChartCard" Grid.Row="1"
@@ -404,7 +404,7 @@
                                 Height="22" Padding="5,2" MinWidth="0"
                                 Click="SaveVIChart_Click"
                                 ToolTipService.ToolTip="{x:Bind Lang.Dash_SaveChart, Mode=OneWay}">
-                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE74E;" FontSize="12"/>
+                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE74E;" FontSize="12"/>
                         </Button>
                     </Grid>
                     <Border x:Name="VIChartCard" Grid.Row="1"

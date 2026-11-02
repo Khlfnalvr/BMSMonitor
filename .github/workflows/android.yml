@@ -1,0 +1,125 @@
+# Builds the Android APK (Android/BMSMonitor.Android.csproj, Uno Platform).
+# - push / PR touching shared code: build check, APK uploaded as a workflow artifact
+# - workflow_call: used by release.yml so every release ships the APK
+#
+# Signing: set repository secrets ANDROID_KEYSTORE_BASE64 (base64 of the .keystore),
+# ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS to sign with a stable release key.
+# Without them the APK is signed with a throw-away debug key (installable, but
+# Android will refuse to update over an APK signed with a different key).
+name: Android
+
+on:
+  push:
+    branches-ignore: [master]
+    paths:
+      - 'Android/**'
+      - 'Models/**'
+      - 'ViewModels/**'
+      - 'Views/**'
+      - 'Services/**'
+      - 'Converters/**'
+      - 'App.xaml*'
+      - 'MainWindow.xaml*'
+      - 'Assets/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        description: 'App version (X.Y.Z)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        shell: bash
+        run: |
+          VER="${{ inputs.version }}"
+          if [ -z "$VER" ]; then
+            VER=$(grep -oP '(?<=<Version>)[^<]+' BMSMonitor.csproj | head -1)
+          fi
+          IFS=. read -r MA MI PA <<< "$VER"
+          CODE=$(( MA * 10000 + MI * 100 + PA ))
+          echo "VER=$VER"   >> "$GITHUB_ENV"
+          echo "CODE=$CODE" >> "$GITHUB_ENV"
+          echo "Version $VER (versionCode $CODE)"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Install Android SDK dependencies
+        run: >
+          dotnet build Android/BMSMonitor.Android.csproj -f net10.0-android
+          -t:InstallAndroidDependencies
+          -p:AndroidSdkDirectory="$ANDROID_HOME"
+          -p:AcceptAndroidSDKLicenses=True
+
+      - name: Prepare signing key
+        shell: bash
+        env:
+          KS_B64:   ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS:  ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            {
+              echo "SIGN_ARGS=-p:AndroidKeyStore=true -p:AndroidSigningKeyStore=$RUNNER_TEMP/release.keystore -p:AndroidSigningKeyAlias=$KS_ALIAS -p:AndroidSigningKeyPass=env:KS_PASS -p:AndroidSigningStorePass=env:KS_PASS"
+              echo "KS_PASS=$KS_PASS"
+            } >> "$GITHUB_ENV"
+            echo "Signing with release keystore."
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 not set - APK is signed with a debug key."
+          fi
+
+      - name: Build APK
+        shell: bash
+        run: |
+          dotnet publish Android/BMSMonitor.Android.csproj -f net10.0-android -c Release \
+            -p:AndroidSdkDirectory="$ANDROID_HOME" \
+            -p:ApplicationDisplayVersion=$VER -p:ApplicationVersion=$CODE \
+            -p:Version=$VER -p:InformationalVersion=$VER \
+            $SIGN_ARGS \
+            -o Publish/Android
+          APK=$(ls Publish/Android/*-Signed.apk | head -1)
+          [ -f "$APK" ] || { echo "Signed APK not produced"; ls -la Publish/Android; exit 1; }
+          mkdir -p Publish/out
+          cp "$APK" "Publish/out/BMSMonitor-v$VER.apk"
+          ls -la Publish/out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: Publish/out/BMSMonitor-v${{ env.VER }}.apk
+          if-no-files-found: error
+
+  # Shared sources are edited for Android with HAS_UNO guards — make sure the
+  # Windows app still builds (skipped when called from release.yml, which
+  # builds Windows itself).
+  windows-check:
+    if: inputs.version == ''
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build Windows app
+        run: dotnet build .\BMSMonitor.csproj -c Release

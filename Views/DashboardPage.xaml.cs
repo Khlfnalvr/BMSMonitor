@@ -824,7 +824,9 @@ public sealed partial class DashboardPage : Page
                 case "svg": picker.FileTypeChoices.Add(Lang.Get("Export_FileTypeSvg"),  new[] { ".svg" }); break;
             }
 
+#if !HAS_UNO
             InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
+#endif
             var file = await picker.PickSaveFileAsync();
             if (file is null) return;
 
@@ -1194,6 +1196,9 @@ public sealed partial class DashboardPage : Page
             await rt.RenderAsync(element, w, h);
 
             var pixels = await rt.GetPixelsAsync();
+#if HAS_UNO
+            return BMSMonitor.Services.UnoImaging.FromBgra(pixels, rt.PixelWidth, rt.PixelHeight);
+#else
             var softwareBitmap = new SoftwareBitmap(
                 BitmapPixelFormat.Bgra8, rt.PixelWidth, rt.PixelHeight, BitmapAlphaMode.Premultiplied);
             softwareBitmap.CopyFromBuffer(pixels);
@@ -1201,6 +1206,7 @@ public sealed partial class DashboardPage : Page
             var source = new SoftwareBitmapSource();
             await source.SetBitmapAsync(softwareBitmap);
             return source;
+#endif
         }
         catch { return null; }
     }

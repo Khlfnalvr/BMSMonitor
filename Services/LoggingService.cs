@@ -39,7 +39,11 @@ public class LoggingService
 
     // ── Statics ───────────────────────────────────────────────────────────
     public static string DefaultLogsFolder =>
+#if HAS_UNO
+        Path.Combine(UnoFiles.DocumentsFolder, "BMSLogs");
+#else
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "BMSLogs");
+#endif
 
     public static string ExtensionFor(LogFormat fmt) => fmt switch
     {

@@ -194,7 +194,7 @@
                         <StackPanel Spacing="14">
 
                             <!-- Auto-connect toggle -->
-                            <Grid ColumnSpacing="10">
+                            <Grid x:Name="SerialAutoConnectRow" ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="220"/>
                                     <ColumnDefinition Width="*"/>
@@ -219,7 +219,7 @@
                             </Grid>
 
                             <!-- Reconnect interval -->
-                            <Grid ColumnSpacing="10">
+                            <Grid x:Name="SerialReconnectRow" ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="220"/>
                                     <ColumnDefinition Width="180"/>
@@ -239,7 +239,7 @@
                             </Grid>
 
                             <!-- Probe timeout -->
-                            <Grid ColumnSpacing="10">
+                            <Grid x:Name="SerialProbeRow" ColumnSpacing="10">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="220"/>
                                     <ColumnDefinition Width="180"/>

@@ -62,7 +62,9 @@ internal static class ChartExportService
                 case "svg": picker.FileTypeChoices.Add(LocalizationManager.Instance.Get("Export_FileTypeSvg"), new[] { ".svg" }); break;
             }
 
+#if !HAS_UNO
             InitializeWithWindow.Initialize(picker, WindowNative.GetWindowHandle(App.CurrentWindow));
+#endif
             var file = await picker.PickSaveFileAsync();
             if (file is null) return;
 
@@ -477,6 +479,9 @@ internal static class ChartExportService
             await rt.RenderAsync(element, w, h);
 
             var pixels = await rt.GetPixelsAsync();
+#if HAS_UNO
+            return BMSMonitor.Services.UnoImaging.FromBgra(pixels, rt.PixelWidth, rt.PixelHeight);
+#else
             var softwareBitmap = new SoftwareBitmap(
                 BitmapPixelFormat.Bgra8,
                 rt.PixelWidth,
@@ -487,6 +492,7 @@ internal static class ChartExportService
             var source = new SoftwareBitmapSource();
             await source.SetBitmapAsync(softwareBitmap);
             return source;
+#endif
         }
         catch
         {

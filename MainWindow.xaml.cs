@@ -33,6 +33,14 @@ public sealed partial class MainWindow : Window
         ?? typeof(App).Assembly.GetName().Version?.ToString(3)
         ?? "1.6.0";
 
+#if HAS_UNO
+    private static Microsoft.UI.Xaml.Media.FontFamily SymbolFont =>
+        new(Uno.UI.FeatureConfiguration.Font.SymbolsFont);
+#else
+    private static Microsoft.UI.Xaml.Media.FontFamily SymbolFont =>
+        new("Segoe Fluent Icons,Segoe MDL2 Assets");
+#endif
+
     private string AboutProductText => $"{Lang.Ui_About_Product}: {AppProductName}";
     private string AboutVersionText => $"{Lang.Ui_About_Version}: {AppVersion}";
     private string AboutLicenseText => $"{Lang.Ui_About_License}: ICO Laboratory proprietary license";
@@ -116,12 +124,18 @@ public sealed partial class MainWindow : Window
 
     public void MaximizeOnLaunch()
     {
+#if HAS_UNO
+        return; // Android: the activity is always full-screen.
+#endif
         if (AppWindow.Presenter is OverlappedPresenter presenter)
             presenter.Maximize();
     }
 
     private void InstallMinimumWindowSizeHook()
     {
+#if HAS_UNO
+        return; // Win32 window-proc hook — Windows only.
+#endif
         _hwnd = WindowNative.GetWindowHandle(this);
         if (_hwnd == IntPtr.Zero) return;
 
@@ -211,6 +225,9 @@ public sealed partial class MainWindow : Window
     // ── Icon ─────────────────────────────────────────────────────────────
     private void SetAppIcon()
     {
+#if HAS_UNO
+        return; // Android: launcher icon comes from the APK.
+#endif
         var iconPath = Path.Combine(AppContext.BaseDirectory, "Assets", "logo.ico");
         if (File.Exists(iconPath))
             AppWindow.SetIcon(iconPath);
@@ -219,6 +236,9 @@ public sealed partial class MainWindow : Window
     // ── Mica ─────────────────────────────────────────────────────────────
     private void ApplyMicaBackdrop()
     {
+#if HAS_UNO
+        return;
+#endif
         if (MicaController.IsSupported())
             SystemBackdrop = new MicaBackdrop { Kind = MicaKind.Base };
     }
@@ -226,6 +246,9 @@ public sealed partial class MainWindow : Window
     // ── Title bar ─────────────────────────────────────────────────────────
     private void InitializeTitleBar()
     {
+#if HAS_UNO
+        return; // No caption bar on Android.
+#endif
         if (!AppWindowTitleBar.IsCustomizationSupported()) return;
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
@@ -235,6 +258,9 @@ public sealed partial class MainWindow : Window
     // toggle area is outside the drag region (no passthrough tricks needed).
     private void UpdateTitleBarLayout()
     {
+#if HAS_UNO
+        return;
+#endif
         if (!AppWindowTitleBar.IsCustomizationSupported()) return;
         var root = Content?.XamlRoot;
         if (root == null) return;
@@ -254,6 +280,9 @@ public sealed partial class MainWindow : Window
 
     private void UpdateTitleBarColors(ElementTheme theme)
     {
+#if HAS_UNO
+        return;
+#endif
         if (!AppWindowTitleBar.IsCustomizationSupported()) return;
         var bar = AppWindow.TitleBar;
         bool dark = theme == ElementTheme.Dark;
@@ -278,9 +307,13 @@ public sealed partial class MainWindow : Window
     private void InitializeTheme()
     {
         // Follow system dark/light preference on first launch.
+#if HAS_UNO
+        bool dark = Application.Current.RequestedTheme == ApplicationTheme.Dark;
+#else
         var uiSettings = new UISettings();
         var bg   = uiSettings.GetColorValue(UIColorType.Background);
         bool dark = bg.R < 128;
+#endif
 
         _initializing = true;
         ApplyTheme(dark ? ElementTheme.Dark : ElementTheme.Light);
@@ -300,9 +333,13 @@ public sealed partial class MainWindow : Window
     {
         bool dark = theme == ElementTheme.Dark;
         string fileName = dark ? "logowhite.png" : "logoblack.png";
+#if HAS_UNO
+        var source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri("ms-appx:///" + fileName));
+#else
         string path = Path.Combine(AppContext.BaseDirectory, fileName);
         if (!File.Exists(path)) return;
         var source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(path));
+#endif
         LogoImage.Source = source;
         if (TourLogoImage is not null)
             TourLogoImage.Source = source;
@@ -916,7 +953,7 @@ public sealed partial class MainWindow : Window
         var panel = new StackPanel { Spacing = 6, Margin = new Thickness(0, 0, 0, 8) };
         panel.Children.Add(new FontIcon
         {
-            FontFamily = new Microsoft.UI.Xaml.Media.FontFamily("Segoe Fluent Icons,Segoe MDL2 Assets"),
+            FontFamily = SymbolFont,
             Glyph      = glyph,
             FontSize   = 28,
             HorizontalAlignment = HorizontalAlignment.Left
@@ -1010,6 +1047,10 @@ public sealed partial class MainWindow : Window
     private void MenuOpenLogFolder_Click(object sender, RoutedEventArgs e)
     {
         Directory.CreateDirectory(AppSettingsService.FolderPath);
+#if HAS_UNO
+        ShowPathInfo(Lang.Ui_Menu_OpenLogFolder, AppSettingsService.FolderPath);
+        return;
+#endif
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
             FileName = AppSettingsService.FolderPath,
@@ -1028,12 +1069,31 @@ public sealed partial class MainWindow : Window
             AppSettingsService.Save(s);
         }
 
+#if HAS_UNO
+        ShowPathInfo(Lang.Ui_Menu_OpenSettings, AppSettingsService.FilePath);
+        return;
+#endif
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
             FileName = AppSettingsService.FilePath,
             UseShellExecute = true
         });
     }
+
+#if HAS_UNO
+    // Android has no shell "open folder/file" — show the location instead.
+    private async void ShowPathInfo(string title, string path)
+    {
+        var dialog = new ContentDialog
+        {
+            Title = title,
+            Content = new TextBlock { Text = path, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true },
+            CloseButtonText = Lang.Get("Ui_Ok"),
+            XamlRoot = Content?.XamlRoot
+        };
+        try { await dialog.ShowAsync(); } catch { }
+    }
+#endif
 
     private async void MenuReportBug_Click(object sender, RoutedEventArgs e)
     {
@@ -1350,7 +1410,7 @@ public sealed partial class MainWindow : Window
             Background = TourIconSurfaceBrush(),
             Child = new FontIcon
             {
-                FontFamily = new FontFamily("Segoe Fluent Icons,Segoe MDL2 Assets"),
+                FontFamily = SymbolFont,
                 Glyph = glyph,
                 FontSize = size >= 40 ? 20 : 15,
                 HorizontalAlignment = HorizontalAlignment.Center,
@@ -1627,7 +1687,13 @@ public sealed partial class MainWindow : Window
 
         // Default tab: Serial. SelectorBar.SelectedItem must be assigned
         // explicitly — leaving it null fires no SelectionChanged on open.
+#if HAS_UNO
+        // Android: Bluetooth LE is the only transport — hide the Serial tab.
+        ConnTabSerial.Visibility = Visibility.Collapsed;
+        ConnTabs.SelectedItem = ConnTabBluetooth;
+#else
         ConnTabs.SelectedItem = ConnTabSerial;
+#endif
         ApplyConnTab();
 
         // Mirror connection status into the flyout text + the status dot.
@@ -1878,6 +1944,9 @@ public sealed partial class MainWindow : Window
     // attention cue when toasts are suppressed.
     private void FlashTaskbarForCriticalAlert()
     {
+#if HAS_UNO
+        return; // Android: the system notification is the attention cue.
+#endif
         if (_hwnd == IntPtr.Zero) return;
         var info = new FLASHWINFO
         {

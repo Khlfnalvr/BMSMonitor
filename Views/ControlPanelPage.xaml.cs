@@ -30,7 +30,17 @@ public sealed partial class ControlPanelPage : Page
         // Default to the Serial tab on first show. SelectorBar.SelectedItem
         // is null on open, which would leave both panels visible — pick the
         // first item explicitly.
+#if HAS_UNO
+        // Android: Bluetooth LE only — hide the Serial tab and the COM-port
+        // auto-connect rows (frame counters stay: they include BLE).
+        CtrlTabSerial.Visibility        = Visibility.Collapsed;
+        SerialAutoConnectRow.Visibility = Visibility.Collapsed;
+        SerialReconnectRow.Visibility   = Visibility.Collapsed;
+        SerialProbeRow.Visibility       = Visibility.Collapsed;
+        ConnTabsCtrl.SelectedItem = CtrlTabBluetooth;
+#else
         ConnTabsCtrl.SelectedItem = CtrlTabSerial;
+#endif
         ApplyConnTab();
 
         // Poll frame counters at 2 Hz — cheap and avoids wiring an event

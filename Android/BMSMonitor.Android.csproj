@@ -1,0 +1,75 @@
+<!--
+  Android build of BMS Monitor (Uno Platform).
+  Re-uses the Windows app's XAML pages, view-models, models and services
+  (linked from the repo root) so the UI is identical. Windows-only pieces
+  (USB-serial, WinRT BLE, Windows toasts, ZIP self-updater, title bar) are
+  replaced by Android implementations in Platform/ or guarded with HAS_UNO.
+  Transport: Bluetooth LE only.
+-->
+<Project Sdk="Uno.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net10.0-android</TargetFrameworks>
+    <TargetFrameworks Condition="'$(BmsDesktopCheck)' == 'true'">net10.0-desktop</TargetFrameworks>
+    <OutputType>Exe</OutputType>
+    <UnoSingleProject>true</UnoSingleProject>
+    <RootNamespace>BMSMonitor</RootNamespace>
+    <AssemblyName>BMSMonitor</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <ApplicationTitle>BMS Monitor</ApplicationTitle>
+    <ApplicationId>com.khlfnalvr.bmsmonitor</ApplicationId>
+    <ApplicationDisplayVersion>2.2.3</ApplicationDisplayVersion>
+    <ApplicationVersion>20203</ApplicationVersion>
+    <ApplicationPublisher>Khlfnalvr</ApplicationPublisher>
+    <Product>Software BMS ICO</Product>
+    <Version>2.2.3</Version>
+    <InformationalVersion>2.2.3</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <Description>BMS Monitor — Cell voltages, SOC, temperatures &amp; balancing</Description>
+
+    <UnoFeatures>SkiaRenderer</UnoFeatures>
+    <!-- The Windows sources compile here too; silence analyzers for APIs
+         Uno does not implement (they are guarded at runtime). -->
+    <NoWarn>$(NoWarn);Uno0001;CS1998;CS0414;CS0169;CS0649</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
+    <SupportedOSPlatformVersion>26.0</SupportedOSPlatformVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="MiniExcel" Version="1.34.2" />
+    <!-- Compiled for shared code only; the Android build never opens a serial port. -->
+    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <UnoIcon Include="Assets\Icons\icon.png" Color="#FFFFFF" />
+    <UnoSplashScreen Include="Assets\Splash\splash.png" BaseSize="128,128" Color="#FFFFFF" />
+  </ItemGroup>
+
+  <!-- ── Shared sources from the Windows app ─────────────────────────── -->
+  <ItemGroup>
+    <Compile Include="..\Models\**\*.cs"     Link="Shared\Models\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\ViewModels\**\*.cs" Link="Shared\ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Converters\**\*.cs" Link="Shared\Converters\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Services\**\*.cs"   Link="Shared\Services\%(RecursiveDir)%(Filename)%(Extension)"
+             Exclude="..\Services\BluetoothService.cs" />
+    <Compile Include="..\Views\**\*.xaml.cs" Link="Shared\Views\%(RecursiveDir)%(Filename)%(Extension)"
+             DependentUpon="%(Filename)" />
+    <Compile Include="..\MainWindow.xaml.cs" Link="Shared\MainWindow.xaml.cs" DependentUpon="MainWindow.xaml" />
+    <Compile Include="..\App.xaml.cs"        Link="Shared\App.xaml.cs"        DependentUpon="App.xaml" />
+
+    <Page Include="..\Views\**\*.xaml"    Link="Shared\Views\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Page Include="..\MainWindow.xaml"    Link="Shared\MainWindow.xaml" />
+    <Page Include="..\Assets\AppTheme.xaml" Link="Shared\Assets\AppTheme.xaml" />
+    <ApplicationDefinition Include="..\App.xaml" Link="Shared\App.xaml" />
+
+    <Content Include="..\logo.png"      Link="logo.png"      CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\logoblack.png" Link="logoblack.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\logowhite.png" Link="logowhite.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

@@ -69,6 +69,14 @@
     <TrimmerRootDescriptor Include="TrimmerRoots.xml"/>
   </ItemGroup>
 
+  <!-- The Android (Uno) project lives in Android/ and links these sources itself. -->
+  <ItemGroup>
+    <Compile Remove="Android\**" />
+    <Page Remove="Android\**" />
+    <None Remove="Android\**" />
+    <Content Remove="Android\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="MiniExcel" Version="1.34.2" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />

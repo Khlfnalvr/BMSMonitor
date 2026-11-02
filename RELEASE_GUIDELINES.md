@@ -6,7 +6,7 @@ me-restart BMSMonitor.
 
 ## Asset Wajib Di GitHub Release
 
-Setiap release GitHub wajib memiliki dua asset berikut:
+Mulai v2.2.4, setiap release GitHub wajib memiliki tiga asset berikut:
 
 1. `BMSMonitorSetup-vX.Y.Z.exe`
    - Installer penuh untuk instalasi manual atau fresh install.
@@ -18,11 +18,22 @@ Setiap release GitHub wajib memiliki dua asset berikut:
    - Nama file sebaiknya mengandung kata `Update`, karena updater akan
      memprioritaskan asset ZIP dengan nama tersebut.
 
-Contoh untuk versi `2.0.2`:
+3. `BMSMonitor-vX.Y.Z.apk`
+   - Aplikasi Android (Bluetooth LE saja), dibangun dari
+     `Android/BMSMonitor.Android.csproj` (Uno Platform, UI sama dengan Windows).
+   - Aplikasi Android mencari asset `.apk` ini saat cek update, lalu membuka
+     link download-nya.
+   - Harus ditandatangani dengan keystore release yang sama setiap rilis
+     (secret `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+     `ANDROID_KEY_ALIAS`). Jika kunci berbeda, Android menolak update dan
+     pengguna harus uninstall dulu.
+
+Contoh untuk versi `2.2.4`:
 
 ```text
-BMSMonitorSetup-v2.0.2.exe
-BMSMonitorUpdate-v2.0.2.zip
+BMSMonitorSetup-v2.2.4.exe
+BMSMonitorUpdate-v2.2.4.zip
+BMSMonitor-v2.2.4.apk
 ```
 
 ## Format ZIP Update
@@ -96,6 +107,7 @@ Update versi di file berikut:
 ```text
 BMSMonitor.csproj
 installer.iss
+Android/BMSMonitor.Android.csproj
 ```
 
 Pastikan nilai versinya sama:
@@ -106,6 +118,18 @@ Pastikan nilai versinya sama:
 <FileVersion>X.Y.Z.0</FileVersion>
 <InformationalVersion>X.Y.Z</InformationalVersion>
 ```
+
+Di `Android/BMSMonitor.Android.csproj` (versionCode = mayor*10000 + minor*100 + patch):
+
+```xml
+<ApplicationDisplayVersion>X.Y.Z</ApplicationDisplayVersion>
+<ApplicationVersion>XYYZZ</ApplicationVersion>
+<Version>X.Y.Z</Version>
+<InformationalVersion>X.Y.Z</InformationalVersion>
+```
+
+Workflow release juga meng-override nilai ini dari tag, jadi APK selalu
+memakai versi tag.
 
 Di `installer.iss`:
 
@@ -141,11 +165,24 @@ Buat installer:
 & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" .\installer.iss
 ```
 
+Build APK Android (butuh workload `android` dan Android SDK):
+
+```powershell
+dotnet workload install android
+dotnet publish .\Android\BMSMonitor.Android.csproj -f net10.0-android -c Release `
+  -p:ApplicationDisplayVersion=X.Y.Z -p:ApplicationVersion=XYYZZ `
+  -p:AndroidKeyStore=true -p:AndroidSigningKeyStore=<path>.keystore `
+  -p:AndroidSigningKeyAlias=<alias> -p:AndroidSigningKeyPass=<pass> -p:AndroidSigningStorePass=<pass> `
+  -o .\Publish\Android
+Copy-Item .\Publish\Android\*-Signed.apk .\Publish\BMSMonitor-vX.Y.Z.apk
+```
+
 Hasil yang harus ada:
 
 ```text
 Publish\BMSMonitorSetup-vX.Y.Z.exe
 Publish\BMSMonitorUpdate-vX.Y.Z.zip
+Publish\BMSMonitor-vX.Y.Z.apk
 ```
 
 ## Verifikasi ZIP
@@ -179,12 +216,13 @@ Tag release harus memakai format:
 vX.Y.Z
 ```
 
-Upload kedua asset:
+Upload ketiga asset:
 
 ```powershell
 gh release create vX.Y.Z `
   ".\Publish\BMSMonitorSetup-vX.Y.Z.exe#BMSMonitorSetup-vX.Y.Z.exe" `
   ".\Publish\BMSMonitorUpdate-vX.Y.Z.zip#BMSMonitorUpdate-vX.Y.Z.zip" `
+  ".\Publish\BMSMonitor-vX.Y.Z.apk#BMSMonitor-vX.Y.Z.apk" `
   --repo Khlfnalvr/BMSMonitor `
   --target master `
   --title "vX.Y.Z - Release title" `
@@ -206,6 +244,9 @@ Sebelum mengumumkan release, pastikan:
 - GitHub release memakai tag `vX.Y.Z`.
 - Release memiliki asset installer `.exe`.
 - Release memiliki asset update `.zip`.
+- Release memiliki asset Android `BMSMonitor-vX.Y.Z.apk`, ditandatangani
+  dengan keystore release yang sama seperti rilis sebelumnya.
+- `Android/BMSMonitor.Android.csproj` sudah memakai versi baru.
 - Nama ZIP update mengandung `Update`.
 - ZIP update berisi `BMSMonitor.exe` di root.
 - ZIP update dibuat dari output `Publish\AppFiles` versi terbaru.

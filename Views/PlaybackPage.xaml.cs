@@ -76,8 +76,10 @@ public sealed partial class PlaybackPage : Page
     private async void BrowseFile_Click(object sender, RoutedEventArgs e)
     {
         var picker = new FileOpenPicker();
+#if !HAS_UNO
         var hwnd   = WinRT.Interop.WindowNative.GetWindowHandle(App.CurrentWindow);
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+#endif
         picker.SuggestedStartLocation = PickerLocationId.DocumentsLibrary;
         foreach (var ext in PlaybackService.SupportedExtensions)
             picker.FileTypeFilter.Add(ext);
@@ -86,7 +88,16 @@ public sealed partial class PlaybackPage : Page
         if (file is null) return;
 
         LoadStatusText.Text = Lang.Get("Pb_Loading");
+#if HAS_UNO
+        // Android pickers hand back content URIs — copy to cache so the
+        // path-based loader can read it.
+        string path;
+        try { path = await BMSMonitor.Services.UnoFiles.CopyToCacheAsync(file); }
+        catch (Exception ex) { LoadStatusText.Text = Lang.Format("Pb_Error", ex.Message); return; }
+        var err = Playback.LoadFile(path);
+#else
         var err = Playback.LoadFile(file.Path);
+#endif
         if (err is not null)
             LoadStatusText.Text = Lang.Format("Pb_Error", err);
     }

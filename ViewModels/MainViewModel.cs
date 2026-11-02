@@ -290,7 +290,9 @@ public partial class MainViewModel : ObservableObject
 
         ApplySettings(savedSettings);
         var savedBaud = Serial.Bitrates.FirstOrDefault(b => b.Baud == savedSettings.SerialBaud);
+#if !HAS_UNO  // Android: no USB serial — skip the COM-port auto-connect loop.
         AutoConnect.Start(savedBaud?.Baud ?? Serial.DefaultBitrate);
+#endif
         LocalizationManager.Instance.PropertyChanged += (_, _) => RefreshLocalizedText();
 
         for (int i = 0; i < 20; i++)

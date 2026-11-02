@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Net;
+#if !HAS_UNO
 using Microsoft.Windows.AppNotifications;
+#endif
 using BMSMonitor.Models;
 
 namespace BMSMonitor.Services;
@@ -36,7 +38,11 @@ public class NotificationService
     {
         try
         {
+#if HAS_UNO
+            PlatformNotifier.Register();
+#else
             AppNotificationManager.Default.Register();
+#endif
             _registered = true;
         }
         catch
@@ -149,6 +155,9 @@ public class NotificationService
         bool critical = severity is AlertSeverity.Error or AlertSeverity.Alert;
         if (critical) CriticalAlertFired?.Invoke(rec);
 
+#if HAS_UNO
+        PlatformNotifier.Show(rec.Title, rec.Body, critical);
+#else
         try
         {
             // scenario="urgent" (Win11) bypasses Focus Assist when the app is
@@ -168,6 +177,7 @@ public class NotificationService
         {
             // Notification failed — will retry on next cycle
         }
+#endif
     }
 
     private static string Escape(string s) => WebUtility.HtmlEncode(s);

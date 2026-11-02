@@ -265,7 +265,7 @@
                                         Text="Github"
                                         Click="MenuGithub_Click">
                             <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                           Glyph="&#xE8A7;"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
@@ -275,7 +275,7 @@
                                         Text="{x:Bind Lang.Ui_Menu_OpenLogFolder, Mode=OneWay}"
                                         Click="MenuOpenLogFolder_Click">
                             <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                           Glyph="&#xE838;"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
@@ -284,7 +284,7 @@
                                         Text="{x:Bind Lang.Ui_Menu_OpenSettings, Mode=OneWay}"
                                         Click="MenuOpenSettings_Click">
                             <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                           Glyph="&#xE7C3;"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
@@ -294,7 +294,7 @@
                                         Text="{x:Bind Lang.Ui_Menu_ReportBug, Mode=OneWay}"
                                         Click="MenuReportBug_Click">
                             <MenuFlyoutItem.Icon>
-                                <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                                <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                           Glyph="&#xEBE8;"/>
                             </MenuFlyoutItem.Icon>
                         </MenuFlyoutItem>
@@ -339,7 +339,7 @@
                         Style="{StaticResource CaptionButtonStyle}"
                         Visibility="Collapsed"
                         Click="UpdateNotifyBtn_Click">
-                    <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                               FontSize="15"
                               Glyph="&#xE777;"
                               Foreground="#F79022"/>
@@ -352,7 +352,7 @@
                 <Button x:Name="AlertBtn"
                         Style="{StaticResource CaptionButtonStyle}">
                     <Grid>
-                        <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                   FontSize="14"
                                   Glyph="&#xE7E7;"/>
                         <Border x:Name="AlertBadge"
@@ -404,7 +404,7 @@
                                                 </Grid.ColumnDefinitions>
                                                 <!-- Severity icon -->
                                                 <FontIcon Grid.Column="0"
-                                                          FontFamily="Segoe MDL2 Assets"
+                                                          FontFamily="{StaticResource SymbolThemeFontFamily}"
                                                           Glyph="{x:Bind SeverityIcon}"
                                                           FontSize="13"
                                                           Foreground="{x:Bind SeverityColorBrush}"
@@ -451,7 +451,7 @@
                 <Button x:Name="SerialBtn"
                         Style="{StaticResource CaptionButtonStyle}">
                     <Grid>
-                        <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                                   FontSize="14"
                                   Glyph="&#xE839;"/>
                         <Ellipse x:Name="SerialStatusDot"
@@ -513,7 +513,7 @@
                                                 Padding="8,6"
                                                 ToolTipService.ToolTip="{x:Bind Lang.Ctrl_Refresh, Mode=OneWay}"
                                                 Click="CapRefresh_Click">
-                                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="12"/>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE72C;" FontSize="12"/>
                                         </Button>
                                     </Grid>
 
@@ -558,7 +558,7 @@
                                                 Padding="8,6"
                                                 ToolTipService.ToolTip="{x:Bind Lang.Ctrl_BtScan, Mode=OneWay}"
                                                 Click="CapBtScanBtn_Click">
-                                            <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE895;" FontSize="12"/>
+                                            <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE895;" FontSize="12"/>
                                         </Button>
                                     </Grid>
 
@@ -583,7 +583,7 @@
 
                 <Button x:Name="LangBtn"
                         Style="{StaticResource CaptionButtonStyle}">
-                    <FontIcon FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}"
                               FontSize="14"
                               Glyph="&#xE12B;"/>
                     <Button.Flyout>
@@ -600,7 +600,7 @@
                         Style="{StaticResource CaptionButtonStyle}"
                         Click="ThemeBtn_Click">
                     <FontIcon x:Name="ThemeIcon"
-                              FontFamily="Segoe Fluent Icons,Segoe MDL2 Assets"
+                              FontFamily="{StaticResource SymbolThemeFontFamily}"
                               FontSize="14"
                               Glyph="&#xE706;"/>
                 </Button>
@@ -628,19 +628,19 @@
                     <Button x:Name="PbFirstBtn" Padding="8,6"
                             ToolTipService.ToolTip="First frame"
                             Click="PbFirst_Click">
-                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE892;" FontSize="14"/>
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE892;" FontSize="14"/>
                     </Button>
                     <Button x:Name="PbPlayPauseBtn" Padding="10,6"
                             Style="{ThemeResource AccentButtonStyle}"
                             ToolTipService.ToolTip="Play / Pause"
                             Click="PbPlayPause_Click">
                         <FontIcon x:Name="PbPlayPauseIcon"
-                                  FontFamily="Segoe MDL2 Assets" Glyph="&#xE768;" FontSize="14"/>
+                                  FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE768;" FontSize="14"/>
                     </Button>
                     <Button x:Name="PbLastBtn" Padding="8,6"
                             ToolTipService.ToolTip="Last frame"
                             Click="PbLast_Click">
-                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE893;" FontSize="14"/>
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE893;" FontSize="14"/>
                     </Button>
                 </StackPanel>
 
@@ -666,7 +666,7 @@
                         VerticalAlignment="Center"
                         ToolTipService.ToolTip="Unload file and return to live mode"
                         Click="PbClose_Click">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8BB;" FontSize="12"/>
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE8BB;" FontSize="12"/>
                 </Button>
             </Grid>
         </Border>

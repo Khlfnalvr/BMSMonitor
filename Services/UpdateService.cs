@@ -70,13 +70,24 @@ public static class UpdateService
                 ?? release.Assets.FirstOrDefault(a =>
                     a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
 
+#if HAS_UNO
+            // Android: no in-place updater. The "open page" action downloads the
+            // release APK directly (falls back to the release page).
+            var apkAsset = release.Assets.FirstOrDefault(a =>
+                a.Name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase));
+            string? releaseUrl = apkAsset?.BrowserDownloadUrl ?? release.HtmlUrl;
+            zipAsset = null;
+#else
+            string? releaseUrl = release.HtmlUrl;
+#endif
+
             return new UpdateCheckInfo
             {
                 Result        = IsNewer(latestTag, current)
                                     ? UpdateCheckResult.UpdateAvailable
                                     : UpdateCheckResult.UpToDate,
                 LatestVersion = latestTag,
-                ReleaseUrl    = release.HtmlUrl,
+                ReleaseUrl    = releaseUrl,
                 UpdateZipUrl  = zipAsset?.BrowserDownloadUrl,
                 ReleaseNotes  = release.Body
             };

@@ -310,6 +310,12 @@ public sealed partial class LoggingPage : Page
 
     private async void BrowseFolder_Click(object sender, RoutedEventArgs e)
     {
+#if HAS_UNO
+        // Android: SAF folders can't be written by path — logs always go to the
+        // app's Documents folder (reachable over USB / file manager).
+        await ShowLogFolderAsync(_selectedFolder);
+        return;
+#endif
         var picker = new FolderPicker();
         var hwnd   = WinRT.Interop.WindowNative.GetWindowHandle(App.CurrentWindow);
         WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
@@ -344,10 +350,28 @@ public sealed partial class LoggingPage : Page
             ? (Path.GetDirectoryName(Logging.FilePath) ?? _selectedFolder)
             : _selectedFolder;
         Directory.CreateDirectory(folder);
+#if HAS_UNO
+        _ = ShowLogFolderAsync(folder);
+#else
         System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
         {
             FileName        = folder,
             UseShellExecute = true
         });
+#endif
     }
+
+#if HAS_UNO
+    private async Task ShowLogFolderAsync(string folder)
+    {
+        var dialog = new ContentDialog
+        {
+            Title           = Lang.Log_OpenFolder,
+            Content         = new TextBlock { Text = folder, TextWrapping = TextWrapping.Wrap, IsTextSelectionEnabled = true },
+            CloseButtonText = Lang.Get("Ui_Ok"),
+            XamlRoot        = XamlRoot
+        };
+        try { await dialog.ShowAsync(); } catch { }
+    }
+#endif
 }
