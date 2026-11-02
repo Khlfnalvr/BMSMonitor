@@ -247,6 +247,11 @@ public partial class MainViewModel : ObservableObject
     // --- Collections ---
     public ObservableCollection<CellViewModel> Cells        { get; } = new();
     public ObservableCollection<TempViewModel> Temperatures { get; } = new();
+    // Two 10S2P packs: cells 1-10 → module 1, cells 11-20 → module 2. Each reading is one
+    // series group (2 parallel cells share a voltage). Same instances as Cells, partitioned for the UI.
+    public const int CellsPerModule = 10;
+    public ObservableCollection<CellViewModel> Module1Cells { get; } = new();
+    public ObservableCollection<CellViewModel> Module2Cells { get; } = new();
     // Battery is split into two modules: NTC 1-10 → module 1, NTC 11-20 → module 2.
     // Same TempViewModel instances as Temperatures, just partitioned for the UI.
     public const int TempsPerModule = BmsData.TempCount / 2;
@@ -288,7 +293,12 @@ public partial class MainViewModel : ObservableObject
         AutoConnect.Start(savedBaud?.Baud ?? Serial.DefaultBitrate);
         LocalizationManager.Instance.PropertyChanged += (_, _) => RefreshLocalizedText();
 
-        for (int i = 0; i < 20; i++) Cells.Add(new CellViewModel { Index = i + 1, VoltageUnit = VoltageUnit });
+        for (int i = 0; i < 20; i++)
+        {
+            var c = new CellViewModel { Index = i + 1, VoltageUnit = VoltageUnit };
+            Cells.Add(c);
+            (i < CellsPerModule ? Module1Cells : Module2Cells).Add(c);
+        }
         for (int i = 0; i < BmsData.TempCount; i++)
         {
             var t = new TempViewModel { Index = i + 1, TemperatureUnit = TemperatureUnit };

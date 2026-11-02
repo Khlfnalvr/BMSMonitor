@@ -548,7 +548,9 @@ public sealed partial class CellViewPage : Page
         if (args.Element is not Button button)
             return;
 
-        button.Tag = args.Index + 1;
+        // Tag with the cell's global number (module 2 repeater starts at 11).
+        if (sender.ItemsSourceView?.GetAt(args.Index) is CellViewModel cvm)
+            button.Tag = cvm.Index;
         button.Click -= CellButton_Click;
         button.Click += CellButton_Click;
         button.Tapped -= CellTile_Tapped;
