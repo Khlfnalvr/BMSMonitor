@@ -4,6 +4,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:BMSMonitor.ViewModels"
     xmlns:conv="using:BMSMonitor.Converters"
+    xmlns:ctl="using:BMSMonitor.Controls"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
@@ -81,12 +82,8 @@
                                    ItemsSource="{x:Bind ViewModel.Module1Cells, Mode=OneWay}"
                                    ElementPrepared="CellRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout
-                                Orientation="Horizontal"
-                                MinItemWidth="100" MinItemHeight="110"
-                                MinColumnSpacing="8" MinRowSpacing="8"
-                                MaximumRowsOrColumns="5"
-                                ItemsStretch="Fill"/>
+                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="110"
+                                                  ColumnSpacing="8" RowSpacing="8"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:CellViewModel">
@@ -159,12 +156,8 @@
                                    ItemsSource="{x:Bind ViewModel.Module2Cells, Mode=OneWay}"
                                    ElementPrepared="CellRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout
-                                Orientation="Horizontal"
-                                MinItemWidth="100" MinItemHeight="110"
-                                MinColumnSpacing="8" MinRowSpacing="8"
-                                MaximumRowsOrColumns="5"
-                                ItemsStretch="Fill"/>
+                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="110"
+                                                  ColumnSpacing="8" RowSpacing="8"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:CellViewModel">
@@ -272,12 +265,8 @@
                                    ItemsSource="{x:Bind ViewModel.Module1Temperatures, Mode=OneWay}"
                                    ElementPrepared="NtcRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout
-                                Orientation="Horizontal"
-                                MinItemWidth="100" MinItemHeight="90"
-                                MinColumnSpacing="10" MinRowSpacing="10"
-                                MaximumRowsOrColumns="5"
-                                ItemsStretch="Fill"/>
+                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="90"
+                                                  ColumnSpacing="10" RowSpacing="10"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:TempViewModel">
@@ -316,12 +305,8 @@
                                    ItemsSource="{x:Bind ViewModel.Module2Temperatures, Mode=OneWay}"
                                    ElementPrepared="NtcRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <UniformGridLayout
-                                Orientation="Horizontal"
-                                MinItemWidth="100" MinItemHeight="90"
-                                MinColumnSpacing="10" MinRowSpacing="10"
-                                MaximumRowsOrColumns="5"
-                                ItemsStretch="Fill"/>
+                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="90"
+                                                  ColumnSpacing="10" RowSpacing="10"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:TempViewModel">

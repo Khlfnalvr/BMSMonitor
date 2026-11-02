@@ -1,6 +1,7 @@
 using Android.App;
 using Android.Content.PM;
 using Android.Views;
+using AndroidX.Core.View;
 
 namespace BMSMonitor.Droid;
 
@@ -20,6 +21,27 @@ public class MainActivity : Microsoft.UI.Xaml.ApplicationActivity
         global::AndroidX.Core.SplashScreen.SplashScreen.InstallSplashScreen(this);
         base.OnCreate(bundle);
         Current = this;
+
+        // Android 15+ draws apps edge-to-edge: pad the content by the status
+        // bar / navigation bar / cutout so the app's top bar and status bar
+        // aren't hidden behind the system bars.
+        var content = FindViewById(Android.Resource.Id.Content);
+        if (content is not null)
+        {
+            ViewCompat.SetOnApplyWindowInsetsListener(content, new SystemBarsPadding());
+            ViewCompat.RequestApplyInsets(content);
+        }
+    }
+
+    private sealed class SystemBarsPadding : Java.Lang.Object, IOnApplyWindowInsetsListener
+    {
+        public WindowInsetsCompat OnApplyWindowInsets(View v, WindowInsetsCompat insets)
+        {
+            var bars = insets.GetInsets(
+                WindowInsetsCompat.Type.SystemBars() | WindowInsetsCompat.Type.DisplayCutout());
+            v.SetPadding(bars.Left, bars.Top, bars.Right, bars.Bottom);
+            return WindowInsetsCompat.Consumed;
+        }
     }
 
     protected override void OnDestroy()

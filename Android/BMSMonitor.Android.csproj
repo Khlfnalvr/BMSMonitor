@@ -56,6 +56,7 @@
     <Compile Include="..\Models\**\*.cs"     Link="Shared\Models\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\ViewModels\**\*.cs" Link="Shared\ViewModels\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\Converters\**\*.cs" Link="Shared\Converters\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Controls\**\*.cs"   Link="Shared\Controls\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\Services\**\*.cs"   Link="Shared\Services\%(RecursiveDir)%(Filename)%(Extension)"
              Exclude="..\Services\BluetoothService.cs" />
     <Compile Include="..\Views\**\*.xaml.cs" Link="Shared\Views\%(RecursiveDir)%(Filename)%(Extension)"
