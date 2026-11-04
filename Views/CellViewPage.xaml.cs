@@ -34,6 +34,15 @@ public sealed partial class CellViewPage : Page
     public CellViewPage()
     {
         InitializeComponent();
+#if HAS_UNO
+        // Android: UniformGridLayout sizes Module 2 tiles from a measured item,
+        // so use the width-only layout there. (Windows keeps UniformGridLayout:
+        // a managed Layout subclass in XAML fails to load on WinUI 3.)
+        CellRepeaterModule1.Layout = new BMSMonitor.Controls.FixedColumnLayout { MinItemHeight = 110, ColumnSpacing = 8,  RowSpacing = 8 };
+        CellRepeaterModule2.Layout = new BMSMonitor.Controls.FixedColumnLayout { MinItemHeight = 110, ColumnSpacing = 8,  RowSpacing = 8 };
+        NtcRepeaterModule1.Layout  = new BMSMonitor.Controls.FixedColumnLayout { MinItemHeight = 90,  ColumnSpacing = 10, RowSpacing = 10 };
+        NtcRepeaterModule2.Layout  = new BMSMonitor.Controls.FixedColumnLayout { MinItemHeight = 90,  ColumnSpacing = 10, RowSpacing = 10 };
+#endif
         InitializeTempChart();
         InitializeTempLegend();
         ApplyTempChartColors();
@@ -542,6 +551,13 @@ public sealed partial class CellViewPage : Page
     }
 
     private void ResetStats_Click(object sender, RoutedEventArgs e) => ViewModel.ResetCellStats();
+
+    // (i) legend: shows on hover via ToolTip; click/tap opens it too (touch).
+    private void LegendInfo_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is DependencyObject d && ToolTipService.GetToolTip(d) is ToolTip tip)
+            tip.IsOpen = true;
+    }
 
     private void CellRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
     {

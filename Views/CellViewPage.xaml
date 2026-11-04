@@ -4,7 +4,6 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:BMSMonitor.ViewModels"
     xmlns:conv="using:BMSMonitor.Converters"
-    xmlns:ctl="using:BMSMonitor.Controls"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Page.Resources>
@@ -12,6 +11,15 @@
         <conv:CellStateToBorderConverter     x:Key="CellStateBorderConverter"/>
         <conv:BoolToVisibilityConverter      x:Key="BoolToVisConverter"/>
         <conv:TempToForegroundConverter      x:Key="TempToFgConverter"/>
+        <Style x:Key="InfoButtonStyle" TargetType="Button">
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="4"/>
+            <Setter Property="MinWidth"        Value="0"/>
+            <Setter Property="MinHeight"       Value="0"/>
+            <Setter Property="Opacity"         Value="0.55"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
     </Page.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -58,9 +66,41 @@
             </Border>
 
             <Grid>
-                <TextBlock Text="{x:Bind Lang.Cell_SecCellGrid, Mode=OneWay}"
-                           Style="{StaticResource SectionHeaderStyle}"
-                           VerticalAlignment="Center"/>
+                <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Text="{x:Bind Lang.Cell_SecCellGrid, Mode=OneWay}"
+                               Style="{StaticResource SectionHeaderStyle}"
+                               VerticalAlignment="Center"/>
+                    <Button Style="{StaticResource InfoButtonStyle}" Margin="0,8,0,0"
+                            Click="LegendInfo_Click">
+                        <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE946;" FontSize="12"/>
+                        <ToolTipService.ToolTip>
+                            <ToolTip>
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{x:Bind Lang.Cell_Normal, Mode=OneWay}" FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Ellipse Width="8" Height="8" Fill="#FFFF8C00" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{x:Bind Lang.Cell_Low, Mode=OneWay}" FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Ellipse Width="8" Height="8" Fill="#FFDC3545" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{x:Bind Lang.Cell_Undervoltage, Mode=OneWay}" FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <Ellipse Width="8" Height="8" Fill="#FF6F42C1" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{x:Bind Lang.Cell_Overvoltage, Mode=OneWay}" FontSize="12"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="⚡" FontSize="10" Foreground="#FFFF8C00" Width="8" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{x:Bind Lang.Cell_Balancing, Mode=OneWay}" FontSize="12"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </ToolTip>
+                        </ToolTipService.ToolTip>
+                    </Button>
+                </StackPanel>
                 <Button x:Name="ResetStatsBtn"
                         HorizontalAlignment="Right"
                         VerticalAlignment="Center"
@@ -82,8 +122,12 @@
                                    ItemsSource="{x:Bind ViewModel.Module1Cells, Mode=OneWay}"
                                    ElementPrepared="CellRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="110"
-                                                  ColumnSpacing="8" RowSpacing="8"/>
+                            <UniformGridLayout
+                                Orientation="Horizontal"
+                                MinItemWidth="100" MinItemHeight="110"
+                                MinColumnSpacing="8" MinRowSpacing="8"
+                                MaximumRowsOrColumns="5"
+                                ItemsStretch="Fill"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:CellViewModel">
@@ -156,8 +200,12 @@
                                    ItemsSource="{x:Bind ViewModel.Module2Cells, Mode=OneWay}"
                                    ElementPrepared="CellRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="110"
-                                                  ColumnSpacing="8" RowSpacing="8"/>
+                            <UniformGridLayout
+                                Orientation="Horizontal"
+                                MinItemWidth="100" MinItemHeight="110"
+                                MinColumnSpacing="8" MinRowSpacing="8"
+                                MaximumRowsOrColumns="5"
+                                ItemsStretch="Fill"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:CellViewModel">
@@ -223,34 +271,35 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Legend -->
-            <StackPanel Orientation="Horizontal" Spacing="20" Margin="0,2,0,0">
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Ellipse Width="9" Height="9" Fill="#FF25C685"/>
-                    <TextBlock Text="{x:Bind Lang.Cell_Normal, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Ellipse Width="9" Height="9" Fill="#FFFF8C00"/>
-                    <TextBlock Text="{x:Bind Lang.Cell_Low, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Ellipse Width="9" Height="9" Fill="#FFDC3545"/>
-                    <TextBlock Text="{x:Bind Lang.Cell_Undervoltage, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <Ellipse Width="9" Height="9" Fill="#FF6F42C1"/>
-                    <TextBlock Text="{x:Bind Lang.Cell_Overvoltage, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                    <TextBlock Text="⚡" FontSize="10" Foreground="#FFFF8C00" VerticalAlignment="Center"/>
-                    <TextBlock Text="{x:Bind Lang.Cell_Balancing, Mode=OneWay}" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
 
             <!-- ══ TEMPERATURES ══════════════════════════════════════════ -->
-            <TextBlock Text="{x:Bind Lang.Cell_SecNtcReadings, Mode=OneWay}"
-                       Style="{StaticResource SectionHeaderStyle}"
-                       Margin="0,16,0,0"/>
+            <StackPanel Orientation="Horizontal" Spacing="2" Margin="0,16,0,0">
+                <TextBlock Text="{x:Bind Lang.Cell_SecNtcReadings, Mode=OneWay}"
+                           Style="{StaticResource SectionHeaderStyle}"
+                           VerticalAlignment="Center"/>
+                <Button Style="{StaticResource InfoButtonStyle}" Margin="0,8,0,0"
+                        Click="LegendInfo_Click">
+                    <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE946;" FontSize="12"/>
+                    <ToolTipService.ToolTip>
+                        <ToolTip>
+                            <StackPanel Spacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{x:Bind Lang.Cell_NormalDesc, Mode=OneWay}" FontSize="12"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse Width="8" Height="8" Fill="#FFFF8C00" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{x:Bind Lang.Cell_WarnDesc, Mode=OneWay}" FontSize="12"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Ellipse Width="8" Height="8" Fill="#FFDC3545" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{x:Bind Lang.Cell_CutoffDesc, Mode=OneWay}" FontSize="12"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </ToolTip>
+                    </ToolTipService.ToolTip>
+                </Button>
+            </StackPanel>
             <!-- Two battery modules side by side: NTC 1-10 (left) / NTC 11-20 (right). -->
             <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
@@ -265,8 +314,12 @@
                                    ItemsSource="{x:Bind ViewModel.Module1Temperatures, Mode=OneWay}"
                                    ElementPrepared="NtcRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="90"
-                                                  ColumnSpacing="10" RowSpacing="10"/>
+                            <UniformGridLayout
+                                Orientation="Horizontal"
+                                MinItemWidth="100" MinItemHeight="90"
+                                MinColumnSpacing="10" MinRowSpacing="10"
+                                MaximumRowsOrColumns="5"
+                                ItemsStretch="Fill"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:TempViewModel">
@@ -305,8 +358,12 @@
                                    ItemsSource="{x:Bind ViewModel.Module2Temperatures, Mode=OneWay}"
                                    ElementPrepared="NtcRepeater_ElementPrepared">
                         <ItemsRepeater.Layout>
-                            <ctl:FixedColumnLayout MaxColumns="5" MinItemWidth="100" MinItemHeight="90"
-                                                  ColumnSpacing="10" RowSpacing="10"/>
+                            <UniformGridLayout
+                                Orientation="Horizontal"
+                                MinItemWidth="100" MinItemHeight="90"
+                                MinColumnSpacing="10" MinRowSpacing="10"
+                                MaximumRowsOrColumns="5"
+                                ItemsStretch="Fill"/>
                         </ItemsRepeater.Layout>
                         <ItemsRepeater.ItemTemplate>
                             <DataTemplate x:DataType="vm:TempViewModel">
@@ -338,36 +395,6 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Thresholds + color legend — sits right under the NTC tiles
-                 so the reference info is adjacent to the sensors it describes. -->
-            <Border Style="{StaticResource CardStyle}" Margin="0,4,0,0">
-                <Grid ColumnSpacing="40">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Cell_Thresholds, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <TextBlock Text="{x:Bind Lang.Cell_ThreshWarn, Mode=OneWay}" FontSize="13"/>
-                        <TextBlock Text="{x:Bind Lang.Cell_ThreshCutoff, Mode=OneWay}" FontSize="13"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="4">
-                        <TextBlock Text="{x:Bind Lang.Cell_Legend, Mode=OneWay}" Style="{StaticResource CardLabelStyle}"/>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Cell_NormalDesc, Mode=OneWay}" FontSize="13"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="8" Height="8" Fill="#FFFF8C00" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Cell_WarnDesc, Mode=OneWay}" FontSize="13"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="8" Height="8" Fill="#FFDC3545" VerticalAlignment="Center"/>
-                            <TextBlock Text="{x:Bind Lang.Cell_CutoffDesc, Mode=OneWay}" FontSize="13"/>
-                        </StackPanel>
-                    </StackPanel>
-                </Grid>
-            </Border>
 
             <Grid>
                 <Grid.ColumnDefinitions>
