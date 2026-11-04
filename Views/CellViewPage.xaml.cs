@@ -62,6 +62,8 @@ public sealed partial class CellViewPage : Page
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
+        CellLegendFlyout.Hide();
+        NtcLegendFlyout.Hide();
         Lang.PropertyChanged -= OnLanguageChanged;
         ViewModel.HistoryUpdated -= OnHistoryUpdated;
         ViewModel.HistoryReset -= OnHistoryReset;
@@ -552,11 +554,17 @@ public sealed partial class CellViewPage : Page
 
     private void ResetStats_Click(object sender, RoutedEventArgs e) => ViewModel.ResetCellStats();
 
-    // (i) legend: shows on hover via ToolTip; click/tap opens it too (touch).
-    private void LegendInfo_Click(object sender, RoutedEventArgs e)
+    // (i) legend: mouse hover opens it and moving away closes it;
+    // click/tap opens it via Button.Flyout (touch).
+    private void LegendInfo_PointerEntered(object sender, PointerRoutedEventArgs e)
     {
-        if (sender is DependencyObject d && ToolTipService.GetToolTip(d) is ToolTip tip)
-            tip.IsOpen = true;
+        if (e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Mouse) return;
+        if (sender is Button b && b.Flyout is Flyout f && !f.IsOpen)
+            f.ShowAt(b, new FlyoutShowOptions
+            {
+                ShowMode  = FlyoutShowMode.TransientWithDismissOnPointerMoveAway,
+                Placement = FlyoutPlacementMode.Bottom,
+            });
     }
 
     private void CellRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)

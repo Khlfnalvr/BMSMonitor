@@ -11,6 +11,11 @@
         <conv:CellStateToBorderConverter     x:Key="CellStateBorderConverter"/>
         <conv:BoolToVisibilityConverter      x:Key="BoolToVisConverter"/>
         <conv:TempToForegroundConverter      x:Key="TempToFgConverter"/>
+        <Style x:Key="LegendFlyoutStyle" TargetType="FlyoutPresenter">
+            <Setter Property="Padding"   Value="12,8"/>
+            <Setter Property="MinWidth"  Value="0"/>
+            <Setter Property="MinHeight" Value="0"/>
+        </Style>
         <Style x:Key="InfoButtonStyle" TargetType="Button">
             <Setter Property="Background"      Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -71,10 +76,10 @@
                                Style="{StaticResource SectionHeaderStyle}"
                                VerticalAlignment="Center"/>
                     <Button Style="{StaticResource InfoButtonStyle}" Margin="0,8,0,0"
-                            Click="LegendInfo_Click">
+                            PointerEntered="LegendInfo_PointerEntered">
                         <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE946;" FontSize="12"/>
-                        <ToolTipService.ToolTip>
-                            <ToolTip>
+                        <Button.Flyout>
+                            <Flyout x:Name="CellLegendFlyout" Placement="Bottom" FlyoutPresenterStyle="{StaticResource LegendFlyoutStyle}">
                                 <StackPanel Spacing="4">
                                     <StackPanel Orientation="Horizontal" Spacing="6">
                                         <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
@@ -97,8 +102,8 @@
                                         <TextBlock Text="{x:Bind Lang.Cell_Balancing, Mode=OneWay}" FontSize="12"/>
                                     </StackPanel>
                                 </StackPanel>
-                            </ToolTip>
-                        </ToolTipService.ToolTip>
+                            </Flyout>
+                        </Button.Flyout>
                     </Button>
                 </StackPanel>
                 <Button x:Name="ResetStatsBtn"
@@ -278,10 +283,10 @@
                            Style="{StaticResource SectionHeaderStyle}"
                            VerticalAlignment="Center"/>
                 <Button Style="{StaticResource InfoButtonStyle}" Margin="0,8,0,0"
-                        Click="LegendInfo_Click">
+                        PointerEntered="LegendInfo_PointerEntered">
                     <FontIcon FontFamily="{StaticResource SymbolThemeFontFamily}" Glyph="&#xE946;" FontSize="12"/>
-                    <ToolTipService.ToolTip>
-                        <ToolTip>
+                    <Button.Flyout>
+                        <Flyout x:Name="NtcLegendFlyout" Placement="Bottom" FlyoutPresenterStyle="{StaticResource LegendFlyoutStyle}">
                             <StackPanel Spacing="4">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Ellipse Width="8" Height="8" Fill="#FF25C685" VerticalAlignment="Center"/>
@@ -296,8 +301,8 @@
                                     <TextBlock Text="{x:Bind Lang.Cell_CutoffDesc, Mode=OneWay}" FontSize="12"/>
                                 </StackPanel>
                             </StackPanel>
-                        </ToolTip>
-                    </ToolTipService.ToolTip>
+                        </Flyout>
+                    </Button.Flyout>
                 </Button>
             </StackPanel>
             <!-- Two battery modules side by side: NTC 1-10 (left) / NTC 11-20 (right). -->
