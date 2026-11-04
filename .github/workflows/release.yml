@@ -119,12 +119,25 @@ jobs:
           }
           if (-not $title) { $title = "Release" }
           if (-not $notes) { $notes = $title }
-          gh release create $env:TAG `
-            ".\Publish\BMSMonitorSetup-v$env:VER.exe#BMSMonitorSetup-v$env:VER.exe" `
-            ".\Publish\BMSMonitorUpdate-v$env:VER.zip#BMSMonitorUpdate-v$env:VER.zip" `
-            ".\Publish\BMSMonitor-v$env:VER.apk#BMSMonitor-v$env:VER.apk" `
-            --repo ${{ github.repository }} `
-            --target ${{ github.sha }} `
-            --title "$env:TAG - $title" `
-            --notes "$notes"
+          $assets = @(
+            ".\Publish\BMSMonitorSetup-v$env:VER.exe#BMSMonitorSetup-v$env:VER.exe",
+            ".\Publish\BMSMonitorUpdate-v$env:VER.zip#BMSMonitorUpdate-v$env:VER.zip",
+            ".\Publish\BMSMonitor-v$env:VER.apk#BMSMonitor-v$env:VER.apk")
+          gh release view $env:TAG --repo ${{ github.repository }} 2>$null | Out-Null
+          if ($LASTEXITCODE -eq 0) {
+            # Release already exists: rebuild in place — move the tag to this
+            # commit, replace the assets and update title/notes.
+            gh api -X PATCH "repos/${{ github.repository }}/git/refs/tags/$env:TAG" -f sha=${{ github.sha }} -F force=true | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "Failed to move tag $env:TAG" }
+            gh release upload $env:TAG @assets --clobber --repo ${{ github.repository }}
+            if ($LASTEXITCODE -ne 0) { throw "Asset upload failed" }
+            gh release edit $env:TAG --repo ${{ github.repository }} --title "$env:TAG - $title" --notes "$notes"
+          } else {
+            gh release create $env:TAG @assets `
+              --repo ${{ github.repository }} `
+              --target ${{ github.sha }} `
+              --title "$env:TAG - $title" `
+              --notes "$notes"
+          }
+          if ($LASTEXITCODE -ne 0) { throw "Release step failed" }
           gh release view $env:TAG --repo ${{ github.repository }} --json tagName,name,url,assets,publishedAt
