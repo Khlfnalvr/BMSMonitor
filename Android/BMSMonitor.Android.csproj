@@ -19,12 +19,12 @@
 
     <ApplicationTitle>BMS Monitor</ApplicationTitle>
     <ApplicationId>com.khlfnalvr.bmsmonitor</ApplicationId>
-    <ApplicationDisplayVersion>2.2.5</ApplicationDisplayVersion>
-    <ApplicationVersion>20205</ApplicationVersion>
+    <ApplicationDisplayVersion>2.2.6</ApplicationDisplayVersion>
+    <ApplicationVersion>20206</ApplicationVersion>
     <ApplicationPublisher>Khlfnalvr</ApplicationPublisher>
     <Product>Software BMS ICO</Product>
-    <Version>2.2.5</Version>
-    <InformationalVersion>2.2.5</InformationalVersion>
+    <Version>2.2.6</Version>
+    <InformationalVersion>2.2.6</InformationalVersion>
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <Description>BMS Monitor — Cell voltages, SOC, temperatures &amp; balancing</Description>
 
